@@ -54,6 +54,22 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     await tournamentsService.updateSeeds(tournamentId, seededPlayerIds)
   }
 
+  async function setPublished(id: string, published: boolean): Promise<void> {
+    const updated = await tournamentsService.setPublished(id, published)
+    const index = tournaments.value.findIndex((t) => t.id === id)
+    if (index !== -1) tournaments.value[index] = updated
+  }
+
+  async function enroll(id: string): Promise<void> {
+    await tournamentsService.enroll(id)
+    await getById(id)
+  }
+
+  async function withdraw(id: string): Promise<void> {
+    await tournamentsService.withdraw(id)
+    await getById(id)
+  }
+
   return {
     tournaments,
     loading,
@@ -66,5 +82,8 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     addPlayer,
     removePlayer,
     updateSeeds,
+    setPublished,
+    enroll,
+    withdraw,
   }
 })
