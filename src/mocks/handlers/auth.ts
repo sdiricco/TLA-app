@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { mockUsers } from '../data/users'
-import type { MockUser, User } from '../../types'
+import type { MockUser, Profile, User } from '../../types'
 
 let currentUser: Omit<MockUser, 'password'> | null = null
 
@@ -10,13 +10,14 @@ export const authHandlers = [
     if (mockUsers.find((u) => u.email === email)) {
       return HttpResponse.json({ message: 'Email già registrata' }, { status: 409 })
     }
-    const newUser: MockUser = { id: `user-${Date.now()}`, email, password, name, role: 'user' }
+    const newUser: MockUser = { id: `user-${Date.now()}`, email, password, name, role: 'player' }
     mockUsers.push(newUser)
     const { password: _pwd, ...safeUser } = newUser
     void _pwd
     currentUser = safeUser
     return HttpResponse.json({ user: safeUser, token: `mock-jwt-token-${safeUser.id}` }, { status: 201 })
   }),
+
   http.post('/api/auth/login', async ({ request }) => {
     const { email, password } = (await request.json()) as Pick<MockUser, 'email' | 'password'>
     const user = mockUsers.find((u) => u.email === email && u.password === password)
@@ -28,10 +29,12 @@ export const authHandlers = [
     currentUser = safeUser
     return HttpResponse.json({ user: safeUser, token: `mock-jwt-token-${safeUser.id}` })
   }),
+
   http.post('/api/auth/logout', () => {
     currentUser = null
     return HttpResponse.json({ message: 'Logout effettuato' })
   }),
+
   http.get('/api/auth/me', ({ request }) => {
     const auth = request.headers.get('Authorization')
     if (!auth?.startsWith('Bearer mock-jwt-token-')) {
@@ -41,5 +44,18 @@ export const authHandlers = [
       return HttpResponse.json({ message: 'Sessione scaduta' }, { status: 401 })
     }
     return HttpResponse.json({ user: currentUser as User })
+  }),
+
+  http.get('/api/auth/profile', ({ request }) => {
+    const auth = request.headers.get('Authorization')
+    if (!auth?.startsWith('Bearer mock-jwt-token-') || !currentUser) {
+      return HttpResponse.json({ message: 'Non autorizzato' }, { status: 401 })
+    }
+    const profile: Profile = {
+      id: currentUser.id,
+      name: currentUser.name ?? null,
+      role: currentUser.role,
+    }
+    return HttpResponse.json(profile)
   }),
 ]
