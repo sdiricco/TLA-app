@@ -107,3 +107,25 @@ CREATE POLICY "Admins can update matches"
 CREATE POLICY "Admins can delete matches"
   ON matches FOR DELETE TO authenticated
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+
+-- 6. Auto-create player record on profile creation --------------------------------
+CREATE OR REPLACE FUNCTION public.create_player_on_profile()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.role = 'player' THEN
+    INSERT INTO public.players (name, ranking, user_id)
+    VALUES (COALESCE(NEW.name, 'Nuovo giocatore'), 0, NEW.id)
+    ON CONFLICT DO NOTHING;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_profile_created ON public.profiles;
+CREATE TRIGGER on_profile_created
+  AFTER INSERT ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.create_player_on_profile();
