@@ -11,9 +11,11 @@ CREATE TABLE IF NOT EXISTS profiles (
 
 -- Auto-create profile on signup
 CREATE OR REPLACE FUNCTION create_profile_on_signup()
-RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-  INSERT INTO profiles (id, name, role)
+  INSERT INTO public.profiles (id, name, role)
   VALUES (NEW.id, NEW.raw_user_meta_data->>'name', 'player')
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
