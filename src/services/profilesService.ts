@@ -35,12 +35,19 @@ const sb: ProfilesService = {
   },
 
   getUnlinkedProfiles: async () => {
-    // Profiles with role='player' that have no linked player record
-    const { data, error } = await supabase!
-      .from('profiles')
-      .select('id, name, role')
-      .eq('role', 'player')
-      .not('id', 'in', `(select user_id from players where user_id is not null)`)
+    // Fetch linked user_ids from players, then filter profiles client-side
+    const { data: players, error: pErr } = await supabase!
+      .from('players')
+      .select('user_id')
+      .not('user_id', 'is', null)
+    if (pErr) throw new Error(pErr.message)
+
+    const linkedIds = (players ?? []).map((p: { user_id: string }) => p.user_id)
+
+    const query = supabase!.from('profiles').select('id, name, role').eq('role', 'player')
+    const { data, error } = linkedIds.length
+      ? await query.not('id', 'in', `(${linkedIds.join(',')})`)
+      : await query
     if (error) throw new Error(error.message)
     return (data ?? []) as Profile[]
   },
