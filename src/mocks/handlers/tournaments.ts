@@ -1,0 +1,56 @@
+import { http, HttpResponse } from 'msw'
+import { mockTournaments } from '../data/tournaments'
+import type { MockTournament } from '../../types'
+
+const tournaments: MockTournament[] = [...mockTournaments]
+
+export const tournamentHandlers = [
+  http.get('/api/tournaments', () => HttpResponse.json(tournaments)),
+  http.get('/api/tournaments/:id', ({ params }) => {
+    const tournament = tournaments.find((t) => t.id === params['id'])
+    if (!tournament) return HttpResponse.json({ message: 'Torneo non trovato' }, { status: 404 })
+    return HttpResponse.json(tournament)
+  }),
+  http.post('/api/tournaments', async ({ request }) => {
+    const body = (await request.json()) as Partial<MockTournament>
+    const newTournament: MockTournament = {
+      id: `t-${Date.now()}`,
+      status: 'upcoming',
+      playerIds: [],
+      format: 'single_elimination',
+      category: 'singles',
+      name: '',
+      ...body,
+    }
+    tournaments.push(newTournament)
+    return HttpResponse.json(newTournament, { status: 201 })
+  }),
+  http.put('/api/tournaments/:id', async ({ params, request }) => {
+    const index = tournaments.findIndex((t) => t.id === params['id'])
+    if (index === -1) return HttpResponse.json({ message: 'Torneo non trovato' }, { status: 404 })
+    const body = (await request.json()) as Partial<MockTournament>
+    tournaments[index] = { ...tournaments[index]!, ...body }
+    return HttpResponse.json(tournaments[index])
+  }),
+  http.delete('/api/tournaments/:id', ({ params }) => {
+    const index = tournaments.findIndex((t) => t.id === params['id'])
+    if (index === -1) return HttpResponse.json({ message: 'Torneo non trovato' }, { status: 404 })
+    tournaments.splice(index, 1)
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.post('/api/tournaments/:id/players', async ({ params, request }) => {
+    const tournament = tournaments.find((t) => t.id === params['id'])
+    if (!tournament) return HttpResponse.json({ message: 'Torneo non trovato' }, { status: 404 })
+    const { playerId } = (await request.json()) as { playerId: string }
+    if (!tournament.playerIds.includes(playerId)) {
+      tournament.playerIds.push(playerId)
+    }
+    return HttpResponse.json(tournament)
+  }),
+  http.delete('/api/tournaments/:id/players/:playerId', ({ params }) => {
+    const tournament = tournaments.find((t) => t.id === params['id'])
+    if (!tournament) return HttpResponse.json({ message: 'Torneo non trovato' }, { status: 404 })
+    tournament.playerIds = tournament.playerIds.filter((id) => id !== params['playerId'])
+    return HttpResponse.json(tournament)
+  }),
+]

@@ -1,0 +1,37 @@
+import type { MockTournament } from '../../types'
+
+export const mockTournaments: MockTournament[] = [
+  {
+    id: 't-1',
+    name: 'Torneo Primaverile 2025',
+    location: 'TC Milano',
+    start_date: '2025-05-10',
+    end_date: '2025-05-18',
+    format: 'single_elimination',
+    category: 'singles',
+    status: 'completed',
+    playerIds: ['p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6', 'p-7', 'p-8'],
+  },
+  {
+    id: 't-2',
+    name: 'Open Estivo 2025',
+    location: 'TC Roma',
+    start_date: '2025-07-01',
+    end_date: '2025-07-15',
+    format: 'round_robin',
+    category: 'singles',
+    status: 'ongoing',
+    playerIds: ['p-1', 'p-3', 'p-5', 'p-7'],
+  },
+  {
+    id: 't-3',
+    name: 'Torneo Autunnale 2025',
+    location: 'TC Torino',
+    start_date: '2025-10-04',
+    end_date: '2025-10-12',
+    format: 'single_elimination',
+    category: 'doubles',
+    status: 'upcoming',
+    playerIds: [],
+  },
+]

@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@import "tailwindcss-primeui";
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+}
