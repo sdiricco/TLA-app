@@ -10,6 +10,7 @@ const mock: PlayersService = {
   create: (data) => http.post<Player>('/players', data),
   update: (id, data) => http.put<Player>(`/players/${id}`, data),
   remove: (id) => http.delete<null>(`/players/${id}`),
+  getMyPlayer: () => http.get<Player | null>('/players/me'),
 }
 
 async function sbQuery<T>(query: SupabaseResult<T>): Promise<T> {
@@ -29,6 +30,16 @@ const sb: PlayersService = {
     const { error } = await supabase!.from('players').delete().eq('id', id)
     if (error) throw new Error(error.message)
     return null
+  },
+  getMyPlayer: async () => {
+    const { data: { user } } = await supabase!.auth.getUser()
+    if (!user) return null
+    const { data } = await supabase!
+      .from('players')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    return data as Player | null
   },
 }
 

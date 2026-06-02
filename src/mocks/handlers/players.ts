@@ -6,6 +6,18 @@ const players: Player[] = [...mockPlayers]
 
 export const playerHandlers = [
   http.get('/api/players', () => HttpResponse.json(players)),
+  http.get('/api/players/me', ({ request }) => {
+    const auth = request.headers.get('Authorization')
+    if (!auth?.startsWith('Bearer mock-jwt-token-')) {
+      return HttpResponse.json({ message: 'Non autorizzato' }, { status: 401 })
+    }
+    const userId = auth.replace('Bearer mock-jwt-token-', '')
+    const playerMap: Record<string, string> = { 'user-2': 'p-1' }
+    const playerId = playerMap[userId]
+    if (!playerId) return HttpResponse.json(null)
+    const player = players.find((p) => p.id === playerId)
+    return player ? HttpResponse.json(player) : HttpResponse.json(null)
+  }),
   http.get('/api/players/:id', ({ params }) => {
     const player = players.find((p) => p.id === params['id'])
     if (!player) return HttpResponse.json({ message: 'Giocatore non trovato' }, { status: 404 })
