@@ -13,6 +13,8 @@ export const authHandlers = [
     }
     const newUser: MockUser = { id: `user-${Date.now()}`, email, password, name, role: 'player' }
     mockUsers.push(newUser)
+    // Auto-create player record for new player users
+    mockPlayers.push({ id: `p-${Date.now()}`, name: name ?? 'Nuovo giocatore', ranking: 0, club: null, phone: null, user_id: newUser.id })
     const { password: _pwd, ...safeUser } = newUser
     void _pwd
     currentUser = safeUser
