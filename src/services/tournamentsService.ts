@@ -13,6 +13,12 @@ const mock: TournamentsService = {
   addPlayer: (tournamentId, playerId) => http.post<null>(`/tournaments/${tournamentId}/players`, { playerId }),
   removePlayer: (tournamentId, playerId) => http.delete<null>(`/tournaments/${tournamentId}/players/${playerId}`),
   updateSeeds: (tournamentId, seededPlayerIds) => http.put<void>(`/tournaments/${tournamentId}`, { playerIds: seededPlayerIds }),
+  setPublished: (id, published) =>
+    http.patch<Tournament>(`/tournaments/${id}/publish`, { published }),
+  enroll: (id) =>
+    http.post<null>(`/tournaments/${id}/enroll`, { playerId: 'me' }).then(() => null),
+  withdraw: (id) =>
+    http.delete<null>(`/tournaments/${id}/enroll`, { playerId: 'me' }).then(() => null),
 }
 
 async function sbQuery<T>(query: SupabaseResult<T>): Promise<T> {
@@ -72,6 +78,44 @@ const sb: TournamentsService = {
         ),
       ),
     )
+  },
+  setPublished: async (id, published) => {
+    const { data, error } = await supabase!
+      .from('tournaments')
+      .update({ published })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw new Error(error.message)
+    return data as Tournament
+  },
+  enroll: async (tournamentId) => {
+    const { data: player } = await supabase!
+      .from('players')
+      .select('id')
+      .eq('user_id', (await supabase!.auth.getUser()).data.user!.id)
+      .single()
+    if (!player) throw new Error('Profilo giocatore non configurato')
+    const { error } = await supabase!
+      .from('tournament_players')
+      .insert({ tournament_id: tournamentId, player_id: player.id })
+    if (error) throw new Error(error.message)
+    return null
+  },
+  withdraw: async (tournamentId) => {
+    const { data: player } = await supabase!
+      .from('players')
+      .select('id')
+      .eq('user_id', (await supabase!.auth.getUser()).data.user!.id)
+      .single()
+    if (!player) throw new Error('Profilo giocatore non configurato')
+    const { error } = await supabase!
+      .from('tournament_players')
+      .delete()
+      .eq('tournament_id', tournamentId)
+      .eq('player_id', player.id)
+    if (error) throw new Error(error.message)
+    return null
   },
 }
 

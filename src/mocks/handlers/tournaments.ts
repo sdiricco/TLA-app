@@ -53,4 +53,25 @@ export const tournamentHandlers = [
     tournament.playerIds = tournament.playerIds.filter((id) => id !== params['playerId'])
     return HttpResponse.json(tournament)
   }),
+  http.patch('/api/tournaments/:id/publish', async ({ params, request }) => {
+    const { published } = (await request.json()) as { published: boolean }
+    const tournament = tournaments.find((t) => t.id === params['id'])
+    if (!tournament) return HttpResponse.json({ message: 'Non trovato' }, { status: 404 })
+    tournament.published = published
+    return HttpResponse.json({ ...tournament })
+  }),
+  http.post('/api/tournaments/:id/enroll', async ({ params, request }) => {
+    const { playerId } = (await request.json()) as { playerId: string }
+    const tournament = tournaments.find((t) => t.id === params['id'])
+    if (!tournament) return HttpResponse.json({ message: 'Non trovato' }, { status: 404 })
+    if (!tournament.playerIds.includes(playerId)) tournament.playerIds.push(playerId)
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.delete('/api/tournaments/:id/enroll', async ({ params, request }) => {
+    const { playerId } = (await request.json()) as { playerId: string }
+    const tournament = tournaments.find((t) => t.id === params['id'])
+    if (!tournament) return HttpResponse.json({ message: 'Non trovato' }, { status: 404 })
+    tournament.playerIds = tournament.playerIds.filter((id) => id !== playerId)
+    return new HttpResponse(null, { status: 204 })
+  }),
 ]

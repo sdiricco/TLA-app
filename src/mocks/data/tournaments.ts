@@ -10,6 +10,7 @@ export const mockTournaments: MockTournament[] = [
     format: 'single_elimination',
     category: 'singles',
     status: 'completed',
+    published: true,
     playerIds: ['p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6', 'p-7', 'p-8'],
   },
   {
@@ -21,6 +22,7 @@ export const mockTournaments: MockTournament[] = [
     format: 'round_robin',
     category: 'singles',
     status: 'ongoing',
+    published: true,
     playerIds: ['p-1', 'p-3', 'p-5', 'p-7'],
   },
   {
@@ -32,6 +34,7 @@ export const mockTournaments: MockTournament[] = [
     format: 'single_elimination',
     category: 'doubles',
     status: 'upcoming',
+    published: false,
     playerIds: [],
   },
 ]
