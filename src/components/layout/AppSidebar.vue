@@ -11,15 +11,22 @@ const auth = useAuthStore()
 const layout = useLayoutStore()
 
 function isActive(to: string): boolean {
-  if (to === '/') return route.path === '/'
+  if (to === '/' || to === '/dashboard') return route.path === to
   return route.path.startsWith(to)
 }
 
-const navItems = [
-  { label: 'Dashboard', icon: 'pi pi-home', to: '/' },
-  { label: 'Tornei', icon: 'pi pi-trophy', to: '/tournaments' },
-  { label: 'Giocatori', icon: 'pi pi-users', to: '/players' },
-]
+const navItems = computed(() => {
+  if (auth.isAdmin) {
+    return [
+      { label: 'Dashboard', icon: 'pi pi-home', to: '/dashboard' },
+      { label: 'Tornei', icon: 'pi pi-trophy', to: '/tournaments' },
+      { label: 'Giocatori', icon: 'pi pi-users', to: '/players' },
+    ]
+  }
+  return [
+    { label: 'Tornei', icon: 'pi pi-trophy', to: '/tournaments' },
+  ]
+})
 
 const displayName = computed(() => auth.user?.name || auth.user?.email || 'Utente')
 
