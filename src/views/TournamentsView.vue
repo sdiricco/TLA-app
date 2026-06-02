@@ -11,6 +11,7 @@ import SelectButton from 'primevue/selectbutton'
 import Tag from 'primevue/tag'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
+import { useAuthStore } from '../stores/auth'
 import { useTournamentsStore } from '../stores/tournaments'
 import type { Tournament, TournamentCategory, TournamentCreate, TournamentFormat, TournamentStatus } from '../types'
 
@@ -29,6 +30,7 @@ interface TournamentForm {
   status: TournamentStatus
 }
 
+const auth = useAuthStore()
 const store = useTournamentsStore()
 const router = useRouter()
 const confirm = useConfirm()
@@ -192,7 +194,7 @@ onMounted(() => store.fetchAll())
         <h2 class="m-0 text-2xl">Tornei</h2>
         <p class="mt-1 mb-0 text-sm text-muted-color">{{ store.tournaments.length }} tornei totali</p>
       </div>
-      <Button label="Nuovo torneo" icon="pi pi-plus" @click="openCreate" />
+      <Button v-if="auth.isAdmin" label="Nuovo torneo" icon="pi pi-plus" @click="openCreate" />
     </div>
 
     <SelectButton
@@ -230,7 +232,10 @@ onMounted(() => store.fetchAll())
         </template>
 
         <template #title>
-          <span class="text-[1.0625rem] font-semibold">{{ t.name }}</span>
+          <div class="flex items-center gap-2">
+            <span class="text-[1.0625rem] font-semibold">{{ t.name }}</span>
+            <Tag v-if="!t.published" value="Bozza" severity="secondary" class="text-xs" />
+          </div>
         </template>
 
         <template #subtitle>
