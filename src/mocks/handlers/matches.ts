@@ -1,51 +1,52 @@
 import { http, HttpResponse } from 'msw'
 import { mockMatches } from '../data/matches'
-import type { Match, MatchResultInput } from '../../types'
-import { advanceWinnerInMemory, buildDrawMatches, sortMatches } from '../../utils/matches'
+import type { Match, MatchAssignInput, MatchResultInput } from '../../types'
+import { buildEmptyBracket, sortMatches } from '../../utils/matches'
 
-let matches: Match[] = mockMatches.map((match) => ({
-  ...match,
-  sets: match.sets.map((set) => ({ ...set })),
-}))
+let matches: Match[] = [...mockMatches]
 
 export const matchHandlers = [
   http.get('/api/tournaments/:id/matches', ({ params }) => {
-    const tournamentMatches = sortMatches(matches.filter((match) => match.tournament_id === params['id']))
+    const tournamentMatches = sortMatches(matches.filter((m) => m.tournament_id === params['id']))
     return HttpResponse.json(tournamentMatches)
   }),
 
-  http.post('/api/tournaments/:id/draw', async ({ params, request }) => {
-    const { playerIds } = (await request.json()) as { playerIds: string[] }
+  http.post('/api/tournaments/:id/bracket', async ({ params, request }) => {
+    const { numPlayers } = (await request.json()) as { numPlayers: number }
     const tournamentId = params['id'] as string
+    matches = matches.filter((m) => m.tournament_id !== tournamentId)
+    const newMatches = buildEmptyBracket(tournamentId, numPlayers, () => crypto.randomUUID())
+    matches = sortMatches([...matches, ...newMatches])
+    return HttpResponse.json(newMatches)
+  }),
 
-    matches = matches.filter((match) => match.tournament_id !== tournamentId)
-    const generatedMatches = buildDrawMatches(tournamentId, playerIds, () => crypto.randomUUID())
-    matches = sortMatches([...matches, ...generatedMatches])
-
-    return HttpResponse.json(generatedMatches)
+  http.patch('/api/matches/:id/assign', async ({ params, request }) => {
+    const body = (await request.json()) as MatchAssignInput
+    const index = matches.findIndex((m) => m.id === params['id'])
+    if (index === -1) return HttpResponse.json({ message: 'Non trovato' }, { status: 404 })
+    const match = { ...matches[index]! }
+    if (body.slot === 'player1_id') match.player1_id = body.player_id
+    else match.player2_id = body.player_id
+    // If clearing a player, also clear winner/result
+    if (body.player_id === null) {
+      match.winner_id = null
+      match.result = null
+      match.status = 'pending'
+    }
+    matches[index] = match
+    return HttpResponse.json(match)
   }),
 
   http.put('/api/matches/:id', async ({ params, request }) => {
-    const index = matches.findIndex((match) => match.id === params['id'])
-    if (index === -1) return HttpResponse.json({ message: 'Match non trovato' }, { status: 404 })
-
     const body = (await request.json()) as MatchResultInput
-    const currentMatch = matches[index]!
-    const updatedMatch: Match = {
-      ...currentMatch,
-      sets: body.sets,
-      winner_id: body.winner_id,
-      status: 'completed',
-    }
-
-    matches[index] = updatedMatch
-    matches = advanceWinnerInMemory(matches, updatedMatch.tournament_id, updatedMatch.round, updatedMatch.position, body.winner_id)
-
-    return HttpResponse.json(matches.find((match) => match.id === updatedMatch.id))
+    const index = matches.findIndex((m) => m.id === params['id'])
+    if (index === -1) return HttpResponse.json({ message: 'Non trovato' }, { status: 404 })
+    matches[index] = { ...matches[index]!, result: body.result, winner_id: body.winner_id, status: 'completed' }
+    return HttpResponse.json(matches[index])
   }),
 
   http.delete('/api/tournaments/:id/matches', ({ params }) => {
-    matches = matches.filter((match) => match.tournament_id !== params['id'])
+    matches = matches.filter((m) => m.tournament_id !== params['id'])
     return new HttpResponse(null, { status: 204 })
   }),
 ]
