@@ -58,4 +58,17 @@ export const authHandlers = [
     }
     return HttpResponse.json(profile)
   }),
+
+  http.get('/api/auth/profiles/unlinked', ({ request }) => {
+    const auth = request.headers.get('Authorization')
+    if (!auth?.startsWith('Bearer mock-jwt-token-') || !currentUser) {
+      return HttpResponse.json({ message: 'Non autorizzato' }, { status: 401 })
+    }
+    // Return player-role users that have no linked player (in mock, player-map: user-2 → p-1)
+    const linkedUserIds = new Set(['user-2'])
+    const profiles: Profile[] = mockUsers
+      .filter((u) => u.role === 'player' && !linkedUserIds.has(u.id))
+      .map((u) => ({ id: u.id, name: u.name ?? null, role: u.role }))
+    return HttpResponse.json(profiles)
+  }),
 ]

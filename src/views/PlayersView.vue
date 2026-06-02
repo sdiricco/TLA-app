@@ -10,7 +10,8 @@ import Tag from 'primevue/tag'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { usePlayersStore } from '../stores/players'
-import type { Player, PlayerCreate } from '../types'
+import { profilesService } from '../services/profilesService'
+import type { Player, PlayerCreate, Profile } from '../types'
 
 interface PlayerForm {
   name: string
@@ -96,7 +97,32 @@ function confirmDelete(player: Player): void {
   })
 }
 
-onMounted(() => store.fetchAll())
+onMounted(async () => {
+  await store.fetchAll()
+  unlinkedProfiles.value = await profilesService.getUnlinkedProfiles()
+})
+
+const unlinkedProfiles = ref<Profile[]>([])
+const addingUserId = ref<string | null>(null)
+
+async function addAsPlayer(profile: Profile): Promise<void> {
+  addingUserId.value = profile.id
+  try {
+    await store.create({
+      name: profile.name ?? 'Nuovo giocatore',
+      ranking: 0,
+      club: null,
+      phone: null,
+      user_id: profile.id,
+    })
+    unlinkedProfiles.value = unlinkedProfiles.value.filter((p) => p.id !== profile.id)
+    toast.add({ severity: 'success', summary: 'Aggiunto', detail: `${profile.name ?? 'Utente'} aggiunto come giocatore`, life: 3000 })
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Errore', detail: (e as Error).message, life: 4000 })
+  } finally {
+    addingUserId.value = null
+  }
+}
 </script>
 
 <template>
@@ -159,6 +185,31 @@ onMounted(() => store.fetchAll())
         </template>
       </Column>
     </DataTable>
+
+    <!-- Utenti registrati non ancora giocatori -->
+    <div v-if="unlinkedProfiles.length > 0" class="mt-6">
+      <h3 class="m-0 mb-3 text-lg font-semibold">Utenti registrati</h3>
+      <p class="mt-0 mb-3 text-sm text-muted-color">Questi utenti hanno un account ma non sono ancora nella lista giocatori.</p>
+      <div class="flex flex-col gap-2">
+        <div
+          v-for="profile in unlinkedProfiles"
+          :key="profile.id"
+          class="flex items-center justify-between gap-3 p-3 rounded-lg bg-surface-50 border border-surface-200"
+        >
+          <div class="flex items-center gap-2">
+            <i class="pi pi-user text-muted-color" />
+            <span class="font-medium">{{ profile.name ?? '(nessun nome)' }}</span>
+          </div>
+          <Button
+            label="Aggiungi come giocatore"
+            icon="pi pi-user-plus"
+            size="small"
+            :loading="addingUserId === profile.id"
+            @click="addAsPlayer(profile)"
+          />
+        </div>
+      </div>
+    </div>
   </div>
 
   <Dialog

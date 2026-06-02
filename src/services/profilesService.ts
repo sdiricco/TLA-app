@@ -4,6 +4,7 @@ import type { Profile, ProfilesService } from '../types'
 
 const mock: ProfilesService = {
   getMyProfile: () => http.get<Profile>('/auth/profile'),
+  getUnlinkedProfiles: () => http.get<Profile[]>('/auth/profiles/unlinked'),
 }
 
 const sb: ProfilesService = {
@@ -31,6 +32,17 @@ const sb: ProfilesService = {
     }
 
     return data as Profile
+  },
+
+  getUnlinkedProfiles: async () => {
+    // Profiles with role='player' that have no linked player record
+    const { data, error } = await supabase!
+      .from('profiles')
+      .select('id, name, role')
+      .eq('role', 'player')
+      .not('id', 'in', `(select user_id from players where user_id is not null)`)
+    if (error) throw new Error(error.message)
+    return (data ?? []) as Profile[]
   },
 }
 

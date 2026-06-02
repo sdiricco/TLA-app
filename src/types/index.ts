@@ -113,6 +113,7 @@ export interface MockTournament extends Tournament {
 
 export interface ProfilesService {
   getMyProfile(): Promise<Profile>
+  getUnlinkedProfiles(): Promise<Profile[]>
 }
 
 export interface AuthService {
