@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { authService } from '../services/authService'
+import { profilesService } from '../services/profilesService'
 import type { User } from '../types'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -9,16 +10,28 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<string | null>(null)
 
   const isAuthenticated = computed(() => !!user.value)
+  const isAdmin = computed(() => user.value?.role === 'admin')
 
   async function init(): Promise<void> {
-    user.value = await authService.getCurrentUser()
+    const authUser = await authService.getCurrentUser()
+    if (authUser) {
+      try {
+        const profile = await profilesService.getMyProfile()
+        user.value = { ...authUser, role: profile.role }
+      } catch {
+        // If profile fetch fails (e.g. new user, no profile yet), default to player
+        user.value = { ...authUser, role: 'player' }
+      }
+    }
   }
 
   async function login(email: string, password: string): Promise<void> {
     loading.value = true
     error.value = null
     try {
-      user.value = await authService.login(email, password)
+      const authUser = await authService.login(email, password)
+      const profile = await profilesService.getMyProfile()
+      user.value = { ...authUser, role: profile.role }
     } catch (e) {
       error.value = (e as Error).message
     } finally {
@@ -35,7 +48,9 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
-      user.value = await authService.register(email, password, name)
+      const authUser = await authService.register(email, password, name)
+      // Newly registered users are always 'player'
+      user.value = { ...authUser, role: 'player' }
     } catch (e) {
       error.value = (e as Error).message
     } finally {
@@ -43,5 +58,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, loading, error, isAuthenticated, init, login, register, logout }
+  return { user, loading, error, isAuthenticated, isAdmin, init, login, register, logout }
 })
