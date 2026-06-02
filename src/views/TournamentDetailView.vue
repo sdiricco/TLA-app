@@ -4,11 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { useTournamentsStore } from '../stores/tournaments'
 import { usePlayersStore } from '../stores/players'
 import { useMatchesStore } from '../stores/matches'
+import { useAuthStore } from '../stores/auth'
+import { playersService } from '../services/playersService'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
-import InputNumber from 'primevue/inputnumber'
+import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Tab from 'primevue/tab'
 import TabList from 'primevue/tablist'
@@ -16,40 +18,39 @@ import TabPanel from 'primevue/tabpanel'
 import TabPanels from 'primevue/tabpanels'
 import Tabs from 'primevue/tabs'
 import Tag from 'primevue/tag'
-import type { Match, MatchSet, Player, TournamentWithPlayers } from '../types'
-import { countSetsWon, formatMatchScore } from '../utils/matches'
-
-interface EditableSet {
-  p1: number | null
-  p2: number | null
-}
-
-type MatchSlot = 'player1_id' | 'player2_id'
+import type { Match, MatchSlot, Player, TournamentWithPlayers } from '../types'
 
 const route = useRoute()
 const router = useRouter()
 const tournamentsStore = useTournamentsStore()
 const playersStore = usePlayersStore()
 const matchesStore = useMatchesStore()
+const auth = useAuthStore()
 const confirm = useConfirm()
 const toast = useToast()
 
 const tournament = ref<TournamentWithPlayers | null>(null)
 const loading = ref(true)
+const myPlayer = ref<Player | null>(null)
 const addPlayerVisible = ref(false)
 const selectedPlayerId = ref<string | null>(null)
 const addingPlayer = ref(false)
 const savingSeeds = ref(false)
-const generatingDraw = ref(false)
 const resettingDraw = ref(false)
-const savingResult = ref(false)
 
 const localOrder = ref<Player[]>([])
 const dragIndex = ref<number | null>(null)
 
-const scoreDialogVisible = ref(false)
+// Assign dialog state
+const assignDialogVisible = ref(false)
 const selectedMatch = ref<Match | null>(null)
-const editSets = ref<EditableSet[]>([{ p1: null, p2: null }])
+const selectedSlot = ref<MatchSlot>('player1_id')
+const assignPlayerId = ref<string | null>(null)
+
+// Result dialog state
+const resultDialogVisible = ref(false)
+const editResult = ref('')
+const editWinnerId = ref<string | null>(null)
 
 const formatLabels: Record<string, string> = {
   single_elimination: 'Eliminazione diretta',
@@ -74,6 +75,7 @@ async function loadPage(): Promise<void> {
       matchesStore.loadForTournament(tournamentId),
     ])
     tournament.value = loadedTournament
+    myPlayer.value = await playersService.getMyPlayer()
   } catch {
     toast.add({ severity: 'error', summary: 'Errore', detail: 'Torneo non trovato', life: 3000 })
     await router.push({ name: 'tournaments' })
@@ -147,33 +149,20 @@ const roundLabels = computed(() => {
   })
 })
 
-const normalizedSets = computed<MatchSet[]>(() =>
-  editSets.value
-    .filter((set) => set.p1 !== null && set.p2 !== null)
-    .map((set) => ({ p1: set.p1!, p2: set.p2! })),
+const isEnrolled = computed(() =>
+  !!myPlayer.value && enrolledPlayerIds.value.includes(myPlayer.value.id),
 )
-const hasIncompleteSets = computed(() => editSets.value.some((set) => set.p1 === null || set.p2 === null))
-const selectedMatchPlayers = computed(() => {
-  if (!selectedMatch.value) return null
-  return {
-    player1: selectedMatch.value.player1_id ? playerById.value.get(selectedMatch.value.player1_id) ?? null : null,
-    player2: selectedMatch.value.player2_id ? playerById.value.get(selectedMatch.value.player2_id) ?? null : null,
-  }
+
+const selectedSlotHasPlayer = computed(() => {
+  if (!selectedMatch.value) return false
+  return selectedMatch.value[selectedSlot.value] !== null
 })
-const computedWinnerId = computed<string | null>(() => {
-  if (!selectedMatch.value || hasIncompleteSets.value || normalizedSets.value.length === 0) return null
-  const wins = countSetsWon(normalizedSets.value)
-  if (wins.p1 === wins.p2) return null
-  return wins.p1 > wins.p2 ? selectedMatch.value.player1_id : selectedMatch.value.player2_id
-})
-const computedWinnerName = computed(() => {
-  if (!computedWinnerId.value) return null
-  return playerById.value.get(computedWinnerId.value)?.name ?? null
-})
-const scoreDialogTitle = computed(() => {
-  const players = selectedMatchPlayers.value
-  if (!players?.player1 || !players.player2) return 'Inserisci risultato'
-  return `${players.player1.name} vs ${players.player2.name}`
+
+const availableForSlot = computed(() => {
+  if (!selectedMatch.value) return enrolledPlayers.value
+  const otherSlot: MatchSlot = selectedSlot.value === 'player1_id' ? 'player2_id' : 'player1_id'
+  const otherPlayerId = selectedMatch.value[otherSlot]
+  return enrolledPlayers.value.filter((p) => p.id !== otherPlayerId)
 })
 
 function statusSeverity(status: string): string {
@@ -191,6 +180,11 @@ function formatDate(date: string | null | undefined): string {
 
 function getPlayer(playerId: string | null): Player | null {
   return playerId ? playerById.value.get(playerId) ?? null : null
+}
+
+function getPlayerName(playerId: string | null | undefined): string {
+  if (!playerId) return 'Slot vuoto'
+  return playerById.value.get(playerId)?.name ?? 'Giocatore sconosciuto'
 }
 
 function getSeed(playerId: string | null): number | null {
@@ -216,11 +210,6 @@ function getSlotLabel(match: Match, slot: MatchSlot): string {
   return 'TBD'
 }
 
-function getSlotScores(match: Match, slot: MatchSlot): string {
-  if (match.sets.length === 0) return ''
-  return match.sets.map((set) => (slot === 'player1_id' ? set.p1 : set.p2)).join(' ')
-}
-
 function canOpenMatch(match: Match): boolean {
   return Boolean(match.player1_id && match.player2_id)
 }
@@ -229,27 +218,23 @@ function isWinner(match: Match, slot: MatchSlot): boolean {
   return Boolean(match.winner_id && match.winner_id === match[slot])
 }
 
-function isWalkoverMatch(match: Match): boolean {
-  return match.status === 'completed' && match.sets.length === 0 && (!match.player1_id || !match.player2_id)
+async function publishToggle(): Promise<void> {
+  if (!tournament.value) return
+  await tournamentsStore.setPublished(tournament.value.id, !tournament.value.published)
+  await loadTournament()
 }
 
-function getMatchSummary(match: Match): string {
-  if (match.status === 'completed') {
-    if (isWalkoverMatch(match)) return 'BYE'
-    return formatMatchScore(match.sets)
-  }
-  if (canOpenMatch(match)) return 'Clicca per inserire risultato'
-  return 'In attesa del turno precedente'
+async function handleEnroll(): Promise<void> {
+  if (!tournament.value) return
+  await tournamentsStore.enroll(tournament.value.id)
+  await loadTournament()
+  myPlayer.value = await playersService.getMyPlayer()
 }
 
-function resetScoreEditor(): void {
-  selectedMatch.value = null
-  editSets.value = [{ p1: null, p2: null }]
-}
-
-function closeScoreDialog(): void {
-  scoreDialogVisible.value = false
-  resetScoreEditor()
+async function handleWithdraw(): Promise<void> {
+  if (!tournament.value) return
+  await tournamentsStore.withdraw(tournament.value.id)
+  await loadTournament()
 }
 
 async function addPlayer(): Promise<void> {
@@ -317,22 +302,9 @@ async function saveSeeds(): Promise<void> {
   }
 }
 
-async function generateDraw(): Promise<void> {
-  if (!tournament.value || localOrder.value.length < 2 || hasMatches.value) return
-  generatingDraw.value = true
-  try {
-    const playerIds = localOrder.value.map((player) => player.id)
-    if (orderChanged.value) {
-      await tournamentsStore.updateSeeds(tournament.value.id, playerIds)
-      await loadTournament()
-    }
-    await matchesStore.generateDraw(tournament.value.id, playerIds)
-    toast.add({ severity: 'success', summary: 'Tabellone creato', detail: 'Il primo turno è stato generato', life: 3000 })
-  } catch (error) {
-    toast.add({ severity: 'error', summary: 'Errore', detail: (error as Error).message, life: 4000 })
-  } finally {
-    generatingDraw.value = false
-  }
+async function createEmptyBracket(): Promise<void> {
+  if (!tournament.value || enrolledPlayers.value.length < 2) return
+  await matchesStore.createEmptyBracket(tournament.value.id, enrolledPlayers.value.length)
 }
 
 function confirmResetDraw(): void {
@@ -358,51 +330,45 @@ function confirmResetDraw(): void {
   })
 }
 
-function openScoreDialog(match: Match): void {
-  if (!canOpenMatch(match)) return
+function openAssignDialog(match: Match, slot: MatchSlot): void {
   selectedMatch.value = match
-  editSets.value = match.sets.length > 0 ? match.sets.map((set) => ({ ...set })) : [{ p1: null, p2: null }]
-  scoreDialogVisible.value = true
+  selectedSlot.value = slot
+  assignPlayerId.value = match[slot]
+  assignDialogVisible.value = true
 }
 
-function addSetRow(): void {
-  if (editSets.value.length >= 5) return
-  editSets.value = [...editSets.value, { p1: null, p2: null }]
+async function confirmAssign(): Promise<void> {
+  if (!selectedMatch.value) return
+  await matchesStore.assignPlayer(selectedMatch.value.id, {
+    slot: selectedSlot.value,
+    player_id: assignPlayerId.value,
+  })
+  assignDialogVisible.value = false
 }
 
-function removeSetRow(index: number): void {
-  if (editSets.value.length === 1) return
-  editSets.value = editSets.value.filter((_, currentIndex) => currentIndex !== index)
+async function clearSlot(): Promise<void> {
+  if (!selectedMatch.value) return
+  await matchesStore.assignPlayer(selectedMatch.value.id, {
+    slot: selectedSlot.value,
+    player_id: null,
+  })
+  assignDialogVisible.value = false
+}
+
+function openResultDialog(match: Match): void {
+  selectedMatch.value = match
+  editResult.value = match.result ?? ''
+  editWinnerId.value = match.winner_id
+  resultDialogVisible.value = true
 }
 
 async function saveResult(): Promise<void> {
-  if (!selectedMatch.value) return
-  if (normalizedSets.value.length === 0) {
-    toast.add({ severity: 'warn', summary: 'Risultato incompleto', detail: 'Inserisci almeno un set', life: 3000 })
-    return
-  }
-  if (hasIncompleteSets.value) {
-    toast.add({ severity: 'warn', summary: 'Set incompleto', detail: 'Compila o rimuovi tutti i set', life: 3000 })
-    return
-  }
-  if (!computedWinnerId.value) {
-    toast.add({ severity: 'warn', summary: 'Vincitore non valido', detail: "Un giocatore deve vincere più set dell'altro", life: 3000 })
-    return
-  }
-
-  savingResult.value = true
-  try {
-    await matchesStore.enterResult(selectedMatch.value.id, {
-      sets: normalizedSets.value,
-      winner_id: computedWinnerId.value,
-    })
-    toast.add({ severity: 'success', summary: 'Risultato salvato', detail: 'Il vincitore è avanzato al turno successivo', life: 3000 })
-    closeScoreDialog()
-  } catch (error) {
-    toast.add({ severity: 'error', summary: 'Errore', detail: (error as Error).message, life: 4000 })
-  } finally {
-    savingResult.value = false
-  }
+  if (!selectedMatch.value || !editResult.value || !editWinnerId.value) return
+  await matchesStore.enterResult(selectedMatch.value.id, {
+    result: editResult.value,
+    winner_id: editWinnerId.value,
+  })
+  resultDialogVisible.value = false
 }
 </script>
 
@@ -423,6 +389,15 @@ async function saveResult(): Promise<void> {
             @click="router.push({ name: 'tournaments' })"
           />
           <Tag :value="statusLabel(tournament.status)" :severity="statusSeverity(tournament.status)" />
+          <Button
+            v-if="auth.isAdmin"
+            :label="tournament.published ? 'Nascondi' : 'Pubblica'"
+            :icon="tournament.published ? 'pi pi-eye-slash' : 'pi pi-eye'"
+            :severity="tournament.published ? 'secondary' : 'success'"
+            size="small"
+            outlined
+            @click="publishToggle"
+          />
         </div>
 
         <h2 class="m-0 text-[1.625rem]">{{ tournament.name }}</h2>
@@ -460,87 +435,106 @@ async function saveResult(): Promise<void> {
         <TabPanels>
           <TabPanel value="iscritti">
             <div class="flex flex-col gap-4 py-4">
-              <div class="flex items-center justify-between gap-3 flex-wrap">
-                <span class="text-sm text-muted-color">{{ enrolledPlayers.length }} giocatori iscritti</span>
-                <Button
-                  label="Aggiungi giocatore"
-                  icon="pi pi-user-plus"
-                  size="small"
-                  :disabled="availablePlayers.length === 0"
-                  @click="addPlayerVisible = true"
-                />
-              </div>
+              <!-- Admin mode -->
+              <template v-if="auth.isAdmin">
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                  <span class="text-sm text-muted-color">{{ enrolledPlayers.length }} giocatori iscritti</span>
+                  <Button
+                    label="Aggiungi giocatore"
+                    icon="pi pi-user-plus"
+                    size="small"
+                    :disabled="availablePlayers.length === 0"
+                    @click="addPlayerVisible = true"
+                  />
+                </div>
 
-              <div v-if="localOrder.length === 0" class="flex flex-col items-center justify-center gap-3 min-h-[220px] text-center text-muted-color">
-                <i class="pi pi-users text-[2rem] text-muted-color" />
-                <p class="m-0">Nessun giocatore iscritto.<br />Clicca <strong>Aggiungi giocatore</strong> per iniziare.</p>
-              </div>
+                <div v-if="localOrder.length === 0" class="flex flex-col items-center justify-center gap-3 min-h-[220px] text-center text-muted-color">
+                  <i class="pi pi-users text-[2rem] text-muted-color" />
+                  <p class="m-0">Nessun giocatore iscritto.<br />Clicca <strong>Aggiungi giocatore</strong> per iniziare.</p>
+                </div>
 
-              <template v-else>
-                <div class="flex flex-col gap-[0.375rem]">
-                  <div
-                    v-for="(player, index) in localOrder"
-                    :key="player.id"
-                    class="flex items-center gap-3 p-3 rounded-lg bg-surface-50 border border-surface-200 cursor-grab"
-                    :class="{ 'opacity-50 cursor-grabbing': dragIndex === index }"
-                    draggable="true"
-                    @dragstart="onDragStart(index)"
-                    @dragover.prevent
-                    @dragend="dragIndex = null"
-                    @drop="onDrop(index)"
-                  >
-                    <span class="text-muted-color cursor-grab" aria-hidden="true">
-                      <i class="pi pi-bars" />
-                    </span>
-                    <span class="text-sm font-bold text-muted-color w-8 shrink-0">#{{ index + 1 }}</span>
-                    <div class="flex-1 min-w-0">
-                      <span class="block font-medium text-color">{{ player.name }}</span>
-                      <span class="block text-[0.8125rem] text-muted-color">
-                        <template v-if="player.club">{{ player.club }} · </template>Rank {{ player.ranking }}
+                <template v-else>
+                  <div class="flex flex-col gap-[0.375rem]">
+                    <div
+                      v-for="(player, index) in localOrder"
+                      :key="player.id"
+                      class="flex items-center gap-3 p-3 rounded-lg bg-surface-50 border border-surface-200 cursor-grab"
+                      :class="{ 'opacity-50 cursor-grabbing': dragIndex === index }"
+                      draggable="true"
+                      @dragstart="onDragStart(index)"
+                      @dragover.prevent
+                      @dragend="dragIndex = null"
+                      @drop="onDrop(index)"
+                    >
+                      <span class="text-muted-color cursor-grab" aria-hidden="true">
+                        <i class="pi pi-bars" />
                       </span>
+                      <span class="text-sm font-bold text-muted-color w-8 shrink-0">#{{ index + 1 }}</span>
+                      <div class="flex-1 min-w-0">
+                        <span class="block font-medium text-color">{{ player.name }}</span>
+                        <span class="block text-[0.8125rem] text-muted-color">
+                          <template v-if="player.club">{{ player.club }} · </template>Rank {{ player.ranking }}
+                        </span>
+                      </div>
+                      <Button
+                        icon="pi pi-times"
+                        text
+                        rounded
+                        size="small"
+                        severity="danger"
+                        aria-label="Rimuovi"
+                        @click="confirmRemovePlayer(player)"
+                      />
                     </div>
+                  </div>
+
+                  <div class="flex items-center gap-2 pt-2 flex-wrap">
                     <Button
-                      icon="pi pi-times"
-                      text
-                      rounded
-                      size="small"
-                      severity="danger"
-                      aria-label="Rimuovi"
-                      @click="confirmRemovePlayer(player)"
+                      label="Salva ordine"
+                      icon="pi pi-save"
+                      outlined
+                      :disabled="!orderChanged"
+                      :loading="savingSeeds"
+                      @click="saveSeeds"
                     />
                   </div>
-                </div>
+                </template>
+              </template>
 
-                <div class="flex items-center gap-2 pt-2 flex-wrap">
-                  <Button
-                    label="Salva ordine"
-                    icon="pi pi-save"
-                    outlined
-                    :disabled="!orderChanged"
-                    :loading="savingSeeds"
-                    @click="saveSeeds"
-                  />
-                  <Button
-                    label="Genera tabellone"
-                    icon="pi pi-sitemap"
-                    :disabled="localOrder.length < 2 || hasMatches || isRoundRobin"
-                    :loading="generatingDraw"
-                    @click="generateDraw"
-                  />
-                  <Button
-                    v-if="hasMatches"
-                    label="Azzera tabellone"
-                    icon="pi pi-refresh"
-                    severity="danger"
-                    outlined
-                    :loading="resettingDraw"
-                    @click="confirmResetDraw"
-                  />
+              <!-- Player mode -->
+              <template v-else>
+                <div v-if="!myPlayer" class="flex flex-col items-center gap-3 py-8 text-muted-color text-center">
+                  <i class="pi pi-exclamation-triangle text-2xl" />
+                  <p class="m-0">Profilo giocatore non configurato.<br>Contatta l'amministratore.</p>
                 </div>
-
-                <small v-if="isRoundRobin" class="text-sm text-muted-color">
-                  La gestione del tabellone con risultati è disponibile per i tornei a eliminazione diretta.
-                </small>
+                <template v-else>
+                  <div class="flex items-center gap-3 mb-4">
+                    <Button
+                      v-if="!isEnrolled && tournament.status === 'upcoming'"
+                      label="Iscriviti"
+                      icon="pi pi-user-plus"
+                      @click="handleEnroll"
+                    />
+                    <Button
+                      v-else-if="isEnrolled && tournament.status === 'upcoming'"
+                      label="Ritirati"
+                      icon="pi pi-user-minus"
+                      severity="danger"
+                      outlined
+                      @click="handleWithdraw"
+                    />
+                  </div>
+                  <div class="flex flex-col gap-2">
+                    <div
+                      v-for="(player, index) in enrolledPlayers"
+                      :key="player.id"
+                      class="flex items-center gap-3 p-3 rounded-lg bg-surface-50 border border-surface-200"
+                    >
+                      <span class="text-sm font-bold text-muted-color w-8">#{{ index + 1 }}</span>
+                      <span class="font-medium text-color">{{ player.name }}</span>
+                    </div>
+                  </div>
+                </template>
               </template>
             </div>
           </TabPanel>
@@ -588,59 +582,89 @@ async function saveResult(): Promise<void> {
                 </div>
               </template>
 
-              <div v-else-if="!hasMatches" class="flex flex-col items-center justify-center gap-3 min-h-[220px] text-center text-muted-color">
-                <i class="pi pi-sitemap text-[2rem] text-muted-color" />
-                <p class="m-0">Salva l'ordine dei giocatori e clicca <strong>Genera tabellone</strong> nella tab Iscritti.</p>
-              </div>
+              <template v-else>
+                <div v-if="auth.isAdmin" class="flex items-center gap-2">
+                  <Button
+                    v-if="!hasMatches"
+                    label="Crea tabellone vuoto"
+                    icon="pi pi-plus"
+                    size="small"
+                    @click="createEmptyBracket"
+                  />
+                  <Button
+                    v-if="hasMatches"
+                    label="Azzera tabellone"
+                    icon="pi pi-refresh"
+                    severity="danger"
+                    outlined
+                    size="small"
+                    :loading="resettingDraw"
+                    @click="confirmResetDraw"
+                  />
+                </div>
 
-              <div v-else class="grid gap-4 items-start grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
-                <div v-for="(roundMatches, roundIndex) in bracketRounds" :key="roundIndex" class="flex flex-col gap-3">
-                  <div class="text-sm font-bold text-muted-color uppercase tracking-[0.04em]">{{ roundLabels[roundIndex] }}</div>
-                  <div class="flex flex-col gap-3">
-                    <button
-                      v-for="match in roundMatches"
-                      :key="match.id"
-                      type="button"
-                      class="appearance-none font-[inherit] text-inherit w-full flex flex-col p-0 border border-surface-200 rounded-xl bg-surface-0 text-left overflow-hidden"
-                      :class="{ 'cursor-pointer hover:border-primary-300': canOpenMatch(match) }"
-                      @click="openScoreDialog(match)"
-                    >
+                <div v-if="!hasMatches" class="flex flex-col items-center justify-center gap-3 min-h-[220px] text-center text-muted-color">
+                  <i class="pi pi-sitemap text-[2rem] text-muted-color" />
+                  <p class="m-0">Nessun tabellone generato.<template v-if="auth.isAdmin"> Clicca <strong>Crea tabellone vuoto</strong> per iniziare.</template></p>
+                </div>
+
+                <div v-else class="grid gap-4 items-start grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
+                  <div v-for="(roundMatches, roundIndex) in bracketRounds" :key="roundIndex" class="flex flex-col gap-3">
+                    <div class="text-sm font-bold text-muted-color uppercase tracking-[0.04em]">{{ roundLabels[roundIndex] }}</div>
+                    <div class="flex flex-col gap-3">
                       <div
-                        class="flex items-center justify-between gap-3 px-4 py-[0.85rem]"
-                        :class="{
-                          'bg-green-500/15': isWinner(match, 'player1_id'),
-                          'text-muted-color': isByeSlot(match, 'player1_id') || isTbdSlot(match, 'player1_id'),
-                        }"
+                        v-for="match in roundMatches"
+                        :key="match.id"
+                        class="flex flex-col border border-surface-200 rounded-xl bg-surface-0 overflow-hidden"
                       >
-                        <div class="flex items-center gap-[0.625rem] min-w-0">
-                          <span v-if="getSeed(match.player1_id)" class="text-[0.75rem] font-bold text-muted-color shrink-0">#{{ getSeed(match.player1_id) }}</span>
-                          <span class="font-semibold text-inherit whitespace-nowrap overflow-hidden text-ellipsis">{{ getSlotLabel(match, 'player1_id') }}</span>
+                        <!-- Player 1 slot -->
+                        <div
+                          class="flex items-center justify-between gap-3 px-4 py-[0.85rem]"
+                          :class="{
+                            'bg-green-500/15': isWinner(match, 'player1_id'),
+                            'text-muted-color': isByeSlot(match, 'player1_id') || isTbdSlot(match, 'player1_id'),
+                            'cursor-pointer hover:bg-surface-100': auth.isAdmin,
+                          }"
+                          @click="auth.isAdmin && openAssignDialog(match, 'player1_id')"
+                        >
+                          <div class="flex items-center gap-[0.625rem] min-w-0">
+                            <span v-if="getSeed(match.player1_id)" class="text-[0.75rem] font-bold text-muted-color shrink-0">#{{ getSeed(match.player1_id) }}</span>
+                            <span class="font-semibold text-inherit whitespace-nowrap overflow-hidden text-ellipsis">{{ getSlotLabel(match, 'player1_id') }}</span>
+                          </div>
+                          <i v-if="auth.isAdmin" class="pi pi-pencil text-xs text-muted-color" />
                         </div>
-                        <span v-if="getSlotScores(match, 'player1_id')" class="text-[0.8125rem] font-semibold text-muted-color">{{ getSlotScores(match, 'player1_id') }}</span>
-                      </div>
 
-                      <div
-                        class="flex items-center justify-between gap-3 px-4 py-[0.85rem] border-t border-surface-200"
-                        :class="{
-                          'bg-green-500/15': isWinner(match, 'player2_id'),
-                          'text-muted-color': isByeSlot(match, 'player2_id') || isTbdSlot(match, 'player2_id'),
-                        }"
-                      >
-                        <div class="flex items-center gap-[0.625rem] min-w-0">
-                          <span v-if="getSeed(match.player2_id)" class="text-[0.75rem] font-bold text-muted-color shrink-0">#{{ getSeed(match.player2_id) }}</span>
-                          <span class="font-semibold text-inherit whitespace-nowrap overflow-hidden text-ellipsis">{{ getSlotLabel(match, 'player2_id') }}</span>
+                        <!-- Player 2 slot -->
+                        <div
+                          class="flex items-center justify-between gap-3 px-4 py-[0.85rem] border-t border-surface-200"
+                          :class="{
+                            'bg-green-500/15': isWinner(match, 'player2_id'),
+                            'text-muted-color': isByeSlot(match, 'player2_id') || isTbdSlot(match, 'player2_id'),
+                            'cursor-pointer hover:bg-surface-100': auth.isAdmin,
+                          }"
+                          @click="auth.isAdmin && openAssignDialog(match, 'player2_id')"
+                        >
+                          <div class="flex items-center gap-[0.625rem] min-w-0">
+                            <span v-if="getSeed(match.player2_id)" class="text-[0.75rem] font-bold text-muted-color shrink-0">#{{ getSeed(match.player2_id) }}</span>
+                            <span class="font-semibold text-inherit whitespace-nowrap overflow-hidden text-ellipsis">{{ getSlotLabel(match, 'player2_id') }}</span>
+                          </div>
+                          <i v-if="auth.isAdmin" class="pi pi-pencil text-xs text-muted-color" />
                         </div>
-                        <span v-if="getSlotScores(match, 'player2_id')" class="text-[0.8125rem] font-semibold text-muted-color">{{ getSlotScores(match, 'player2_id') }}</span>
-                      </div>
 
-                      <div class="flex items-center justify-between gap-3 px-4 py-3 border-t border-surface-200 text-[0.8125rem] text-muted-color">
-                        <span>{{ getMatchSummary(match) }}</span>
-                        <i v-if="canOpenMatch(match)" class="pi pi-pencil" />
+                        <!-- Result area -->
+                        <div
+                          v-if="match.player1_id && match.player2_id"
+                          class="text-xs text-center p-2 border-t border-surface-200 text-muted-color"
+                          :class="{ 'cursor-pointer hover:bg-surface-100': auth.isAdmin }"
+                          @click="auth.isAdmin && openResultDialog(match)"
+                        >
+                          {{ match.result || (auth.isAdmin ? 'Inserisci risultato' : '—') }}
+                        </div>
                       </div>
-                    </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </template>
             </div>
           </TabPanel>
         </TabPanels>
@@ -666,63 +690,54 @@ async function saveResult(): Promise<void> {
     </div>
   </Dialog>
 
-  <Dialog
-    v-model:visible="scoreDialogVisible"
-    :header="scoreDialogTitle"
-    :style="{ width: '460px' }"
-    modal
-    @hide="resetScoreEditor"
-  >
+  <Dialog v-model:visible="assignDialogVisible" header="Assegna giocatore" modal :style="{ width: '340px' }">
     <div class="flex flex-col gap-4 pt-2">
-      <div
-        v-for="(set, index) in editSets"
-        :key="index"
-        class="grid items-center gap-3 grid-cols-2 md:grid-cols-[4.5rem_1fr_auto_1fr_auto]"
-      >
-        <span class="col-span-full md:col-auto text-sm font-semibold">Set {{ index + 1 }}</span>
-        <InputNumber v-model="set.p1" :min="0" :max="7" :use-grouping="false" fluid />
-        <span class="col-span-full md:col-auto text-muted-color">–</span>
-        <InputNumber v-model="set.p2" :min="0" :max="7" :use-grouping="false" fluid />
-        <Button
-          v-if="editSets.length > 1"
-          icon="pi pi-trash"
-          text
-          rounded
-          severity="danger"
-          aria-label="Rimuovi set"
-          @click="removeSetRow(index)"
-        />
+      <Select
+        v-model="assignPlayerId"
+        :options="availableForSlot"
+        option-label="name"
+        option-value="id"
+        placeholder="Seleziona giocatore"
+        fluid
+      />
+      <div class="flex justify-end gap-2">
+        <Button v-if="selectedSlotHasPlayer" label="Rimuovi" severity="danger" outlined @click="clearSlot" />
+        <Button label="Annulla" severity="secondary" outlined @click="assignDialogVisible = false" />
+        <Button label="Assegna" :disabled="!assignPlayerId" @click="confirmAssign" />
       </div>
+    </div>
+  </Dialog>
 
-      <div class="flex items-center justify-between gap-3 flex-wrap">
-        <Button
-          label="Aggiungi set"
-          icon="pi pi-plus"
-          text
-          :disabled="editSets.length >= 5"
-          @click="addSetRow"
-        />
-        <span class="text-sm text-muted-color">Massimo 5 set</span>
+  <Dialog v-model:visible="resultDialogVisible" header="Inserisci risultato" modal :style="{ width: '360px' }">
+    <div class="flex flex-col gap-4 pt-2">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium">Risultato</label>
+        <InputText v-model="editResult" placeholder="es. 6-3 6-4" fluid />
       </div>
-
-      <div class="rounded-lg bg-surface-100 px-4 py-3.5 text-color">
-        <template v-if="computedWinnerName">
-          Vincitore calcolato: <strong>{{ computedWinnerName }}</strong>
-        </template>
-        <template v-else>
-          Inserisci almeno un set completo e un vincitore valido.
-        </template>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium">Vincitore</label>
+        <div class="flex flex-col gap-2">
+          <div
+            class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer"
+            :class="editWinnerId === selectedMatch?.player1_id ? 'border-primary-400 bg-primary-50' : 'border-surface-200'"
+            @click="editWinnerId = selectedMatch?.player1_id ?? null"
+          >
+            <i class="pi pi-circle-fill text-xs" :class="editWinnerId === selectedMatch?.player1_id ? 'text-primary-500' : 'text-surface-300'" />
+            <span>{{ getPlayerName(selectedMatch?.player1_id) }}</span>
+          </div>
+          <div
+            class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer"
+            :class="editWinnerId === selectedMatch?.player2_id ? 'border-primary-400 bg-primary-50' : 'border-surface-200'"
+            @click="editWinnerId = selectedMatch?.player2_id ?? null"
+          >
+            <i class="pi pi-circle-fill text-xs" :class="editWinnerId === selectedMatch?.player2_id ? 'text-primary-500' : 'text-surface-300'" />
+            <span>{{ getPlayerName(selectedMatch?.player2_id) }}</span>
+          </div>
+        </div>
       </div>
-
-      <div class="flex items-center justify-end gap-3 flex-wrap">
-        <Button label="Annulla" severity="secondary" outlined @click="closeScoreDialog" />
-        <Button
-          label="Salva risultato"
-          icon="pi pi-check"
-          :loading="savingResult"
-          :disabled="!computedWinnerId || hasIncompleteSets || normalizedSets.length === 0"
-          @click="saveResult"
-        />
+      <div class="flex justify-end gap-2 pt-2">
+        <Button label="Annulla" severity="secondary" outlined @click="resultDialogVisible = false" />
+        <Button label="Salva" :disabled="!editResult || !editWinnerId" @click="saveResult" />
       </div>
     </div>
   </Dialog>
