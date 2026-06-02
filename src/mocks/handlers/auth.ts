@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { mockUsers } from '../data/users'
+import { mockPlayers } from '../data/players'
 import type { MockUser, Profile, User } from '../../types'
 
 let currentUser: Omit<MockUser, 'password'> | null = null
@@ -64,8 +65,7 @@ export const authHandlers = [
     if (!auth?.startsWith('Bearer mock-jwt-token-') || !currentUser) {
       return HttpResponse.json({ message: 'Non autorizzato' }, { status: 401 })
     }
-    // Return player-role users that have no linked player (in mock, player-map: user-2 → p-1)
-    const linkedUserIds = new Set(['user-2'])
+    const linkedUserIds = new Set(mockPlayers.map((p) => p.user_id).filter(Boolean))
     const profiles: Profile[] = mockUsers
       .filter((u) => u.role === 'player' && !linkedUserIds.has(u.id))
       .map((u) => ({ id: u.id, name: u.name ?? null, role: u.role }))
