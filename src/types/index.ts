@@ -1,10 +1,18 @@
 // ── Domain types ────────────────────────────────────────────────────────────
 
+export type UserRole = 'admin' | 'player'
+
 export interface User {
   id: string
   email: string
   name?: string
-  role?: string
+  role: UserRole
+}
+
+export interface Profile {
+  id: string
+  name: string | null
+  role: UserRole
 }
 
 export interface Player {
@@ -13,6 +21,7 @@ export interface Player {
   ranking: number
   club?: string | null
   phone?: string | null
+  user_id?: string | null
   created_at?: string
   updated_at?: string
 }
@@ -39,6 +48,7 @@ export interface Tournament {
   format: TournamentFormat
   category: TournamentCategory
   status: TournamentStatus
+  published: boolean
   created_at?: string
   updated_at?: string
 }
@@ -51,20 +61,15 @@ export type TournamentUpdate = Partial<TournamentCreate>
 export interface TournamentPlayer {
   player_id: string
   seed: number | null
+  enrolled_at?: string
 }
 
-/** Returned by getById — includes enrolled player data */
 export interface TournamentWithPlayers extends Tournament {
   tournament_players?: TournamentPlayer[]
   playerIds?: string[]
 }
 
 // ── Matches ──────────────────────────────────────────────────────────────────
-
-export interface MatchSet {
-  p1: number
-  p2: number
-}
 
 export type MatchStatus = 'pending' | 'completed'
 
@@ -75,16 +80,23 @@ export interface Match {
   position: number
   player1_id: string | null
   player2_id: string | null
-  sets: MatchSet[]
+  result: string | null
   winner_id: string | null
   status: MatchStatus
   created_at?: string
   updated_at?: string
 }
 
-export type MatchResultInput = {
-  sets: MatchSet[]
+export type MatchSlot = 'player1_id' | 'player2_id'
+
+export interface MatchResultInput {
+  result: string
   winner_id: string
+}
+
+export interface MatchAssignInput {
+  slot: MatchSlot
+  player_id: string | null
 }
 
 // ── Mock-specific types ──────────────────────────────────────────────────────
@@ -99,6 +111,10 @@ export interface MockTournament extends Tournament {
 
 // ── Service interface types ──────────────────────────────────────────────────
 
+export interface ProfilesService {
+  getMyProfile(): Promise<Profile>
+}
+
 export interface AuthService {
   login(email: string, password: string): Promise<User>
   register(email: string, password: string, name?: string): Promise<User>
@@ -112,6 +128,7 @@ export interface PlayersService {
   create(data: PlayerCreate): Promise<Player>
   update(id: string, data: PlayerUpdate): Promise<Player>
   remove(id: string): Promise<null>
+  getMyPlayer(): Promise<Player | null>
 }
 
 export interface TournamentsService {
@@ -123,12 +140,30 @@ export interface TournamentsService {
   addPlayer(tournamentId: string, playerId: string): Promise<null>
   removePlayer(tournamentId: string, playerId: string): Promise<null>
   updateSeeds(tournamentId: string, seededPlayerIds: string[]): Promise<void>
+  setPublished(tournamentId: string, published: boolean): Promise<Tournament>
+  enroll(tournamentId: string): Promise<null>
+  withdraw(tournamentId: string): Promise<null>
 }
 
 export interface MatchesService {
   getByTournament(tournamentId: string): Promise<Match[]>
-  generateDraw(tournamentId: string, seededPlayerIds: string[]): Promise<Match[]>
+  createEmptyBracket(tournamentId: string, numPlayers: number): Promise<Match[]>
+  assignPlayer(matchId: string, data: MatchAssignInput): Promise<Match>
   enterResult(matchId: string, data: MatchResultInput): Promise<Match>
-  advanceWinner(tournamentId: string, round: number, position: number, winnerId: string): Promise<void>
   reset(tournamentId: string): Promise<void>
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+export interface TournamentStats {
+  upcoming: number
+  ongoing: number
+  completed: number
+  totalPlayers: number
+}
+
+export interface PendingEnrollment {
+  playerName: string
+  tournamentName: string
+  enrolledAt: string
 }
