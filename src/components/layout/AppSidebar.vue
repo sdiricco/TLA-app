@@ -16,7 +16,7 @@ function isActive(to: string): boolean {
 }
 
 const navItems = computed(() => {
-  if (auth.isAdmin) {
+  if (auth.isAdmin || auth.isGuest) {
     return [
       { label: 'Dashboard', icon: 'pi pi-home', to: '/dashboard' },
       { label: 'Tornei', icon: 'pi pi-trophy', to: '/tournaments' },

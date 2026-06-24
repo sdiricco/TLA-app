@@ -8,6 +8,11 @@ export async function requireAdmin(req: AuthenticatedRequest, res: Response, nex
     return
   }
 
+  if (req.authUser.id === 'guest') {
+    res.status(403).json({ message: 'Forbidden' })
+    return
+  }
+
   try {
     const profile = await getOrCreateProfile(req.authUser)
     if (profile.role !== 'admin') {

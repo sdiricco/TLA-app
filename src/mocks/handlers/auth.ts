@@ -4,6 +4,13 @@ import { mockPlayers } from '../data/players'
 import type { MockUser, Profile, User } from '../../types'
 
 let currentUser: Omit<MockUser, 'password'> | null = null
+const GUEST_TOKEN = 'tla_guest_token'
+const guestUser: User = {
+  id: 'guest',
+  email: 'ospite@local',
+  name: 'Ospite',
+  role: 'admin',
+}
 
 export const authHandlers = [
   http.post('/api/auth/register', async ({ request }) => {
@@ -40,6 +47,9 @@ export const authHandlers = [
 
   http.get('/api/auth/me', ({ request }) => {
     const auth = request.headers.get('Authorization')
+    if (auth === `Bearer ${GUEST_TOKEN}`) {
+      return HttpResponse.json({ user: guestUser })
+    }
     if (!auth?.startsWith('Bearer mock-jwt-token-')) {
       return HttpResponse.json({ message: 'Non autorizzato' }, { status: 401 })
     }
@@ -51,6 +61,14 @@ export const authHandlers = [
 
   http.get('/api/auth/profile', ({ request }) => {
     const auth = request.headers.get('Authorization')
+    if (auth === `Bearer ${GUEST_TOKEN}`) {
+      return HttpResponse.json({
+        id: 'guest',
+        email: guestUser.email,
+        name: guestUser.name,
+        role: 'player',
+      })
+    }
     if (!auth?.startsWith('Bearer mock-jwt-token-') || !currentUser) {
       return HttpResponse.json({ message: 'Non autorizzato' }, { status: 401 })
     }
@@ -64,6 +82,13 @@ export const authHandlers = [
 
   http.get('/api/auth/profiles/unlinked', ({ request }) => {
     const auth = request.headers.get('Authorization')
+    if (auth === `Bearer ${GUEST_TOKEN}`) {
+      const linkedUserIds = new Set(mockPlayers.map((p) => p.user_id).filter(Boolean))
+      const profiles: Profile[] = mockUsers
+        .filter((u) => u.role === 'player' && !linkedUserIds.has(u.id))
+        .map((u) => ({ id: u.id, name: u.name ?? null, role: u.role }))
+      return HttpResponse.json(profiles)
+    }
     if (!auth?.startsWith('Bearer mock-jwt-token-') || !currentUser) {
       return HttpResponse.json({ message: 'Non autorizzato' }, { status: 401 })
     }

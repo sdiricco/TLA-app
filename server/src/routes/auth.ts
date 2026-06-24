@@ -14,6 +14,18 @@ authRouter.get('/me', requireAuth, async (req, res) => {
     return
   }
 
+  if (authUser.id === 'guest') {
+    res.json({
+      user: {
+        id: 'guest',
+        email: 'ospite@local',
+        name: 'Ospite',
+        role: 'player',
+      },
+    })
+    return
+  }
+
   try {
     const profile = await getOrCreateProfile(authUser)
     res.json({
@@ -103,6 +115,16 @@ authRouter.get('/profile', requireAuth, async (req, res) => {
 
   if (!user) {
     res.status(401).json({ message: 'Not authenticated' })
+    return
+  }
+
+  if (user.id === 'guest') {
+    res.json({
+      id: 'guest',
+      email: 'ospite@local',
+      name: 'Ospite',
+      role: 'player',
+    })
     return
   }
 

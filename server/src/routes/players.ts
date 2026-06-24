@@ -17,6 +17,11 @@ playersRouter.get('/me', async (req, res) => {
     return
   }
 
+  if (userId === 'guest') {
+    res.json(null)
+    return
+  }
+
   const player = await prisma.player.findUnique({
     where: { userId },
   })

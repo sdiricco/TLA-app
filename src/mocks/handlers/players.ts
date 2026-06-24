@@ -3,11 +3,15 @@ import { mockPlayers } from '../data/players'
 import type { Player } from '../../types'
 
 const players: Player[] = [...mockPlayers]
+const GUEST_TOKEN = 'tla_guest_token'
 
 export const playerHandlers = [
   http.get('/api/players', () => HttpResponse.json(players)),
   http.get('/api/players/me', ({ request }) => {
     const auth = request.headers.get('Authorization')
+    if (auth === `Bearer ${GUEST_TOKEN}`) {
+      return HttpResponse.json(null)
+    }
     if (!auth?.startsWith('Bearer mock-jwt-token-')) {
       return HttpResponse.json({ message: 'Non autorizzato' }, { status: 401 })
     }

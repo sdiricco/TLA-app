@@ -70,17 +70,17 @@ router.beforeEach(async (to) => {
 
   // Authenticated on login page → redirect by role
   if (to.name === 'login' && auth.isAuthenticated) {
-    return auth.isAdmin ? { name: 'dashboard' } : { name: 'tournaments' }
+    return auth.isAdmin || auth.isGuest ? { name: 'dashboard' } : { name: 'tournaments' }
   }
 
   // Player trying to access admin-only route
-  if (to.meta.requiresAdmin && !auth.isAdmin) {
+  if (to.meta.requiresAdmin && !auth.isAdmin && !auth.isGuest) {
     return { name: 'tournaments' }
   }
 
   // Root path: redirect by role
   if (to.name === 'home') {
-    return auth.isAdmin ? { name: 'dashboard' } : { name: 'tournaments' }
+    return auth.isAdmin || auth.isGuest ? { name: 'dashboard' } : { name: 'tournaments' }
   }
 
   return true

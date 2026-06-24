@@ -2,7 +2,7 @@ import type { AuthService, User } from '../types'
 import { backendApi } from './backendApi'
 
 const TOKEN_KEY = 'tla_token'
-const GUEST_KEY = 'tla_guest'
+const GUEST_TOKEN = 'tla_guest_token'
 
 const guestUser: User = {
   id: 'guest',
@@ -21,18 +21,6 @@ function saveToken(token: string): void {
 
 function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY)
-}
-
-function isGuestMode(): boolean {
-  return localStorage.getItem(GUEST_KEY) === '1'
-}
-
-function enableGuestMode(): void {
-  localStorage.setItem(GUEST_KEY, '1')
-}
-
-function disableGuestMode(): void {
-  localStorage.removeItem(GUEST_KEY)
 }
 
 async function readBody(res: Response): Promise<unknown> {
@@ -61,12 +49,11 @@ async function mockLogin(email: string, password: string): Promise<User> {
 async function mockLogout(): Promise<void> {
   await fetch('/api/auth/logout', { method: 'POST' })
   clearToken()
-  disableGuestMode()
 }
 
 async function mockGetCurrentUser(): Promise<User | null> {
-  if (isGuestMode()) return guestUser
   const token = getToken()
+  if (token === GUEST_TOKEN) return guestUser
   if (!token) return null
   const res = await fetch('/api/auth/me', {
     headers: { Authorization: `Bearer ${token}` },
@@ -87,7 +74,6 @@ async function mockRegister(email: string, password: string, name?: string): Pro
   const data = (await readBody(res)) as { message?: string; user?: User; token?: string }
   if (!res.ok) throw new Error(data.message ?? 'Registration failed')
   saveToken(data.token ?? '')
-  disableGuestMode()
   return data.user as User
 }
 
@@ -111,12 +97,11 @@ async function backendLogout(): Promise<void> {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
   clearToken()
-  disableGuestMode()
 }
 
 async function backendGetCurrentUser(): Promise<User | null> {
-  if (isGuestMode()) return guestUser
   const token = getToken()
+  if (token === GUEST_TOKEN) return guestUser
   if (!token) return null
   const res = await fetch(backendApi.authPath('/me'), {
     headers: { Authorization: `Bearer ${token}` },
@@ -138,13 +123,11 @@ async function backendRegister(email: string, password: string, name?: string): 
   const data = (await readBody(res)) as { message?: string; user?: User; token?: string }
   if (!res.ok) throw new Error(data.message ?? 'Registration failed')
   saveToken(data.token ?? '')
-  disableGuestMode()
   return data.user as User
 }
 
 async function loginAsGuest(): Promise<User> {
-  clearToken()
-  enableGuestMode()
+  saveToken(GUEST_TOKEN)
   return guestUser
 }
 

@@ -137,6 +137,7 @@ const isRoundRobin = computed(
 const orderChanged = computed(
   () => localOrder.value.map((player) => player.id).join(',') !== enrolledPlayers.value.map((player) => player.id).join(','),
 )
+const canViewAdmin = computed(() => auth.isAdmin || auth.isGuest)
 const canModify = computed(() => !auth.isGuest)
 const bracketRoundTabs = computed(() =>
   Array.from({ length: matchesStore.numRounds }, (_, index) => {
@@ -514,7 +515,7 @@ async function saveResult(): Promise<void> {
           />
           <Tag :value="statusLabel(tournament.status)" :severity="statusSeverity(tournament.status)" />
           <Button
-            v-if="auth.isAdmin"
+            v-if="canViewAdmin"
             :label="tournament.published ? 'Nascondi' : 'Pubblica'"
             :icon="tournament.published ? 'pi pi-eye-slash' : 'pi pi-eye'"
             :severity="tournament.published ? 'secondary' : 'success'"
@@ -561,7 +562,7 @@ async function saveResult(): Promise<void> {
           <TabPanel value="iscritti">
             <div class="flex flex-col gap-4 py-4">
               <!-- Admin mode -->
-              <template v-if="auth.isAdmin">
+              <template v-if="canViewAdmin">
                 <div class="flex items-center justify-between gap-3 flex-wrap">
                   <span class="text-sm text-muted-color">{{ enrolledPlayers.length }} giocatori iscritti</span>
                   <Button
@@ -710,7 +711,7 @@ async function saveResult(): Promise<void> {
 
               <template v-else>
                 <div class="flex items-center justify-between gap-3 flex-wrap">
-                  <div v-if="auth.isAdmin" class="flex items-center gap-2">
+                  <div v-if="canViewAdmin" class="flex items-center gap-2">
                     <Button
                       v-if="!hasMatches"
                       label="Genera tabellone"
@@ -764,7 +765,7 @@ async function saveResult(): Promise<void> {
 
                 <div v-if="!hasMatches" class="flex flex-col items-center justify-center gap-3 min-h-[220px] text-center text-muted-color">
                   <i class="pi pi-sitemap text-[2rem] text-muted-color" />
-                  <p class="m-0">Nessun tabellone generato.<template v-if="auth.isAdmin"> Clicca <strong>Genera tabellone</strong> per iniziare.</template></p>
+                  <p class="m-0">Nessun tabellone generato.<template v-if="canViewAdmin"> Clicca <strong>Genera tabellone</strong> per iniziare.</template></p>
                 </div>
 
                 <div v-else class="flex flex-col gap-4">
@@ -811,7 +812,7 @@ async function saveResult(): Promise<void> {
                               <span v-if="getSeed(match.player1_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(match.player1_id) }}</span>
                               <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">{{ getSlotLabel(match, 'player1_id') }}</span>
                             </div>
-                            <i v-if="auth.isAdmin" class="pi pi-pencil text-xs text-muted-color" />
+                            <i v-if="canViewAdmin" class="pi pi-pencil text-xs text-muted-color" />
                           </div>
 
                           <div
@@ -827,7 +828,7 @@ async function saveResult(): Promise<void> {
                               <span v-if="getSeed(match.player2_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(match.player2_id) }}</span>
                               <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">{{ getSlotLabel(match, 'player2_id') }}</span>
                             </div>
-                            <i v-if="auth.isAdmin" class="pi pi-pencil text-xs text-muted-color" />
+                            <i v-if="canViewAdmin" class="pi pi-pencil text-xs text-muted-color" />
                           </div>
 
                           <div
@@ -836,7 +837,7 @@ async function saveResult(): Promise<void> {
                             :class="{ 'cursor-pointer hover:bg-surface-100': canModify }"
                             @click="canModify && openResultDialog(match)"
                           >
-                            {{ match.result || (auth.isAdmin ? 'Inserisci risultato' : '—') }}
+                            {{ match.result || (canViewAdmin ? 'Inserisci risultato' : '—') }}
                           </div>
                         </div>
                       </div>
@@ -876,7 +877,7 @@ async function saveResult(): Promise<void> {
                                   <span v-if="getSeed(entry.match.player1_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(entry.match.player1_id) }}</span>
                                   <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">{{ getSlotLabel(entry.match, 'player1_id') }}</span>
                                 </div>
-                                <i v-if="auth.isAdmin" class="pi pi-pencil text-xs text-muted-color" />
+                                <i v-if="canViewAdmin" class="pi pi-pencil text-xs text-muted-color" />
                               </div>
 
                               <div
@@ -892,7 +893,7 @@ async function saveResult(): Promise<void> {
                                   <span v-if="getSeed(entry.match.player2_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(entry.match.player2_id) }}</span>
                                   <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">{{ getSlotLabel(entry.match, 'player2_id') }}</span>
                                 </div>
-                                <i v-if="auth.isAdmin" class="pi pi-pencil text-xs text-muted-color" />
+                                <i v-if="canViewAdmin" class="pi pi-pencil text-xs text-muted-color" />
                               </div>
 
                               <div
@@ -901,7 +902,7 @@ async function saveResult(): Promise<void> {
                                 :class="{ 'cursor-pointer hover:bg-surface-100': canModify }"
                                 @click="canModify && openResultDialog(entry.match)"
                               >
-                                {{ entry.match.result || (auth.isAdmin ? 'Inserisci risultato' : '—') }}
+                                {{ entry.match.result || (canViewAdmin ? 'Inserisci risultato' : '—') }}
                               </div>
                             </div>
                           </div>

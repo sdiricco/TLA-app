@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
@@ -25,6 +25,7 @@ const store = usePlayersStore()
 const auth = useAuthStore()
 const confirm = useConfirm()
 const toast = useToast()
+const canViewAdmin = computed(() => auth.isAdmin || auth.isGuest)
 
 const dialogVisible = ref(false)
 const saving = ref(false)
@@ -139,7 +140,7 @@ async function addAsPlayer(profile: Profile): Promise<void> {
         <h2 class="m-0 text-2xl">Giocatori</h2>
         <p class="mt-1 mb-0 text-sm text-muted-color">{{ store.players.length }} giocatori registrati</p>
       </div>
-      <Button label="Aggiungi" icon="pi pi-plus" :disabled="auth.isGuest" @click="openCreate" />
+      <Button v-if="canViewAdmin" label="Aggiungi" icon="pi pi-plus" :disabled="auth.isGuest" @click="openCreate" />
     </div>
 
     <DataTable
@@ -186,15 +187,15 @@ async function addAsPlayer(profile: Profile): Promise<void> {
       <Column header="Azioni" style="width: 7rem">
         <template #body="{ data }">
           <div class="flex gap-1">
-            <Button icon="pi pi-pencil" text rounded size="small" aria-label="Modifica" :disabled="auth.isGuest" @click="openEdit(data)" />
-            <Button icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Elimina" :disabled="auth.isGuest" @click="confirmDelete(data)" />
+            <Button v-if="canViewAdmin" icon="pi pi-pencil" text rounded size="small" aria-label="Modifica" :disabled="auth.isGuest" @click="openEdit(data)" />
+            <Button v-if="canViewAdmin" icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Elimina" :disabled="auth.isGuest" @click="confirmDelete(data)" />
           </div>
         </template>
       </Column>
     </DataTable>
 
     <!-- Utenti registrati non ancora giocatori -->
-    <div v-if="unlinkedProfiles.length > 0" class="mt-6">
+    <div v-if="canViewAdmin && unlinkedProfiles.length > 0" class="mt-6">
       <h3 class="m-0 mb-3 text-lg font-semibold">Utenti registrati</h3>
       <p class="mt-0 mb-3 text-sm text-muted-color">Questi utenti hanno un account ma non sono ancora nella lista giocatori.</p>
       <div class="flex flex-col gap-2">
