@@ -10,6 +10,18 @@ export interface SupabaseSessionUser extends SupabaseAuthUser {
   access_token: string
 }
 
+interface SupabaseErrorResponse {
+  message?: string
+  msg?: string
+  error_description?: string
+  error_code?: string
+  code?: number
+}
+
+function extractSupabaseError(data: SupabaseErrorResponse): string {
+  return data.message ?? data.msg ?? data.error_description ?? data.error_code ?? 'Authentication failed'
+}
+
 export async function verifySupabaseAccessToken(token: string): Promise<SupabaseAuthUser | null> {
   const response = await fetch(`${env.supabaseUrl}/auth/v1/user`, {
     headers: {
@@ -37,8 +49,8 @@ export async function signInWithPassword(email: string, password: string) {
   })
 
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as { message?: string; error_description?: string }
-    throw new Error(data.message ?? data.error_description ?? 'Authentication failed')
+    const data = (await response.json().catch(() => ({}))) as SupabaseErrorResponse
+    throw new Error(extractSupabaseError(data))
   }
 
   return (await response.json()) as {
@@ -65,8 +77,8 @@ export async function signUpWithPassword(email: string, password: string, name?:
   })
 
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as { message?: string; error_description?: string }
-    throw new Error(data.message ?? data.error_description ?? 'Registration failed')
+    const data = (await response.json().catch(() => ({}))) as SupabaseErrorResponse
+    throw new Error(extractSupabaseError(data))
   }
 
   return (await response.json()) as {

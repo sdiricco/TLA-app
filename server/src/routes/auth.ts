@@ -87,9 +87,9 @@ authRouter.post('/register', async (req, res) => {
       },
     })
   } catch (error) {
-    res.status(400).json({
-      message: error instanceof Error ? error.message : 'Registration failed',
-    })
+    const message = error instanceof Error ? error.message : 'Registration failed'
+    const status = message.toLowerCase().includes('rate limit') ? 429 : 400
+    res.status(status).json({ message })
   }
 })
 
