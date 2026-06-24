@@ -10,7 +10,7 @@ import App from './App.vue'
 import router from './router'
 
 async function enableMocking(): Promise<void> {
-  if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) return
+  if (import.meta.env.PROD || import.meta.env.VITE_DISABLE_MSW === 'true') return
   const { worker } = await import('./mocks/browser')
   await worker.start({ onUnhandledRequest: 'bypass' })
 }

@@ -1,6 +1,6 @@
 # TLA App — Tennis League Administration
 
-TLA App is a client-side web application for **organising and managing tennis tournaments**. It lets tournament directors create draws, register players, schedule matches, and track results — all from the browser, with no backend required.
+TLA App is a client-side web application for **organising and managing tennis tournaments**. The current frontend is built with Vue and Vite; a separate Node/Express backend can now be introduced for auth and business APIs.
 
 ## Features at a glance
 
@@ -15,6 +15,44 @@ TLA App is a client-side web application for **organising and managing tennis to
 ```bash
 npm install
 npm run dev
+```
+
+## Backend
+
+The backend entrypoint lives under `server/` and currently exposes:
+
+- `GET /api/health`
+- `POST /api/auth/login`
+- `POST /api/auth/register`
+- `POST /api/auth/logout`
+- `GET /api/auth/me` with a Supabase bearer token
+- `GET /api/auth/profile`
+- `GET /api/health/db` when `DATABASE_URL` is configured
+
+Run it with:
+
+```bash
+npm run dev:server
+```
+
+The frontend reads `VITE_API_URL` to send auth traffic to Express, while the existing mock layer still covers the remaining `/api/*` data routes until we migrate them one by one.
+
+## Database
+
+The backend is prepared to use Prisma with PostgreSQL. The current schema covers:
+
+- `Profile`
+- `Player`
+- `Tournament`
+- `TournamentPlayer`
+- `Match`
+
+User roles are stored in `profiles.role` and resolved by the backend.
+
+Generate the Prisma client with:
+
+```bash
+npm run prisma:generate
 ```
 
 ## Documentation

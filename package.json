@@ -5,14 +5,25 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "node --import tsx server/src/index.ts",
+    "start:server": "node --import tsx server/src/index.ts",
     "build": "vite build",
+    "build:server": "tsc -p server/tsconfig.json",
+    "build:all": "npm run build && npm run build:server",
+    "prisma:generate": "prisma generate --schema server/prisma/schema.prisma",
+    "prisma:format": "prisma format --schema server/prisma/schema.prisma",
+    "prisma:studio": "prisma studio --schema server/prisma/schema.prisma",
     "preview": "vite preview"
   },
   "dependencies": {
     "@primeuix/themes": "^2.0.3",
     "@primevue/themes": "^4.5.4",
+    "@prisma/client": "^6.19.3",
     "@supabase/supabase-js": "^2.106.2",
     "@tailwindcss/vite": "^4.3.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.5",
@@ -22,9 +33,13 @@
     "vue-router": "^5.1.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^25.9.1",
     "@vitejs/plugin-vue": "^6.0.6",
     "msw": "^2.14.6",
+    "prisma": "^6.19.3",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vite": "^8.0.12",
     "vue-tsc": "^3.3.3"

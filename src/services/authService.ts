@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase'
 import type { AuthService, User } from '../types'
+import { backendApi } from './backendApi'
 
 const TOKEN_KEY = 'tla_token'
 
@@ -57,55 +57,59 @@ async function mockRegister(email: string, password: string, name?: string): Pro
   return data.user as User
 }
 
-async function supabaseLogin(email: string, password: string): Promise<User> {
-  const { data, error } = await supabase!.auth.signInWithPassword({ email, password })
-  if (error) throw new Error(error.message)
-  return {
-    id: data.user.id,
-    email: data.user.email ?? email,
-    name: (data.user.user_metadata?.['name'] as string | undefined) ?? undefined,
-    role: (data.user.role as string | undefined) ?? undefined,
-  }
-}
-
-async function supabaseLogout(): Promise<void> {
-  await supabase!.auth.signOut()
-}
-
-async function supabaseGetCurrentUser(): Promise<User | null> {
-  const { data } = await supabase!.auth.getUser()
-  const user = data?.user
-  if (!user) return null
-  return {
-    id: user.id,
-    email: user.email ?? '',
-    name: (user.user_metadata?.['name'] as string | undefined) ?? undefined,
-    role: (user.role as string | undefined) ?? undefined,
-  }
-}
-
-async function supabaseRegister(email: string, password: string, name?: string): Promise<User> {
-  const { data, error } = await supabase!.auth.signUp({
-    email,
-    password,
-    options: { data: { ...(name ? { name } : {}) } },
+async function backendLogin(email: string, password: string): Promise<User> {
+  const res = await fetch(backendApi.authPath('/login'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
   })
-  if (error) throw new Error(error.message)
-  if (!data.user) throw new Error('Registrazione non riuscita.')
-  if (!data.session) throw new Error('Controlla la tua email per confermare la registrazione.')
-  return {
-    id: data.user.id,
-    email: data.user.email ?? email,
-    name,
-    role: (data.user.role as string | undefined) ?? undefined,
-  }
+
+  const data = (await res.json()) as { message?: string; user?: User; token?: string }
+  if (!res.ok) throw new Error(data.message ?? 'Login failed')
+  saveToken(data.token ?? '')
+  return data.user as User
 }
 
-const isMock = !supabase
+async function backendLogout(): Promise<void> {
+  const token = getToken()
+  await fetch(backendApi.authPath('/logout'), {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  clearToken()
+}
+
+async function backendGetCurrentUser(): Promise<User | null> {
+  const token = getToken()
+  if (!token) return null
+  const res = await fetch(backendApi.authPath('/me'), {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) {
+    clearToken()
+    return null
+  }
+  return ((await res.json()) as { user: User }).user
+}
+
+async function backendRegister(email: string, password: string, name?: string): Promise<User> {
+  const res = await fetch(backendApi.authPath('/register'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, name }),
+  })
+
+  const data = (await res.json()) as { message?: string; user?: User; token?: string }
+  if (!res.ok) throw new Error(data.message ?? 'Registration failed')
+  saveToken(data.token ?? '')
+  return data.user as User
+}
+
+const useBackend = !!backendApi.baseUrl
 
 export const authService: AuthService = {
-  login: isMock ? mockLogin : supabaseLogin,
-  register: isMock ? mockRegister : (email, password, name) => supabaseRegister(email, password, name),
-  logout: isMock ? mockLogout : supabaseLogout,
-  getCurrentUser: isMock ? mockGetCurrentUser : supabaseGetCurrentUser,
+  login: useBackend ? backendLogin : mockLogin,
+  register: useBackend ? backendRegister : mockRegister,
+  logout: useBackend ? backendLogout : mockLogout,
+  getCurrentUser: useBackend ? backendGetCurrentUser : mockGetCurrentUser,
 }

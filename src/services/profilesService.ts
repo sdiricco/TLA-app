@@ -1,56 +1,33 @@
-import { supabase } from '../lib/supabase'
 import { http } from './http'
 import type { Profile, ProfilesService } from '../types'
+import { backendApi } from './backendApi'
 
 const mock: ProfilesService = {
   getMyProfile: () => http.get<Profile>('/auth/profile'),
   getUnlinkedProfiles: () => http.get<Profile[]>('/auth/profiles/unlinked'),
 }
 
-const sb: ProfilesService = {
-  getMyProfile: async () => {
-    const { data: { user } } = await supabase!.auth.getUser()
-    if (!user) throw new Error('Non autenticato')
-
-    const { data, error } = await supabase!
-      .from('profiles')
-      .select('id, name, role')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (error) throw new Error(error.message)
-
-    // Profile missing (user existed before migration) — create with default role
-    if (!data) {
-      const { data: created, error: insertError } = await supabase!
-        .from('profiles')
-        .insert({ id: user.id, name: user.user_metadata?.name ?? null, role: 'player' })
-        .select('id, name, role')
-        .single()
-      if (insertError) throw new Error(insertError.message)
-      return created as Profile
-    }
-
-    return data as Profile
-  },
-
-  getUnlinkedProfiles: async () => {
-    // Fetch linked user_ids from players, then filter profiles client-side
-    const { data: players, error: pErr } = await supabase!
-      .from('players')
-      .select('user_id')
-      .not('user_id', 'is', null)
-    if (pErr) throw new Error(pErr.message)
-
-    const linkedIds = (players ?? []).map((p: { user_id: string }) => p.user_id)
-
-    const query = supabase!.from('profiles').select('id, name, role').eq('role', 'player')
-    const { data, error } = linkedIds.length
-      ? await query.not('id', 'in', `(${linkedIds.join(',')})`)
-      : await query
-    if (error) throw new Error(error.message)
-    return (data ?? []) as Profile[]
-  },
+const backend: ProfilesService = {
+  getMyProfile: () => fetchProfile('/profile'),
+  getUnlinkedProfiles: () => fetchProfiles('/profiles/unlinked'),
 }
 
-export const profilesService: ProfilesService = supabase ? sb : mock
+async function fetchProfile(path: string): Promise<Profile> {
+  const token = localStorage.getItem('tla_token')
+  const res = await fetch(`${backendApi.authPath(path)}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) throw new Error('Profile unavailable')
+  return (await res.json()) as Profile
+}
+
+async function fetchProfiles(path: string): Promise<Profile[]> {
+  const token = localStorage.getItem('tla_token')
+  const res = await fetch(`${backendApi.authPath(path)}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) throw new Error('Profiles unavailable')
+  return (await res.json()) as Profile[]
+}
+
+export const profilesService: ProfilesService = backendApi.baseUrl ? backend : mock
