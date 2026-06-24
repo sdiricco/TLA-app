@@ -62,7 +62,6 @@ model TournamentPlayer {
   tournamentId String     @map("tournament_id")
   playerId     String     @map("player_id")
   seed         Int?
-  enrolledAt   DateTime   @default(now()) @map("enrolled_at")
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   player       Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
 

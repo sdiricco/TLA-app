@@ -71,7 +71,6 @@ export function serializeTournamentWithPlayers(tournament: {
   players?: Array<{
     playerId: string
     seed: number | null
-    enrolledAt: Date
   }>
 }): TournamentWithPlayers {
   const base = serializeTournament(tournament)
@@ -85,7 +84,6 @@ export function serializeTournamentWithPlayers(tournament: {
     tournament_players: (tournament.players ?? []).map((entry) => ({
       player_id: entry.playerId,
       seed: entry.seed,
-      enrolled_at: entry.enrolledAt.toISOString(),
     })),
     playerIds,
   }
@@ -94,12 +92,10 @@ export function serializeTournamentWithPlayers(tournament: {
 export function serializeTournamentPlayer(entry: {
   playerId: string
   seed: number | null
-  enrolledAt: Date
 }): TournamentPlayer {
   return {
     player_id: entry.playerId,
     seed: entry.seed,
-    enrolled_at: entry.enrolledAt.toISOString(),
   }
 }
 
