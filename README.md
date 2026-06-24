@@ -50,13 +50,13 @@ Before deploying, set these Fly secrets:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `DATABASE_URL`
-- `CORS_ORIGIN`
+- `CORS_ORIGIN` is optional while we keep CORS open during this phase
 
 Then deploy with:
 
 ```bash
 fly launch
-fly secrets set SUPABASE_URL=... SUPABASE_ANON_KEY=... DATABASE_URL=... CORS_ORIGIN=https://your-frontend-domain
+fly secrets set SUPABASE_URL=... SUPABASE_ANON_KEY=... DATABASE_URL=...
 fly deploy
 ```
 

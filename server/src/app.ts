@@ -1,6 +1,5 @@
 import cors from 'cors'
 import express from 'express'
-import { env } from './config/env'
 import { authRouter } from './routes/auth'
 import { healthRouter } from './routes/health'
 
@@ -9,31 +8,7 @@ export function createApp() {
 
   app.use(
     cors({
-      origin(origin, callback) {
-        if (!origin) {
-          callback(null, true)
-          return
-        }
-
-        if (env.corsOrigins.includes(origin)) {
-          callback(null, true)
-          return
-        }
-
-        if (process.env.NODE_ENV !== 'production') {
-          try {
-            const parsed = new URL(origin)
-            if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
-              callback(null, true)
-              return
-            }
-          } catch {
-            // Ignore invalid origins and fall through to the rejection path.
-          }
-        }
-
-        callback(new Error(`Origin not allowed by CORS: ${origin}`))
-      },
+      origin: true,
       credentials: true,
     }),
   )
