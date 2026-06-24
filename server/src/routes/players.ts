@@ -49,7 +49,7 @@ playersRouter.post('/', requireAdmin, async (req, res) => {
   const player = await prisma.player.create({
     data: {
       name: data.name,
-      ranking: data.ranking,
+      ranking: data.ranking ?? 0,
       club: data.club ?? null,
       phone: data.phone ?? null,
       userId: data.user_id ?? null,
@@ -66,7 +66,7 @@ playersRouter.put('/:id', requireAdmin, async (req, res) => {
       where: { id: playerId },
       data: {
         ...(data.name !== undefined ? { name: data.name } : {}),
-        ...(data.ranking !== undefined ? { ranking: data.ranking } : {}),
+        ...(data.ranking !== undefined ? { ranking: data.ranking ?? 0 } : {}),
         ...(data.club !== undefined ? { club: data.club ?? null } : {}),
         ...(data.phone !== undefined ? { phone: data.phone ?? null } : {}),
         ...(data.user_id !== undefined ? { userId: data.user_id ?? null } : {}),
