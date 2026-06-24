@@ -137,7 +137,7 @@ const orderChanged = computed(
 )
 const bracketRoundTabs = computed(() =>
   Array.from({ length: matchesStore.numRounds }, (_, index) => {
-    const round = matchesStore.numRounds - index
+    const round = index + 1
     const remaining = matchesStore.numRounds - round + 1
     let label = `${round}° turno`
     if (remaining === 1) label = 'Finale'
@@ -193,7 +193,7 @@ watch(
       activeBracketRound.value = 1
       return
     }
-    activeBracketRound.value = numRounds
+    activeBracketRound.value = 1
   },
   { immediate: true },
 )
@@ -354,7 +354,7 @@ async function saveSeeds(): Promise<void> {
 async function createEmptyBracket(): Promise<void> {
   if (!tournament.value || enrolledPlayers.value.length < 2) return
   await matchesStore.createEmptyBracket(tournament.value.id, enrolledPlayers.value.length)
-  activeBracketRound.value = matchesStore.numRounds || 1
+  activeBracketRound.value = 1
 }
 
 function confirmResetDraw(): void {
