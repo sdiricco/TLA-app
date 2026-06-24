@@ -37,6 +37,29 @@ npm run dev:server
 
 The frontend reads `VITE_API_URL` to send auth traffic to Express, while the existing mock layer still covers the remaining `/api/*` data routes until we migrate them one by one.
 
+## Fly.io Deploy
+
+The backend is prepared for Fly.io with:
+
+- `Dockerfile`
+- `fly.toml`
+- server listening on `PORT` when present
+
+Before deploying, set these Fly secrets:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `DATABASE_URL`
+- `CORS_ORIGIN`
+
+Then deploy with:
+
+```bash
+fly launch
+fly secrets set SUPABASE_URL=... SUPABASE_ANON_KEY=... DATABASE_URL=... CORS_ORIGIN=https://your-frontend-domain
+fly deploy
+```
+
 ## Database
 
 The backend is prepared to use Prisma with PostgreSQL. The current schema covers:

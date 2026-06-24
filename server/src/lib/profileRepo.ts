@@ -13,13 +13,13 @@ function mapProfile(profile: {
   id: string
   email: string
   name: string | null
-  role: 'admin' | 'player'
+  role: string
 }): StoredProfile {
   return {
     id: profile.id,
     email: profile.email,
     name: profile.name,
-    role: profile.role,
+    role: profile.role as StoredProfile['role'],
   }
 }
 

@@ -3,7 +3,7 @@ const requiredEnv = {
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
 }
 
-const port = Number(process.env.API_PORT ?? '4000')
+const port = Number(process.env.PORT ?? process.env.API_PORT ?? '4000')
 const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173')
   .split(',')
   .map((origin) => origin.trim())
