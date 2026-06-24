@@ -1,9 +1,11 @@
 import { http, HttpResponse } from 'msw'
 import { mockMatches } from '../data/matches'
+import { mockPlayers } from '../data/players'
 import type { Match, MatchAssignInput, MatchResultInput } from '../../types'
-import { buildEmptyBracket, sortMatches } from '../../utils/matches'
+import { buildBracketMatches, sortMatches } from '../../utils/matches'
 
 let matches: Match[] = [...mockMatches]
+const rankingByPlayerId = new Map(mockPlayers.map((player) => [player.id, player.ranking]))
 
 export const matchHandlers = [
   http.get('/api/tournaments/:id/matches', ({ params }) => {
@@ -15,7 +17,15 @@ export const matchHandlers = [
     const { numPlayers } = (await request.json()) as { numPlayers: number }
     const tournamentId = params['id'] as string
     matches = matches.filter((m) => m.tournament_id !== tournamentId)
-    const newMatches = buildEmptyBracket(tournamentId, numPlayers, () => crypto.randomUUID())
+    const playerIds = mockPlayers
+      .map((player) => player.id)
+      .sort(
+        (a, b) =>
+          (rankingByPlayerId.get(a) ?? Number.MAX_SAFE_INTEGER) -
+          (rankingByPlayerId.get(b) ?? Number.MAX_SAFE_INTEGER),
+      )
+      .slice(0, numPlayers)
+    const newMatches = buildBracketMatches(tournamentId, playerIds, () => crypto.randomUUID())
     matches = sortMatches([...matches, ...newMatches])
     return HttpResponse.json(newMatches)
   }),

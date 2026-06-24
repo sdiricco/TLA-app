@@ -3,7 +3,7 @@ import type { TournamentCreate, TournamentUpdate } from '../../../src/types'
 import { prisma } from '../db/prisma'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
 import { requireAdmin } from '../middleware/requireAdmin'
-import { buildEmptyBracket, sortMatches } from '../lib/bracket'
+import { buildBracketMatches, sortMatches } from '../lib/bracket'
 import {
   serializeMatch,
   serializeTournament,
@@ -259,12 +259,29 @@ tournamentsRouter.get('/:id/matches', async (req, res) => {
 })
 
 tournamentsRouter.post('/:id/bracket', requireAdmin, async (req, res) => {
-  const { numPlayers } = req.body as { numPlayers: number }
   const tournamentId = req.params['id'] as string
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      players: {
+        orderBy: { seed: 'asc' },
+        select: { playerId: true, seed: true },
+      },
+    },
+  })
+  if (!tournament) {
+    res.status(404).json({ message: 'Torneo non trovato' })
+    return
+  }
+
+  const playerIds = [...tournament.players]
+    .sort((a, b) => (a.seed ?? Number.MAX_SAFE_INTEGER) - (b.seed ?? Number.MAX_SAFE_INTEGER))
+    .map((entry) => entry.playerId)
   await prisma.match.deleteMany({
     where: { tournamentId },
   })
-  const toInsert = buildEmptyBracket(tournamentId, numPlayers, () => crypto.randomUUID())
+
+  const toInsert = buildBracketMatches(tournamentId, playerIds, () => crypto.randomUUID())
   if (toInsert.length === 0) {
     res.json([])
     return
