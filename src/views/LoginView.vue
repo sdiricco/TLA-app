@@ -31,6 +31,11 @@ async function handleSubmit(): Promise<void> {
     await router.push('/')
   }
 }
+
+async function continueAsGuest(): Promise<void> {
+  await auth.loginAsGuest()
+  await router.push('/dashboard')
+}
 </script>
 
 <template>
@@ -107,6 +112,17 @@ async function handleSubmit(): Promise<void> {
               @click="toggleMode"
             />
           </div>
+
+          <Button
+            v-if="mode === 'login'"
+            type="button"
+            label="Entra come ospite"
+            icon="pi pi-eye"
+            severity="secondary"
+            outlined
+            fluid
+            @click="continueAsGuest"
+          />
         </form>
       </template>
     </Card>

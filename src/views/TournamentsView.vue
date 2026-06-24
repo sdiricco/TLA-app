@@ -111,12 +111,14 @@ function emptyForm(): TournamentForm {
 const form = ref<TournamentForm>(emptyForm())
 
 function openCreate(): void {
+  if (auth.isGuest) return
   editingId.value = null
   form.value = emptyForm()
   dialogVisible.value = true
 }
 
 function openEdit(tournament: Tournament): void {
+  if (auth.isGuest) return
   editingId.value = tournament.id
   form.value = {
     name: tournament.name,
@@ -147,6 +149,7 @@ function toTournamentPayload(data: TournamentForm): TournamentCreate {
 }
 
 async function saveTournament(): Promise<void> {
+  if (auth.isGuest) return
   saving.value = true
   try {
     const payload = toTournamentPayload(form.value)
@@ -166,6 +169,7 @@ async function saveTournament(): Promise<void> {
 }
 
 function confirmDelete(tournament: Tournament): void {
+  if (auth.isGuest) return
   confirm.require({
     message: `Eliminare il torneo "${tournament.name}"? Tutti i dati correlati verranno rimossi.`,
     header: 'Conferma eliminazione',
@@ -194,7 +198,7 @@ onMounted(() => store.fetchAll())
         <h2 class="m-0 text-2xl">Tornei</h2>
         <p class="mt-1 mb-0 text-sm text-muted-color">{{ store.tournaments.length }} tornei totali</p>
       </div>
-      <Button v-if="auth.isAdmin" label="Nuovo torneo" icon="pi pi-plus" @click="openCreate" />
+      <Button v-if="auth.isAdmin" label="Nuovo torneo" icon="pi pi-plus" :disabled="auth.isGuest" @click="openCreate" />
     </div>
 
     <SelectButton
@@ -225,8 +229,8 @@ onMounted(() => store.fetchAll())
           <div class="flex items-center justify-between px-[0.875rem] pt-[0.875rem]">
             <Tag :value="statusLabel(t.status)" :severity="statusSeverity(t.status)" />
             <div class="flex gap-[0.125rem]">
-              <Button icon="pi pi-pencil" text rounded size="small" aria-label="Modifica" @click.stop="openEdit(t)" />
-              <Button icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Elimina" @click.stop="confirmDelete(t)" />
+              <Button icon="pi pi-pencil" text rounded size="small" aria-label="Modifica" :disabled="auth.isGuest" @click.stop="openEdit(t)" />
+              <Button icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Elimina" :disabled="auth.isGuest" @click.stop="confirmDelete(t)" />
             </div>
           </div>
         </template>

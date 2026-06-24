@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTournamentsStore } from '../stores/tournaments'
 import { usePlayersStore } from '../stores/players'
@@ -40,7 +40,7 @@ const savingSeeds = ref(false)
 const resettingDraw = ref(false)
 const activeBracketRound = ref(1)
 const bracketViewMode = ref<'rounds' | 'global'>('rounds')
-const printing = ref(false)
+const printableBracketRef = ref<HTMLElement | null>(null)
 
 const localOrder = ref<Player[]>([])
 const dragIndex = ref<number | null>(null)
@@ -90,13 +90,6 @@ async function loadPage(): Promise<void> {
 }
 
 onMounted(loadPage)
-onMounted(() => {
-  window.addEventListener('afterprint', handleAfterPrint)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('afterprint', handleAfterPrint)
-})
 
 const enrolledPlayerIds = computed<string[]>(() => {
   if (!tournament.value) return []
@@ -144,6 +137,7 @@ const isRoundRobin = computed(
 const orderChanged = computed(
   () => localOrder.value.map((player) => player.id).join(',') !== enrolledPlayers.value.map((player) => player.id).join(','),
 )
+const canModify = computed(() => !auth.isGuest)
 const bracketRoundTabs = computed(() =>
   Array.from({ length: matchesStore.numRounds }, (_, index) => {
     const round = index + 1
@@ -220,13 +214,41 @@ function getGlobalMatchStyle(round: number, position: number): Record<string, st
 
 async function printBracket(): Promise<void> {
   bracketViewMode.value = 'global'
-  printing.value = true
   await nextTick()
-  window.requestAnimationFrame(() => window.print())
-}
+  const target = printableBracketRef.value
+  if (!target) return
 
-function handleAfterPrint(): void {
-  printing.value = false
+  const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1400,height=900')
+  if (!printWindow) {
+    toast.add({ severity: 'error', summary: 'Errore', detail: 'Impossibile aprire la finestra di stampa', life: 4000 })
+    return
+  }
+
+  const styles = Array.from(document.head.querySelectorAll('link[rel="stylesheet"], style'))
+    .map((node) => node.outerHTML)
+    .join('')
+
+  printWindow.document.open()
+  printWindow.document.write(`<!doctype html>
+    <html>
+      <head>
+        <title>Tabellone - ${tournament.value?.name ?? ''}</title>
+        ${styles}
+        <style>
+          @page { size: landscape; margin: 12mm; }
+          body { margin: 0; padding: 24px; background: #fff; color: #111; }
+        </style>
+      </head>
+      <body>
+        ${target.outerHTML}
+      </body>
+    </html>`)
+  printWindow.document.close()
+  printWindow.focus()
+  window.setTimeout(() => {
+    printWindow.print()
+    printWindow.close()
+  }, 250)
 }
 
 watch(
@@ -311,6 +333,7 @@ function isWinner(match: Match, slot: MatchSlot): boolean {
 }
 
 async function publishToggle(): Promise<void> {
+  if (auth.isGuest) return
   if (!tournament.value) return
   await tournamentsStore.setPublished(tournament.value.id, !tournament.value.published)
   await loadTournament()
@@ -381,6 +404,7 @@ function onDrop(targetIndex: number): void {
 }
 
 async function saveSeeds(): Promise<void> {
+  if (auth.isGuest) return
   if (!tournament.value || !orderChanged.value) return
   savingSeeds.value = true
   try {
@@ -395,6 +419,7 @@ async function saveSeeds(): Promise<void> {
 }
 
 async function createEmptyBracket(): Promise<void> {
+  if (auth.isGuest) return
   if (!tournament.value || enrolledPlayers.value.length < 2) return
   await matchesStore.createEmptyBracket(tournament.value.id, enrolledPlayers.value.length)
   activeBracketRound.value = 1
@@ -424,6 +449,7 @@ function confirmResetDraw(): void {
 }
 
 function openAssignDialog(match: Match, slot: MatchSlot): void {
+  if (auth.isGuest) return
   selectedMatch.value = match
   selectedSlot.value = slot
   assignPlayerId.value = match[slot]
@@ -432,6 +458,7 @@ function openAssignDialog(match: Match, slot: MatchSlot): void {
 }
 
 async function confirmAssign(): Promise<void> {
+  if (auth.isGuest) return
   if (!selectedMatch.value) return
   await matchesStore.assignPlayer(selectedMatch.value.id, {
     slot: selectedSlot.value,
@@ -441,6 +468,7 @@ async function confirmAssign(): Promise<void> {
 }
 
 async function clearSlot(): Promise<void> {
+  if (auth.isGuest) return
   if (!selectedMatch.value) return
   await matchesStore.assignPlayer(selectedMatch.value.id, {
     slot: selectedSlot.value,
@@ -450,6 +478,7 @@ async function clearSlot(): Promise<void> {
 }
 
 function openResultDialog(match: Match): void {
+  if (auth.isGuest) return
   selectedMatch.value = match
   editResult.value = match.result ?? ''
   editWinnerId.value = match.winner_id
@@ -457,6 +486,7 @@ function openResultDialog(match: Match): void {
 }
 
 async function saveResult(): Promise<void> {
+  if (auth.isGuest) return
   if (!selectedMatch.value || !editResult.value || !editWinnerId.value) return
   await matchesStore.enterResult(selectedMatch.value.id, {
     result: editResult.value,
@@ -467,7 +497,7 @@ async function saveResult(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col gap-5" :class="{ 'is-printing': printing }">
+  <div class="flex flex-col gap-5">
     <div v-if="loading" class="flex flex-col items-center justify-center gap-3 min-h-[220px] text-center text-muted-color">
       <i class="pi pi-spin pi-spinner text-[2rem] text-primary-500" />
     </div>
@@ -490,6 +520,7 @@ async function saveResult(): Promise<void> {
             :severity="tournament.published ? 'secondary' : 'success'"
             size="small"
             outlined
+            :disabled="auth.isGuest"
             @click="publishToggle"
           />
         </div>
@@ -537,7 +568,7 @@ async function saveResult(): Promise<void> {
                     label="Aggiungi giocatore"
                     icon="pi pi-user-plus"
                     size="small"
-                    :disabled="availablePlayers.length === 0"
+                    :disabled="availablePlayers.length === 0 || auth.isGuest"
                     @click="addPlayerVisible = true"
                   />
                 </div>
@@ -554,11 +585,11 @@ async function saveResult(): Promise<void> {
                       :key="player.id"
                       class="flex items-center gap-3 p-3 rounded-lg bg-surface-50 border border-surface-200 cursor-grab"
                       :class="{ 'opacity-50 cursor-grabbing': dragIndex === index }"
-                      draggable="true"
-                      @dragstart="onDragStart(index)"
+                      :draggable="canModify"
+                      @dragstart="canModify && onDragStart(index)"
                       @dragover.prevent
                       @dragend="dragIndex = null"
-                      @drop="onDrop(index)"
+                      @drop="canModify && onDrop(index)"
                     >
                       <span class="text-muted-color cursor-grab" aria-hidden="true">
                         <i class="pi pi-bars" />
@@ -577,6 +608,7 @@ async function saveResult(): Promise<void> {
                         size="small"
                         severity="danger"
                         aria-label="Rimuovi"
+                        :disabled="auth.isGuest"
                         @click="confirmRemovePlayer(player)"
                       />
                     </div>
@@ -587,7 +619,7 @@ async function saveResult(): Promise<void> {
                       label="Salva ordine"
                       icon="pi pi-save"
                       outlined
-                      :disabled="!orderChanged"
+                      :disabled="!orderChanged || auth.isGuest"
                       :loading="savingSeeds"
                       @click="saveSeeds"
                     />
@@ -684,6 +716,7 @@ async function saveResult(): Promise<void> {
                       label="Genera tabellone"
                       icon="pi pi-plus"
                       size="small"
+                      :disabled="auth.isGuest"
                       @click="createEmptyBracket"
                     />
                     <Button
@@ -693,6 +726,7 @@ async function saveResult(): Promise<void> {
                       severity="danger"
                       outlined
                       size="small"
+                      :disabled="auth.isGuest"
                       :loading="resettingDraw"
                       @click="confirmResetDraw"
                     />
@@ -703,6 +737,7 @@ async function saveResult(): Promise<void> {
                       label="Vista turni"
                       icon="pi pi-list"
                       size="small"
+                      :disabled="auth.isGuest"
                       :severity="bracketViewMode === 'rounds' ? 'primary' : 'secondary'"
                       :outlined="bracketViewMode !== 'rounds'"
                       @click="bracketViewMode = 'rounds'"
@@ -711,6 +746,7 @@ async function saveResult(): Promise<void> {
                       label="Vista globale"
                       icon="pi pi-sitemap"
                       size="small"
+                      :disabled="auth.isGuest"
                       :severity="bracketViewMode === 'global' ? 'primary' : 'secondary'"
                       :outlined="bracketViewMode !== 'global'"
                       @click="bracketViewMode = 'global'"
@@ -720,6 +756,7 @@ async function saveResult(): Promise<void> {
                       icon="pi pi-print"
                       size="small"
                       outlined
+                      :disabled="auth.isGuest"
                       @click="printBracket"
                     />
                   </div>
@@ -766,9 +803,9 @@ async function saveResult(): Promise<void> {
                             :class="{
                               'bg-green-500/15': isWinner(match, 'player1_id'),
                               'text-muted-color': isByeSlot(match, 'player1_id') || isTbdSlot(match, 'player1_id'),
-                              'cursor-pointer hover:bg-surface-100': auth.isAdmin,
+                              'cursor-pointer hover:bg-surface-100': canModify,
                             }"
-                            @click="auth.isAdmin && openAssignDialog(match, 'player1_id')"
+                            @click="canModify && openAssignDialog(match, 'player1_id')"
                           >
                             <div class="flex min-w-0 items-center gap-[0.625rem]">
                               <span v-if="getSeed(match.player1_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(match.player1_id) }}</span>
@@ -782,9 +819,9 @@ async function saveResult(): Promise<void> {
                             :class="{
                               'bg-green-500/15': isWinner(match, 'player2_id'),
                               'text-muted-color': isByeSlot(match, 'player2_id') || isTbdSlot(match, 'player2_id'),
-                              'cursor-pointer hover:bg-surface-100': auth.isAdmin,
+                              'cursor-pointer hover:bg-surface-100': canModify,
                             }"
-                            @click="auth.isAdmin && openAssignDialog(match, 'player2_id')"
+                            @click="canModify && openAssignDialog(match, 'player2_id')"
                           >
                             <div class="flex min-w-0 items-center gap-[0.625rem]">
                               <span v-if="getSeed(match.player2_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(match.player2_id) }}</span>
@@ -796,8 +833,8 @@ async function saveResult(): Promise<void> {
                           <div
                             v-if="match.player1_id && match.player2_id"
                             class="border-t border-surface-200 p-2 text-center text-xs text-muted-color"
-                            :class="{ 'cursor-pointer hover:bg-surface-100': auth.isAdmin }"
-                            @click="auth.isAdmin && openResultDialog(match)"
+                            :class="{ 'cursor-pointer hover:bg-surface-100': canModify }"
+                            @click="canModify && openResultDialog(match)"
                           >
                             {{ match.result || (auth.isAdmin ? 'Inserisci risultato' : '—') }}
                           </div>
@@ -806,8 +843,8 @@ async function saveResult(): Promise<void> {
                     </div>
                   </div>
 
-                  <div v-else class="flex flex-col gap-4 print-only">
-                    <div class="overflow-x-auto rounded-2xl border border-surface-200 bg-surface-50/50 p-4">
+                  <div v-else class="flex flex-col gap-4">
+                    <div ref="printableBracketRef" class="overflow-x-auto rounded-2xl border border-surface-200 bg-surface-50/50 p-4">
                       <div
                         class="bracket-global min-w-max grid items-start gap-6"
                         :style="{ gridTemplateColumns: `repeat(${globalBracketColumns.length}, minmax(16rem, 1fr))` }"
@@ -831,9 +868,9 @@ async function saveResult(): Promise<void> {
                                 :class="{
                                   'bg-green-500/15': isWinner(entry.match, 'player1_id'),
                                   'text-muted-color': isByeSlot(entry.match, 'player1_id') || isTbdSlot(entry.match, 'player1_id'),
-                                  'cursor-pointer hover:bg-surface-100': auth.isAdmin,
+                                  'cursor-pointer hover:bg-surface-100': canModify,
                                 }"
-                                @click="auth.isAdmin && openAssignDialog(entry.match, 'player1_id')"
+                                @click="canModify && openAssignDialog(entry.match, 'player1_id')"
                               >
                                 <div class="flex min-w-0 items-center gap-[0.625rem]">
                                   <span v-if="getSeed(entry.match.player1_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(entry.match.player1_id) }}</span>
@@ -847,9 +884,9 @@ async function saveResult(): Promise<void> {
                                 :class="{
                                   'bg-green-500/15': isWinner(entry.match, 'player2_id'),
                                   'text-muted-color': isByeSlot(entry.match, 'player2_id') || isTbdSlot(entry.match, 'player2_id'),
-                                  'cursor-pointer hover:bg-surface-100': auth.isAdmin,
+                                  'cursor-pointer hover:bg-surface-100': canModify,
                                 }"
-                                @click="auth.isAdmin && openAssignDialog(entry.match, 'player2_id')"
+                                @click="canModify && openAssignDialog(entry.match, 'player2_id')"
                               >
                                 <div class="flex min-w-0 items-center gap-[0.625rem]">
                                   <span v-if="getSeed(entry.match.player2_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(entry.match.player2_id) }}</span>
@@ -861,8 +898,8 @@ async function saveResult(): Promise<void> {
                               <div
                                 v-if="entry.match.player1_id && entry.match.player2_id"
                                 class="border-t border-surface-200 p-2 text-center text-xs text-muted-color"
-                                :class="{ 'cursor-pointer hover:bg-surface-100': auth.isAdmin }"
-                                @click="auth.isAdmin && openResultDialog(entry.match)"
+                                :class="{ 'cursor-pointer hover:bg-surface-100': canModify }"
+                                @click="canModify && openResultDialog(entry.match)"
                               >
                                 {{ entry.match.result || (auth.isAdmin ? 'Inserisci risultato' : '—') }}
                               </div>
@@ -958,23 +995,3 @@ async function saveResult(): Promise<void> {
     </div>
   </Dialog>
 </template>
-
-<style scoped>
-@media print {
-  .is-printing > :not(.print-only) {
-    display: none !important;
-  }
-
-  .print-only {
-    display: block !important;
-  }
-
-  .print-only :deep(.p-button) {
-    display: none !important;
-  }
-
-  .print-only :deep(.global-round-column) {
-    overflow: visible !important;
-  }
-}
-</style>

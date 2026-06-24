@@ -10,6 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
+  const isGuest = computed(() => user.value?.id === 'guest')
 
   async function init(): Promise<void> {
     user.value = await authService.getCurrentUser()
@@ -44,5 +45,17 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, loading, error, isAuthenticated, isAdmin, init, login, register, logout }
+  async function loginAsGuest(): Promise<void> {
+    loading.value = true
+    error.value = null
+    try {
+      user.value = await authService.loginAsGuest()
+    } catch (e) {
+      error.value = (e as Error).message
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return { user, loading, error, isAuthenticated, isAdmin, isGuest, init, login, register, logout, loginAsGuest }
 })

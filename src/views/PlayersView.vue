@@ -9,6 +9,7 @@ import InputText from 'primevue/inputtext'
 import Tag from 'primevue/tag'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
+import { useAuthStore } from '../stores/auth'
 import { usePlayersStore } from '../stores/players'
 import { profilesService } from '../services/profilesService'
 import type { Player, PlayerCreate, Profile } from '../types'
@@ -21,6 +22,7 @@ interface PlayerForm {
 }
 
 const store = usePlayersStore()
+const auth = useAuthStore()
 const confirm = useConfirm()
 const toast = useToast()
 
@@ -34,12 +36,14 @@ function emptyForm(): PlayerForm {
 }
 
 function openCreate(): void {
+  if (auth.isGuest) return
   editingId.value = null
   form.value = emptyForm()
   dialogVisible.value = true
 }
 
 function openEdit(player: Player): void {
+  if (auth.isGuest) return
   editingId.value = player.id
   form.value = {
     name: player.name,
@@ -60,6 +64,7 @@ function toPlayerPayload(data: PlayerForm): PlayerCreate {
 }
 
 async function savePlayer(): Promise<void> {
+  if (auth.isGuest) return
   saving.value = true
   try {
     const payload = toPlayerPayload(form.value)
@@ -79,6 +84,7 @@ async function savePlayer(): Promise<void> {
 }
 
 function confirmDelete(player: Player): void {
+  if (auth.isGuest) return
   confirm.require({
     message: `Eliminare ${player.name}?`,
     header: 'Conferma eliminazione',
@@ -106,6 +112,7 @@ const unlinkedProfiles = ref<Profile[]>([])
 const addingUserId = ref<string | null>(null)
 
 async function addAsPlayer(profile: Profile): Promise<void> {
+  if (auth.isGuest) return
   addingUserId.value = profile.id
   try {
     await store.create({
@@ -132,7 +139,7 @@ async function addAsPlayer(profile: Profile): Promise<void> {
         <h2 class="m-0 text-2xl">Giocatori</h2>
         <p class="mt-1 mb-0 text-sm text-muted-color">{{ store.players.length }} giocatori registrati</p>
       </div>
-      <Button label="Aggiungi" icon="pi pi-plus" @click="openCreate" />
+      <Button label="Aggiungi" icon="pi pi-plus" :disabled="auth.isGuest" @click="openCreate" />
     </div>
 
     <DataTable
@@ -179,8 +186,8 @@ async function addAsPlayer(profile: Profile): Promise<void> {
       <Column header="Azioni" style="width: 7rem">
         <template #body="{ data }">
           <div class="flex gap-1">
-            <Button icon="pi pi-pencil" text rounded size="small" aria-label="Modifica" @click="openEdit(data)" />
-            <Button icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Elimina" @click="confirmDelete(data)" />
+            <Button icon="pi pi-pencil" text rounded size="small" aria-label="Modifica" :disabled="auth.isGuest" @click="openEdit(data)" />
+            <Button icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Elimina" :disabled="auth.isGuest" @click="confirmDelete(data)" />
           </div>
         </template>
       </Column>
@@ -205,6 +212,7 @@ async function addAsPlayer(profile: Profile): Promise<void> {
             icon="pi pi-user-plus"
             size="small"
             :loading="addingUserId === profile.id"
+            :disabled="auth.isGuest"
             @click="addAsPlayer(profile)"
           />
         </div>
