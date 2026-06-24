@@ -135,10 +135,17 @@ const isRoundRobin = computed(
 const orderChanged = computed(
   () => localOrder.value.map((player) => player.id).join(',') !== enrolledPlayers.value.map((player) => player.id).join(','),
 )
-const bracketRoundLabels = computed(() =>
-  Array.from({ length: matchesStore.numRounds }, (_, index) =>
-    index + 1 === matchesStore.numRounds ? 'Finale' : `${index + 1}° turno`,
-  ),
+const bracketRoundTabs = computed(() =>
+  Array.from({ length: matchesStore.numRounds }, (_, index) => {
+    const round = matchesStore.numRounds - index
+    const remaining = matchesStore.numRounds - round + 1
+    let label = `${round}° turno`
+    if (remaining === 1) label = 'Finale'
+    else if (remaining === 2) label = 'Semifinale'
+    else if (remaining === 3) label = 'Quarti'
+    else if (remaining === 4) label = 'Ottavi'
+    return { round, label }
+  }),
 )
 const activeBracketMatches = computed(() =>
   (matchesStore.matchesByRound.get(activeBracketRound.value) ?? []).filter(
@@ -186,9 +193,7 @@ watch(
       activeBracketRound.value = 1
       return
     }
-    if (activeBracketRound.value > numRounds) {
-      activeBracketRound.value = numRounds
-    }
+    activeBracketRound.value = numRounds
   },
   { immediate: true },
 )
@@ -349,7 +354,7 @@ async function saveSeeds(): Promise<void> {
 async function createEmptyBracket(): Promise<void> {
   if (!tournament.value || enrolledPlayers.value.length < 2) return
   await matchesStore.createEmptyBracket(tournament.value.id, enrolledPlayers.value.length)
-  activeBracketRound.value = 1
+  activeBracketRound.value = matchesStore.numRounds || 1
 }
 
 function confirmResetDraw(): void {
@@ -657,13 +662,13 @@ async function saveResult(): Promise<void> {
                 <div v-else class="flex flex-col gap-4">
                   <div class="flex flex-wrap gap-2">
                     <Button
-                      v-for="(label, index) in bracketRoundLabels"
-                      :key="label"
-                      :label="label"
+                      v-for="tab in bracketRoundTabs"
+                      :key="tab.round"
+                      :label="tab.label"
                       size="small"
-                      :severity="activeBracketRound === index + 1 ? 'primary' : 'secondary'"
-                      :outlined="activeBracketRound !== index + 1"
-                      @click="activeBracketRound = index + 1"
+                      :severity="activeBracketRound === tab.round ? 'primary' : 'secondary'"
+                      :outlined="activeBracketRound !== tab.round"
+                      @click="activeBracketRound = tab.round"
                     />
                   </div>
 
@@ -676,7 +681,7 @@ async function saveResult(): Promise<void> {
 
                   <div v-else class="flex flex-col gap-3">
                     <div class="text-sm font-bold text-muted-color uppercase tracking-[0.04em]">
-                      {{ bracketRoundLabels[activeBracketRound - 1] }}
+                      {{ bracketRoundTabs.find((tab) => tab.round === activeBracketRound)?.label }}
                     </div>
                     <div class="flex flex-col gap-3">
                       <div
