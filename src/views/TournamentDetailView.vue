@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTournamentsStore } from '../stores/tournaments'
 import { usePlayersStore } from '../stores/players'
@@ -39,6 +39,8 @@ const addingPlayer = ref(false)
 const savingSeeds = ref(false)
 const resettingDraw = ref(false)
 const activeBracketRound = ref(1)
+const bracketViewMode = ref<'rounds' | 'global'>('rounds')
+const printing = ref(false)
 
 const localOrder = ref<Player[]>([])
 const dragIndex = ref<number | null>(null)
@@ -88,6 +90,13 @@ async function loadPage(): Promise<void> {
 }
 
 onMounted(loadPage)
+onMounted(() => {
+  window.addEventListener('afterprint', handleAfterPrint)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('afterprint', handleAfterPrint)
+})
 
 const enrolledPlayerIds = computed<string[]>(() => {
   if (!tournament.value) return []
@@ -152,6 +161,23 @@ const activeBracketMatches = computed(() =>
     (match): match is Match => Boolean(match),
   ),
 )
+const globalBracketTotalRows = computed(() => Math.max(1, 2 ** Math.max(0, matchesStore.numRounds - 1)))
+const globalBracketColumns = computed(() =>
+  bracketRoundTabs.value.map((tab) => {
+    const matches = (matchesStore.matchesByRound.get(tab.round) ?? []).filter(
+      (match): match is Match => Boolean(match),
+    )
+    const rowSpan = 2 ** (tab.round - 1)
+    return {
+      ...tab,
+      rowSpan,
+      matches: matches.map((match) => ({
+        match,
+        rowStart: match.position * rowSpan + 1,
+      })),
+    }
+  }),
+)
 
 const isEnrolled = computed(() =>
   !!myPlayer.value && enrolledPlayerIds.value.includes(myPlayer.value.id),
@@ -185,6 +211,23 @@ const filteredAvailablePlayers = computed(() =>
 const filteredAvailableForSlot = computed(() =>
   availableForSlot.value.filter((player) => matchesPlayerSearch(player, assignPlayerSearch.value)),
 )
+
+function getGlobalMatchStyle(round: number, position: number): Record<string, string> {
+  const rowSpan = 2 ** (round - 1)
+  const rowStart = position * rowSpan + 1
+  return { gridRow: `${rowStart} / span ${rowSpan}` }
+}
+
+async function printBracket(): Promise<void> {
+  bracketViewMode.value = 'global'
+  printing.value = true
+  await nextTick()
+  window.requestAnimationFrame(() => window.print())
+}
+
+function handleAfterPrint(): void {
+  printing.value = false
+}
 
 watch(
   () => matchesStore.numRounds,
@@ -424,7 +467,7 @@ async function saveResult(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
+  <div class="flex flex-col gap-5" :class="{ 'is-printing': printing }">
     <div v-if="loading" class="flex flex-col items-center justify-center gap-3 min-h-[220px] text-center text-muted-color">
       <i class="pi pi-spin pi-spinner text-[2rem] text-primary-500" />
     </div>
@@ -634,24 +677,52 @@ async function saveResult(): Promise<void> {
               </template>
 
               <template v-else>
-              <div v-if="auth.isAdmin" class="flex items-center gap-2">
-                  <Button
-                    v-if="!hasMatches"
-                    label="Genera tabellone"
-                    icon="pi pi-plus"
-                    size="small"
-                    @click="createEmptyBracket"
-                  />
-                  <Button
-                    v-if="hasMatches"
-                    label="Azzera tabellone"
-                    icon="pi pi-refresh"
-                    severity="danger"
-                    outlined
-                    size="small"
-                    :loading="resettingDraw"
-                    @click="confirmResetDraw"
-                  />
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                  <div v-if="auth.isAdmin" class="flex items-center gap-2">
+                    <Button
+                      v-if="!hasMatches"
+                      label="Genera tabellone"
+                      icon="pi pi-plus"
+                      size="small"
+                      @click="createEmptyBracket"
+                    />
+                    <Button
+                      v-if="hasMatches"
+                      label="Azzera tabellone"
+                      icon="pi pi-refresh"
+                      severity="danger"
+                      outlined
+                      size="small"
+                      :loading="resettingDraw"
+                      @click="confirmResetDraw"
+                    />
+                  </div>
+
+                  <div v-if="hasMatches" class="flex items-center gap-2">
+                    <Button
+                      label="Vista turni"
+                      icon="pi pi-list"
+                      size="small"
+                      :severity="bracketViewMode === 'rounds' ? 'primary' : 'secondary'"
+                      :outlined="bracketViewMode !== 'rounds'"
+                      @click="bracketViewMode = 'rounds'"
+                    />
+                    <Button
+                      label="Vista globale"
+                      icon="pi pi-sitemap"
+                      size="small"
+                      :severity="bracketViewMode === 'global' ? 'primary' : 'secondary'"
+                      :outlined="bracketViewMode !== 'global'"
+                      @click="bracketViewMode = 'global'"
+                    />
+                    <Button
+                      label="Stampa"
+                      icon="pi pi-print"
+                      size="small"
+                      outlined
+                      @click="printBracket"
+                    />
+                  </div>
                 </div>
 
                 <div v-if="!hasMatches" class="flex flex-col items-center justify-center gap-3 min-h-[220px] text-center text-muted-color">
@@ -660,74 +731,143 @@ async function saveResult(): Promise<void> {
                 </div>
 
                 <div v-else class="flex flex-col gap-4">
-                  <div class="flex flex-wrap gap-2">
-                    <Button
-                      v-for="tab in bracketRoundTabs"
-                      :key="tab.round"
-                      :label="tab.label"
-                      size="small"
-                      :severity="activeBracketRound === tab.round ? 'primary' : 'secondary'"
-                      :outlined="activeBracketRound !== tab.round"
-                      @click="activeBracketRound = tab.round"
-                    />
-                  </div>
-
-                  <div
-                    v-if="activeBracketMatches.length === 0"
-                    class="flex min-h-[180px] items-center justify-center rounded-xl border border-dashed border-surface-200 text-muted-color"
-                  >
-                    Nessun incontro disponibile per questo turno.
-                  </div>
-
-                  <div v-else class="flex flex-col gap-3">
-                    <div class="text-sm font-bold text-muted-color uppercase tracking-[0.04em]">
-                      {{ bracketRoundTabs.find((tab) => tab.round === activeBracketRound)?.label }}
+                  <div v-if="bracketViewMode === 'rounds'" class="flex flex-col gap-4">
+                    <div class="flex flex-wrap gap-2">
+                      <Button
+                        v-for="tab in bracketRoundTabs"
+                        :key="tab.round"
+                        :label="tab.label"
+                        size="small"
+                        :severity="activeBracketRound === tab.round ? 'primary' : 'secondary'"
+                        :outlined="activeBracketRound !== tab.round"
+                        @click="activeBracketRound = tab.round"
+                      />
                     </div>
-                    <div class="flex flex-col gap-3">
+
+                    <div
+                      v-if="activeBracketMatches.length === 0"
+                      class="flex min-h-[180px] items-center justify-center rounded-xl border border-dashed border-surface-200 text-muted-color"
+                    >
+                      Nessun incontro disponibile per questo turno.
+                    </div>
+
+                    <div v-else class="flex flex-col gap-3">
+                      <div class="text-sm font-bold text-muted-color uppercase tracking-[0.04em]">
+                        {{ bracketRoundTabs.find((tab) => tab.round === activeBracketRound)?.label }}
+                      </div>
+                      <div class="flex flex-col gap-3">
+                        <div
+                          v-for="match in activeBracketMatches"
+                          :key="match.id"
+                          class="flex flex-col overflow-hidden rounded-xl border border-surface-200 bg-surface-0"
+                        >
+                          <div
+                            class="flex items-center justify-between gap-3 px-4 py-[0.85rem]"
+                            :class="{
+                              'bg-green-500/15': isWinner(match, 'player1_id'),
+                              'text-muted-color': isByeSlot(match, 'player1_id') || isTbdSlot(match, 'player1_id'),
+                              'cursor-pointer hover:bg-surface-100': auth.isAdmin,
+                            }"
+                            @click="auth.isAdmin && openAssignDialog(match, 'player1_id')"
+                          >
+                            <div class="flex min-w-0 items-center gap-[0.625rem]">
+                              <span v-if="getSeed(match.player1_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(match.player1_id) }}</span>
+                              <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">{{ getSlotLabel(match, 'player1_id') }}</span>
+                            </div>
+                            <i v-if="auth.isAdmin" class="pi pi-pencil text-xs text-muted-color" />
+                          </div>
+
+                          <div
+                            class="flex items-center justify-between gap-3 border-t border-surface-200 px-4 py-[0.85rem]"
+                            :class="{
+                              'bg-green-500/15': isWinner(match, 'player2_id'),
+                              'text-muted-color': isByeSlot(match, 'player2_id') || isTbdSlot(match, 'player2_id'),
+                              'cursor-pointer hover:bg-surface-100': auth.isAdmin,
+                            }"
+                            @click="auth.isAdmin && openAssignDialog(match, 'player2_id')"
+                          >
+                            <div class="flex min-w-0 items-center gap-[0.625rem]">
+                              <span v-if="getSeed(match.player2_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(match.player2_id) }}</span>
+                              <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">{{ getSlotLabel(match, 'player2_id') }}</span>
+                            </div>
+                            <i v-if="auth.isAdmin" class="pi pi-pencil text-xs text-muted-color" />
+                          </div>
+
+                          <div
+                            v-if="match.player1_id && match.player2_id"
+                            class="border-t border-surface-200 p-2 text-center text-xs text-muted-color"
+                            :class="{ 'cursor-pointer hover:bg-surface-100': auth.isAdmin }"
+                            @click="auth.isAdmin && openResultDialog(match)"
+                          >
+                            {{ match.result || (auth.isAdmin ? 'Inserisci risultato' : '—') }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div v-else class="flex flex-col gap-4 print-only">
+                    <div class="overflow-x-auto rounded-2xl border border-surface-200 bg-surface-50/50 p-4">
                       <div
-                        v-for="match in activeBracketMatches"
-                        :key="match.id"
-                        class="flex flex-col overflow-hidden rounded-xl border border-surface-200 bg-surface-0"
+                        class="bracket-global min-w-max grid items-start gap-6"
+                        :style="{ gridTemplateColumns: `repeat(${globalBracketColumns.length}, minmax(16rem, 1fr))` }"
                       >
-                        <div
-                          class="flex items-center justify-between gap-3 px-4 py-[0.85rem]"
-                          :class="{
-                            'bg-green-500/15': isWinner(match, 'player1_id'),
-                            'text-muted-color': isByeSlot(match, 'player1_id') || isTbdSlot(match, 'player1_id'),
-                            'cursor-pointer hover:bg-surface-100': auth.isAdmin,
-                          }"
-                          @click="auth.isAdmin && openAssignDialog(match, 'player1_id')"
-                        >
-                          <div class="flex min-w-0 items-center gap-[0.625rem]">
-                            <span v-if="getSeed(match.player1_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(match.player1_id) }}</span>
-                            <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">{{ getSlotLabel(match, 'player1_id') }}</span>
+                        <div v-for="column in globalBracketColumns" :key="column.round" class="flex min-w-0 flex-col gap-3">
+                          <div class="text-sm font-bold text-muted-color uppercase tracking-[0.04em]">
+                            {{ column.label }}
                           </div>
-                          <i v-if="auth.isAdmin" class="pi pi-pencil text-xs text-muted-color" />
-                        </div>
+                          <div
+                            class="global-round-column grid gap-3"
+                            :style="{ gridTemplateRows: `repeat(${globalBracketTotalRows}, minmax(4rem, auto))` }"
+                          >
+                            <div
+                              v-for="entry in column.matches"
+                              :key="entry.match.id"
+                              class="flex flex-col overflow-hidden rounded-xl border border-surface-200 bg-surface-0 shadow-sm"
+                              :style="getGlobalMatchStyle(column.round, entry.match.position)"
+                            >
+                              <div
+                                class="flex items-center justify-between gap-3 px-4 py-[0.85rem]"
+                                :class="{
+                                  'bg-green-500/15': isWinner(entry.match, 'player1_id'),
+                                  'text-muted-color': isByeSlot(entry.match, 'player1_id') || isTbdSlot(entry.match, 'player1_id'),
+                                  'cursor-pointer hover:bg-surface-100': auth.isAdmin,
+                                }"
+                                @click="auth.isAdmin && openAssignDialog(entry.match, 'player1_id')"
+                              >
+                                <div class="flex min-w-0 items-center gap-[0.625rem]">
+                                  <span v-if="getSeed(entry.match.player1_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(entry.match.player1_id) }}</span>
+                                  <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">{{ getSlotLabel(entry.match, 'player1_id') }}</span>
+                                </div>
+                                <i v-if="auth.isAdmin" class="pi pi-pencil text-xs text-muted-color" />
+                              </div>
 
-                        <div
-                          class="flex items-center justify-between gap-3 border-t border-surface-200 px-4 py-[0.85rem]"
-                          :class="{
-                            'bg-green-500/15': isWinner(match, 'player2_id'),
-                            'text-muted-color': isByeSlot(match, 'player2_id') || isTbdSlot(match, 'player2_id'),
-                            'cursor-pointer hover:bg-surface-100': auth.isAdmin,
-                          }"
-                          @click="auth.isAdmin && openAssignDialog(match, 'player2_id')"
-                        >
-                          <div class="flex min-w-0 items-center gap-[0.625rem]">
-                            <span v-if="getSeed(match.player2_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(match.player2_id) }}</span>
-                            <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">{{ getSlotLabel(match, 'player2_id') }}</span>
+                              <div
+                                class="flex items-center justify-between gap-3 border-t border-surface-200 px-4 py-[0.85rem]"
+                                :class="{
+                                  'bg-green-500/15': isWinner(entry.match, 'player2_id'),
+                                  'text-muted-color': isByeSlot(entry.match, 'player2_id') || isTbdSlot(entry.match, 'player2_id'),
+                                  'cursor-pointer hover:bg-surface-100': auth.isAdmin,
+                                }"
+                                @click="auth.isAdmin && openAssignDialog(entry.match, 'player2_id')"
+                              >
+                                <div class="flex min-w-0 items-center gap-[0.625rem]">
+                                  <span v-if="getSeed(entry.match.player2_id)" class="shrink-0 text-[0.75rem] font-bold text-muted-color">#{{ getSeed(entry.match.player2_id) }}</span>
+                                  <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">{{ getSlotLabel(entry.match, 'player2_id') }}</span>
+                                </div>
+                                <i v-if="auth.isAdmin" class="pi pi-pencil text-xs text-muted-color" />
+                              </div>
+
+                              <div
+                                v-if="entry.match.player1_id && entry.match.player2_id"
+                                class="border-t border-surface-200 p-2 text-center text-xs text-muted-color"
+                                :class="{ 'cursor-pointer hover:bg-surface-100': auth.isAdmin }"
+                                @click="auth.isAdmin && openResultDialog(entry.match)"
+                              >
+                                {{ entry.match.result || (auth.isAdmin ? 'Inserisci risultato' : '—') }}
+                              </div>
+                            </div>
                           </div>
-                          <i v-if="auth.isAdmin" class="pi pi-pencil text-xs text-muted-color" />
-                        </div>
-
-                        <div
-                          v-if="match.player1_id && match.player2_id"
-                          class="border-t border-surface-200 p-2 text-center text-xs text-muted-color"
-                          :class="{ 'cursor-pointer hover:bg-surface-100': auth.isAdmin }"
-                          @click="auth.isAdmin && openResultDialog(match)"
-                        >
-                          {{ match.result || (auth.isAdmin ? 'Inserisci risultato' : '—') }}
                         </div>
                       </div>
                     </div>
@@ -818,3 +958,23 @@ async function saveResult(): Promise<void> {
     </div>
   </Dialog>
 </template>
+
+<style scoped>
+@media print {
+  .is-printing > :not(.print-only) {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-only :deep(.p-button) {
+    display: none !important;
+  }
+
+  .print-only :deep(.global-round-column) {
+    overflow: visible !important;
+  }
+}
+</style>
