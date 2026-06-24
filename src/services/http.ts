@@ -1,4 +1,17 @@
-const BASE = '/api'
+import { backendApi } from './backendApi'
+
+const BASE = backendApi.baseUrl ? `${backendApi.baseUrl}/api` : '/api'
+
+async function readBody(res: Response): Promise<unknown> {
+  const text = await res.text()
+  if (!text) return null
+
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return text
+  }
+}
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = localStorage.getItem('tla_token')
@@ -14,7 +27,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
   if (res.status === 204) return null as T
 
-  const data = await res.json()
+  const data = await readBody(res)
   if (!res.ok) throw new Error((data as { message?: string }).message ?? `HTTP ${res.status}`)
   return data as T
 }

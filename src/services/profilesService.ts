@@ -12,13 +12,24 @@ const backend: ProfilesService = {
   getUnlinkedProfiles: () => fetchProfiles('/profiles/unlinked'),
 }
 
+async function readBody(res: Response): Promise<unknown> {
+  const text = await res.text()
+  if (!text) return null
+
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return text
+  }
+}
+
 async function fetchProfile(path: string): Promise<Profile> {
   const token = localStorage.getItem('tla_token')
   const res = await fetch(`${backendApi.authPath(path)}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
   if (!res.ok) throw new Error('Profile unavailable')
-  return (await res.json()) as Profile
+  return (await readBody(res)) as Profile
 }
 
 async function fetchProfiles(path: string): Promise<Profile[]> {
@@ -27,7 +38,7 @@ async function fetchProfiles(path: string): Promise<Profile[]> {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
   if (!res.ok) throw new Error('Profiles unavailable')
-  return (await res.json()) as Profile[]
+  return (await readBody(res)) as Profile[]
 }
 
 export const profilesService: ProfilesService = backendApi.baseUrl ? backend : mock

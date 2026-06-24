@@ -15,13 +15,24 @@ function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY)
 }
 
+async function readBody(res: Response): Promise<unknown> {
+  const text = await res.text()
+  if (!text) return null
+
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return text
+  }
+}
+
 async function mockLogin(email: string, password: string): Promise<User> {
   const res = await fetch('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
-  const data = (await res.json()) as { message?: string; user?: User; token?: string }
+  const data = (await readBody(res)) as { message?: string; user?: User; token?: string }
   if (!res.ok) throw new Error(data.message ?? 'Login failed')
   saveToken(data.token ?? '')
   return data.user as User
@@ -42,7 +53,7 @@ async function mockGetCurrentUser(): Promise<User | null> {
     clearToken()
     return null
   }
-  return ((await res.json()) as { user: User }).user
+  return ((await readBody(res)) as { user: User }).user
 }
 
 async function mockRegister(email: string, password: string, name?: string): Promise<User> {
@@ -51,7 +62,7 @@ async function mockRegister(email: string, password: string, name?: string): Pro
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, name }),
   })
-  const data = (await res.json()) as { message?: string; user?: User; token?: string }
+  const data = (await readBody(res)) as { message?: string; user?: User; token?: string }
   if (!res.ok) throw new Error(data.message ?? 'Registration failed')
   saveToken(data.token ?? '')
   return data.user as User
@@ -64,7 +75,7 @@ async function backendLogin(email: string, password: string): Promise<User> {
     body: JSON.stringify({ email, password }),
   })
 
-  const data = (await res.json()) as { message?: string; user?: User; token?: string }
+  const data = (await readBody(res)) as { message?: string; user?: User; token?: string }
   if (!res.ok) throw new Error(data.message ?? 'Login failed')
   saveToken(data.token ?? '')
   return data.user as User
@@ -89,7 +100,7 @@ async function backendGetCurrentUser(): Promise<User | null> {
     clearToken()
     return null
   }
-  return ((await res.json()) as { user: User }).user
+  return ((await readBody(res)) as { user: User }).user
 }
 
 async function backendRegister(email: string, password: string, name?: string): Promise<User> {
@@ -99,7 +110,7 @@ async function backendRegister(email: string, password: string, name?: string): 
     body: JSON.stringify({ email, password, name }),
   })
 
-  const data = (await res.json()) as { message?: string; user?: User; token?: string }
+  const data = (await readBody(res)) as { message?: string; user?: User; token?: string }
   if (!res.ok) throw new Error(data.message ?? 'Registration failed')
   saveToken(data.token ?? '')
   return data.user as User

@@ -2,6 +2,9 @@ import cors from 'cors'
 import express from 'express'
 import { authRouter } from './routes/auth'
 import { healthRouter } from './routes/health'
+import { matchesRouter } from './routes/matches'
+import { playersRouter } from './routes/players'
+import { tournamentsRouter } from './routes/tournaments'
 
 export function createApp() {
   const app = express()
@@ -16,6 +19,9 @@ export function createApp() {
 
   app.use('/api', healthRouter)
   app.use('/api/auth', authRouter)
+  app.use('/api/players', playersRouter)
+  app.use('/api/tournaments', tournamentsRouter)
+  app.use('/api/matches', matchesRouter)
 
   app.get('/', (_req, res) => {
     res.json({
