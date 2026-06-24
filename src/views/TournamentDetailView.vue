@@ -738,7 +738,6 @@ async function saveResult(): Promise<void> {
                       label="Vista turni"
                       icon="pi pi-list"
                       size="small"
-                      :disabled="auth.isGuest"
                       :severity="bracketViewMode === 'rounds' ? 'primary' : 'secondary'"
                       :outlined="bracketViewMode !== 'rounds'"
                       @click="bracketViewMode = 'rounds'"
@@ -747,7 +746,6 @@ async function saveResult(): Promise<void> {
                       label="Vista globale"
                       icon="pi pi-sitemap"
                       size="small"
-                      :disabled="auth.isGuest"
                       :severity="bracketViewMode === 'global' ? 'primary' : 'secondary'"
                       :outlined="bracketViewMode !== 'global'"
                       @click="bracketViewMode = 'global'"
@@ -757,7 +755,6 @@ async function saveResult(): Promise<void> {
                       icon="pi pi-print"
                       size="small"
                       outlined
-                      :disabled="auth.isGuest"
                       @click="printBracket"
                     />
                   </div>
