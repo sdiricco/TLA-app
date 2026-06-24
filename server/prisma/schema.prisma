@@ -20,7 +20,7 @@ model Profile {
 }
 
 model Player {
-  id               String             @id @default(cuid())
+  id               String             @id @default(uuid())
   name             String
   ranking          Int
   club             String?
@@ -39,7 +39,7 @@ model Player {
 }
 
 model Tournament {
-  id        String             @id @default(cuid())
+  id        String             @id @default(uuid())
   name      String
   location  String?
   startDate DateTime?          @map("start_date")
@@ -71,7 +71,7 @@ model TournamentPlayer {
 }
 
 model Match {
-  id           String     @id @default(cuid())
+  id           String     @id @default(uuid())
   tournamentId String     @map("tournament_id")
   round        Int
   position     Int
