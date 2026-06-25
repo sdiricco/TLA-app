@@ -1,28 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import Card from 'primevue/card'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
 import { useTournamentsStore } from '../stores/tournaments'
 import { usePlayersStore } from '../stores/players'
-import type { PendingEnrollment, TournamentStats, TournamentWithPlayers } from '../types'
+import type { TournamentStats } from '../types'
 
 const tournamentsStore = useTournamentsStore()
 const playersStore = usePlayersStore()
 
 const loading = ref(true)
-const tournamentDetails = ref<Record<string, TournamentWithPlayers>>({})
 
 onMounted(async () => {
   await Promise.all([tournamentsStore.fetchAll(), playersStore.fetchAll()])
-  // Load details for upcoming tournaments to get enrollment data
-  const upcoming = tournamentsStore.tournaments.filter((t) => t.status === 'upcoming')
-  await Promise.all(
-    upcoming.map(async (t) => {
-      const detail = await tournamentsStore.getById(t.id)
-      if (detail) tournamentDetails.value[t.id] = detail
-    }),
-  )
   loading.value = false
 })
 
@@ -79,31 +68,6 @@ const statCards = computed(() => [
           </div>
         </template>
       </Card>
-    </div>
-
-    <div>
-      <h3 class="m-0 mb-3 text-lg font-semibold">Iscrizioni in attesa</h3>
-      <DataTable
-        :value="pendingEnrollments"
-        :loading="loading"
-        :rows="10"
-        paginator
-        paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
-      >
-        <template #empty>
-          <div class="flex flex-col items-center gap-3 py-8 text-muted-color text-center">
-            <i class="pi pi-inbox text-2xl" />
-            <p class="m-0">Nessuna iscrizione in attesa.</p>
-          </div>
-        </template>
-        <Column field="playerName" header="Giocatore" sortable />
-        <Column field="tournamentName" header="Torneo" sortable />
-        <Column field="enrolledAt" header="Data iscrizione" sortable>
-          <template #body="{ data }">
-            {{ data.enrolledAt ? new Date(data.enrolledAt).toLocaleDateString('it-IT') : '—' }}
-          </template>
-        </Column>
-      </DataTable>
     </div>
   </div>
 </template>

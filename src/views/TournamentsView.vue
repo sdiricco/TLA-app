@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import DatePicker from 'primevue/datepicker'
+import Dropdown from 'primevue/dropdown'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
@@ -203,13 +204,25 @@ onMounted(() => store.fetchAll())
       <Button v-if="canViewAdmin" label="Nuovo torneo" icon="pi pi-plus" :disabled="auth.isGuest" @click="openCreate" />
     </div>
 
-    <SelectButton
-      v-model="statusFilter"
-      :options="statusOptions"
-      option-label="label"
-      option-value="value"
-      aria-label="Filtra per stato"
-    />
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <SelectButton
+        v-model="statusFilter"
+        :options="statusOptions"
+        option-label="label"
+        option-value="value"
+        aria-label="Filtra per stato"
+        class="hidden sm:inline-flex"
+      />
+      <Dropdown
+        v-model="statusFilter"
+        :options="statusOptions"
+        option-label="label"
+        option-value="value"
+        aria-label="Filtra per stato"
+        class="w-full sm:hidden"
+        fluid
+      />
+    </div>
 
     <div v-if="store.loading" class="flex flex-col items-center gap-3 py-10 text-muted-color text-center">
       <i class="pi pi-spin pi-spinner text-[2rem] text-primary-500" />
