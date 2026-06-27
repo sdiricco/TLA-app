@@ -11,6 +11,7 @@ export const mockTournaments: MockTournament[] = [
     category: 'singles',
     status: 'completed',
     published: true,
+    participant_limit: 32,
     playerIds: ['p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6', 'p-7', 'p-8'],
   },
   {
@@ -23,6 +24,7 @@ export const mockTournaments: MockTournament[] = [
     category: 'singles',
     status: 'ongoing',
     published: true,
+    participant_limit: 16,
     playerIds: ['p-1', 'p-3', 'p-5', 'p-7'],
   },
   {
@@ -35,6 +37,7 @@ export const mockTournaments: MockTournament[] = [
     category: 'doubles',
     status: 'upcoming',
     published: false,
+    participant_limit: 16,
     playerIds: [],
   },
 ]

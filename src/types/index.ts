@@ -49,6 +49,9 @@ export interface Tournament {
   category: TournamentCategory
   status: TournamentStatus
   published: boolean
+  participant_limit?: number | null
+  group_count?: number | null
+  qualifiers_per_group?: number | null
   created_at?: string
   updated_at?: string
 }

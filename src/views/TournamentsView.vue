@@ -6,6 +6,7 @@ import Card from 'primevue/card'
 import DatePicker from 'primevue/datepicker'
 import Dropdown from 'primevue/dropdown'
 import Dialog from 'primevue/dialog'
+import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
@@ -29,6 +30,9 @@ interface TournamentForm {
   format: TournamentFormat
   category: TournamentCategory
   status: TournamentStatus
+  participant_limit: number | null
+  group_count: number | null
+  qualifiers_per_group: number | null
 }
 
 const auth = useAuthStore()
@@ -77,6 +81,7 @@ const statusEditOptions = [
 ] satisfies Array<{ label: string; value: TournamentStatus }>
 
 const canViewAdmin = computed(() => auth.isAdmin || auth.isGuest)
+const requiresGroupConfig = computed(() => form.value.format === 'round_robin_elimination')
 
 function statusSeverity(status: TournamentStatus): 'info' | 'success' | 'secondary' {
   return { upcoming: 'info', ongoing: 'success', completed: 'secondary' }[status]
@@ -95,6 +100,11 @@ function formatDate(date: string | null | undefined): string {
   })
 }
 
+function formatParticipantLimit(limit: number | null | undefined): string {
+  if (!limit) return 'Illimitato'
+  return `${limit} max`
+}
+
 const dialogVisible = ref(false)
 const saving = ref(false)
 const editingId = ref<string | null>(null)
@@ -108,6 +118,9 @@ function emptyForm(): TournamentForm {
     format: 'single_elimination',
     category: 'singles',
     status: 'upcoming',
+    participant_limit: 32,
+    group_count: null,
+    qualifiers_per_group: null,
   }
 }
 
@@ -131,6 +144,9 @@ function openEdit(tournament: Tournament): void {
     format: tournament.format,
     category: tournament.category,
     status: tournament.status,
+    participant_limit: tournament.participant_limit ?? null,
+    group_count: tournament.group_count ?? null,
+    qualifiers_per_group: tournament.qualifiers_per_group ?? null,
   }
   dialogVisible.value = true
 }
@@ -148,11 +164,24 @@ function toTournamentPayload(data: TournamentForm): TournamentCreate {
     format: data.format,
     category: data.category,
     status: data.status,
+    participant_limit: data.participant_limit,
+    group_count: data.format === 'round_robin_elimination' ? data.group_count : null,
+    qualifiers_per_group: data.format === 'round_robin_elimination' ? data.qualifiers_per_group : null,
   }
 }
 
 async function saveTournament(): Promise<void> {
   if (auth.isGuest) return
+  if (!form.value.participant_limit || form.value.participant_limit < 2) {
+    toast.add({ severity: 'warn', summary: 'Controlla i dati', detail: 'Inserisci un limite partecipanti valido', life: 4000 })
+    return
+  }
+  if (form.value.format === 'round_robin_elimination') {
+    if (!form.value.group_count || !form.value.qualifiers_per_group) {
+      toast.add({ severity: 'warn', summary: 'Controlla i dati', detail: 'Configura gironi e qualificati per il formato gironi + finale', life: 4000 })
+      return
+    }
+  }
   saving.value = true
   try {
     const payload = toTournamentPayload(form.value)
@@ -279,6 +308,16 @@ onMounted(() => store.fetchAll())
               <i class="pi pi-user text-[0.8125rem] w-4 text-center" />
               <span>{{ categoryLabels[t.category] ?? t.category }}</span>
             </div>
+            <div class="flex items-center gap-2 text-sm text-muted-color">
+              <i class="pi pi-users text-[0.8125rem] w-4 text-center" />
+              <span>Limite: {{ formatParticipantLimit(t.participant_limit) }}</span>
+            </div>
+            <div v-if="t.format === 'round_robin_elimination'" class="flex items-center gap-2 text-sm text-muted-color">
+              <i class="pi pi-sitemap text-[0.8125rem] w-4 text-center" />
+              <span>
+                {{ t.group_count ?? '—' }} gironi · {{ t.qualifiers_per_group ?? '—' }} qualificati/girone
+              </span>
+            </div>
           </div>
         </template>
       </Card>
@@ -318,6 +357,17 @@ onMounted(() => store.fetchAll())
         <Select v-model="form.format" :options="formatOptions" option-label="label" option-value="value" fluid />
       </div>
 
+      <div class="flex flex-col gap-[0.375rem]">
+        <label class="text-sm font-medium">Limite partecipanti *</label>
+        <InputNumber
+          v-model="form.participant_limit"
+          :min="2"
+          :use-grouping="false"
+          placeholder="Es. 32"
+          fluid
+        />
+      </div>
+
       <div class="grid grid-cols-2 gap-3">
         <div class="flex flex-col gap-[0.375rem]">
           <label class="text-sm font-medium">Categoria</label>
@@ -326,6 +376,32 @@ onMounted(() => store.fetchAll())
         <div class="flex flex-col gap-[0.375rem]">
           <label class="text-sm font-medium">Stato</label>
           <Select v-model="form.status" :options="statusEditOptions" option-label="label" option-value="value" fluid />
+        </div>
+      </div>
+
+      <div v-if="requiresGroupConfig" class="rounded-lg border border-surface-200 bg-surface-50 p-3">
+        <div class="mb-3 text-sm font-semibold text-color">Configurazione gironi</div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-[0.375rem]">
+            <label class="text-sm font-medium">Numero gironi *</label>
+            <InputNumber
+              v-model="form.group_count"
+              :min="1"
+              :use-grouping="false"
+              placeholder="Es. 4"
+              fluid
+            />
+          </div>
+          <div class="flex flex-col gap-[0.375rem]">
+            <label class="text-sm font-medium">Qualificati per girone *</label>
+            <InputNumber
+              v-model="form.qualifiers_per_group"
+              :min="1"
+              :use-grouping="false"
+              placeholder="Es. 2"
+              fluid
+            />
+          </div>
         </div>
       </div>
 

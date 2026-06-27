@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { Prisma } from '@prisma/client'
 import type { TournamentCreate, TournamentUpdate } from '../../../src/types'
 import { prisma } from '../db/prisma'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
@@ -39,6 +40,47 @@ async function getNextSeed(tournamentId: string): Promise<number> {
   return (entries ?? []).reduce((max, row) => Math.max(max, row.seed ?? 0), 0) + 1
 }
 
+function parseNullableInt(value: unknown): number | null | undefined {
+  if (value === undefined) return undefined
+  if (value === null || value === '') return null
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error('Invalid numeric value')
+  }
+  return parsed
+}
+
+function tournamentCapacityReached(limit: number | null, count: number): boolean {
+  return limit !== null && count >= limit
+}
+
+async function assertCanAddParticipant(tournamentId: string, playerId: string): Promise<void> {
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: { participantLimit: true },
+  })
+  if (!tournament) {
+    throw new Error('Torneo non trovato')
+  }
+
+  const alreadyEnrolled = await prisma.tournamentPlayer.findUnique({
+    where: {
+      tournamentId_playerId: {
+        tournamentId,
+        playerId,
+      },
+    },
+  })
+  if (alreadyEnrolled) return
+
+  const count = await prisma.tournamentPlayer.count({
+    where: { tournamentId },
+  })
+  if (tournamentCapacityReached(tournament.participantLimit, count)) {
+    throw new Error('Torneo al completo')
+  }
+}
+
 tournamentsRouter.get('/', async (_req, res) => {
   const tournaments = await prisma.tournament.findMany({
     orderBy: { startDate: 'desc' },
@@ -57,20 +99,51 @@ tournamentsRouter.get('/:id', async (req, res) => {
 })
 
 tournamentsRouter.post('/', requireAdmin, async (req, res) => {
-  const data = req.body as TournamentCreate
-  const tournament = await prisma.tournament.create({
-    data: {
-      name: data.name,
-      location: data.location ?? null,
-      startDate: parseDate(data.start_date ?? null),
-      endDate: parseDate(data.end_date ?? null),
-      format: data.format,
-      category: data.category,
-      status: data.status,
-      published: data.published,
-    },
-  })
-  res.status(201).json(serializeTournament(tournament))
+  try {
+    const data = req.body as TournamentCreate
+    const participantLimit = parseNullableInt(data.participant_limit)
+    const groupCount = parseNullableInt(data.group_count)
+    const qualifiersPerGroup = parseNullableInt(data.qualifiers_per_group)
+
+    if (data.format === 'round_robin_elimination' && (groupCount == null || qualifiersPerGroup == null)) {
+      res.status(400).json({ message: 'La configurazione dei gironi è obbligatoria per questo formato' })
+      return
+    }
+
+    if (
+      data.format === 'round_robin_elimination' &&
+      groupCount !== null &&
+      qualifiersPerGroup !== null &&
+      participantLimit !== null &&
+      groupCount * qualifiersPerGroup > participantLimit
+    ) {
+      res.status(400).json({ message: 'I qualificati totali non possono superare il limite partecipanti' })
+      return
+    }
+
+    const tournament = await prisma.tournament.create({
+      data: {
+        name: data.name,
+        location: data.location ?? null,
+        startDate: parseDate(data.start_date ?? null),
+        endDate: parseDate(data.end_date ?? null),
+        format: data.format,
+        category: data.category,
+        status: data.status,
+        published: data.published,
+        participantLimit: participantLimit ?? null,
+        groupCount: groupCount ?? null,
+        qualifiersPerGroup: qualifiersPerGroup ?? null,
+      },
+    })
+    res.status(201).json(serializeTournament(tournament))
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      res.status(404).json({ message: 'Torneo non trovato' })
+      return
+    }
+    res.status(400).json({ message: (error as Error).message })
+  }
 })
 
 tournamentsRouter.put('/:id', requireAdmin, async (req, res) => {
@@ -109,6 +182,30 @@ tournamentsRouter.put('/:id', requireAdmin, async (req, res) => {
   }
 
   try {
+    const participantLimit = body.participant_limit !== undefined ? parseNullableInt(body.participant_limit) : undefined
+    const groupCount = body.group_count !== undefined ? parseNullableInt(body.group_count) : undefined
+    const qualifiersPerGroup =
+      body.qualifiers_per_group !== undefined ? parseNullableInt(body.qualifiers_per_group) : undefined
+
+    if (
+      body.format === 'round_robin_elimination' &&
+      (groupCount === undefined || qualifiersPerGroup === undefined)
+    ) {
+      res.status(400).json({ message: 'La configurazione dei gironi è obbligatoria per questo formato' })
+      return
+    }
+
+    if (
+      body.format === 'round_robin_elimination' &&
+      groupCount !== null &&
+      qualifiersPerGroup !== null &&
+      participantLimit !== null &&
+      groupCount * qualifiersPerGroup > participantLimit
+    ) {
+      res.status(400).json({ message: 'I qualificati totali non possono superare il limite partecipanti' })
+      return
+    }
+
     const tournament = await prisma.tournament.update({
       where: { id: tournamentId },
       data: {
@@ -120,11 +217,14 @@ tournamentsRouter.put('/:id', requireAdmin, async (req, res) => {
         ...(body.category !== undefined ? { category: body.category } : {}),
         ...(body.status !== undefined ? { status: body.status } : {}),
         ...(body.published !== undefined ? { published: body.published } : {}),
+        ...(participantLimit !== undefined ? { participantLimit } : {}),
+        ...(groupCount !== undefined ? { groupCount } : {}),
+        ...(qualifiersPerGroup !== undefined ? { qualifiersPerGroup } : {}),
       },
     })
     res.json(serializeTournament(tournament))
-  } catch {
-    res.status(404).json({ message: 'Torneo non trovato' })
+  } catch (error) {
+    res.status(400).json({ message: (error as Error).message })
   }
 })
 
@@ -141,6 +241,13 @@ tournamentsRouter.delete('/:id', requireAdmin, async (req, res) => {
 tournamentsRouter.post('/:id/players', requireAdmin, async (req, res) => {
   const { playerId } = req.body as { playerId: string }
   const tournamentId = req.params['id'] as string
+  try {
+    await assertCanAddParticipant(tournamentId, playerId)
+  } catch (error) {
+    const message = (error as Error).message
+    res.status(message === 'Torneo non trovato' ? 404 : 400).json({ message })
+    return
+  }
   const seed = await getNextSeed(tournamentId)
   await prisma.tournamentPlayer.upsert({
     where: {
@@ -200,6 +307,14 @@ tournamentsRouter.post('/:id/enroll', async (req, res) => {
   })
   if (!player) {
     res.status(400).json({ message: 'Profilo giocatore non configurato' })
+    return
+  }
+
+  try {
+    await assertCanAddParticipant(tournamentId, player.id)
+  } catch (error) {
+    const message = (error as Error).message
+    res.status(message === 'Torneo non trovato' ? 404 : 400).json({ message })
     return
   }
 

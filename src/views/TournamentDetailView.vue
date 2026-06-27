@@ -9,8 +9,10 @@ import { playersService } from '../services/playersService'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
+import Checkbox from 'primevue/checkbox'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
+import MultiSelect from 'primevue/multiselect'
 import Select from 'primevue/select'
 import Tab from 'primevue/tab'
 import TabList from 'primevue/tablist'
@@ -33,9 +35,10 @@ const tournament = ref<TournamentWithPlayers | null>(null)
 const loading = ref(true)
 const myPlayer = ref<Player | null>(null)
 const addPlayerVisible = ref(false)
-const selectedPlayerId = ref<string | null>(null)
+const selectedPlayerIds = ref<string[]>([])
 const addingPlayer = ref(false)
 const savingSeeds = ref(false)
+const selectedRemovePlayerIds = ref<string[]>([])
 const resettingDraw = ref(false)
 const updatingStatus = ref(false)
 const activeBracketRound = ref(1)
@@ -142,8 +145,19 @@ const isRoundRobinElimination = computed(() => tournament.value?.format === 'rou
 const orderChanged = computed(
   () => localOrder.value.map((player) => player.id).join(',') !== enrolledPlayers.value.map((player) => player.id).join(','),
 )
+const allPlayersSelected = computed(
+  () => localOrder.value.length > 0 && selectedRemovePlayerIds.value.length === localOrder.value.length,
+)
+const somePlayersSelected = computed(
+  () => selectedRemovePlayerIds.value.length > 0 && selectedRemovePlayerIds.value.length < localOrder.value.length,
+)
 const canViewAdmin = computed(() => auth.isAdmin || auth.isGuest)
 const canModify = computed(() => !auth.isGuest)
+const canAddMorePlayers = computed(() => {
+  const limit = tournament.value?.participant_limit
+  if (!limit) return true
+  return enrolledPlayers.value.length < limit
+})
 const bracketRoundTabs = computed(() =>
   Array.from({ length: matchesStore.numRounds }, (_, index) => {
     const round = index + 1
@@ -303,9 +317,18 @@ watch(
 
 watch(addPlayerVisible, (visible) => {
   if (visible) {
-    selectedPlayerId.value = null
+    selectedPlayerIds.value = []
   }
 })
+
+watch(
+  localOrder,
+  (players) => {
+    const validIds = new Set(players.map((player) => player.id))
+    selectedRemovePlayerIds.value = selectedRemovePlayerIds.value.filter((id) => validIds.has(id))
+  },
+  { immediate: true },
+)
 
 function statusSeverity(status: string): string {
   return ({ upcoming: 'info', ongoing: 'success', completed: 'secondary' } as Record<string, string>)[status] ?? 'secondary'
@@ -313,6 +336,11 @@ function statusSeverity(status: string): string {
 
 function statusLabel(status: string): string {
   return ({ upcoming: 'In programma', ongoing: 'In corso', completed: 'Completato' } as Record<string, string>)[status] ?? status
+}
+
+function formatParticipantLimit(limit: number | null | undefined): string {
+  if (!limit) return 'Illimitato'
+  return `${limit} max`
 }
 
 function formatDate(date: string | null | undefined): string {
@@ -360,6 +388,20 @@ function isWinner(match: Match, slot: MatchSlot): boolean {
   return Boolean(match.winner_id && match.winner_id === match[slot])
 }
 
+function toggleRemoveAll(checked: boolean): void {
+  selectedRemovePlayerIds.value = checked ? localOrder.value.map((player) => player.id) : []
+}
+
+function toggleRemovePlayer(playerId: string, checked: boolean): void {
+  if (checked) {
+    if (!selectedRemovePlayerIds.value.includes(playerId)) {
+      selectedRemovePlayerIds.value = [...selectedRemovePlayerIds.value, playerId]
+    }
+    return
+  }
+  selectedRemovePlayerIds.value = selectedRemovePlayerIds.value.filter((id) => id !== playerId)
+}
+
 async function publishToggle(): Promise<void> {
   if (auth.isGuest) return
   if (!tournament.value) return
@@ -401,14 +443,22 @@ async function handleWithdraw(): Promise<void> {
 }
 
 async function addPlayer(): Promise<void> {
-  if (!selectedPlayerId.value || !tournament.value) return
+  if (selectedPlayerIds.value.length === 0 || !tournament.value) return
   addingPlayer.value = true
   try {
-    await tournamentsStore.addPlayer(tournament.value.id, selectedPlayerId.value)
+    const addedCount = selectedPlayerIds.value.length
+    for (const playerId of selectedPlayerIds.value) {
+      await tournamentsStore.addPlayer(tournament.value.id, playerId)
+    }
     await loadTournament()
     addPlayerVisible.value = false
-    selectedPlayerId.value = null
-    toast.add({ severity: 'success', summary: 'Aggiunto', detail: 'Giocatore iscritto', life: 3000 })
+    selectedPlayerIds.value = []
+    toast.add({
+      severity: 'success',
+      summary: 'Aggiunti',
+      detail: `${addedCount} giocatori iscritti`,
+      life: 3000,
+    })
   } catch (error) {
     toast.add({ severity: 'error', summary: 'Errore', detail: (error as Error).message, life: 4000 })
   } finally {
@@ -416,9 +466,13 @@ async function addPlayer(): Promise<void> {
   }
 }
 
-function confirmRemovePlayer(player: Player): void {
+function confirmRemovePlayers(players: Player[]): void {
+  if (players.length === 0) return
   confirm.require({
-    message: `Rimuovere ${player.name} da questo torneo?`,
+    message:
+      players.length === 1
+        ? `Rimuovere ${players[0]?.name ?? 'il giocatore selezionato'} da questo torneo?`
+        : `Rimuovere ${players.length} giocatori selezionati da questo torneo?`,
     header: 'Conferma rimozione',
     icon: 'pi pi-exclamation-triangle',
     rejectLabel: 'Annulla',
@@ -427,14 +481,30 @@ function confirmRemovePlayer(player: Player): void {
     accept: async () => {
       if (!tournament.value) return
       try {
-        await tournamentsStore.removePlayer(tournament.value.id, player.id)
+        for (const player of players) {
+          await tournamentsStore.removePlayer(tournament.value.id, player.id)
+        }
         await loadTournament()
-        toast.add({ severity: 'success', summary: 'Rimosso', detail: `${player.name} rimosso`, life: 3000 })
+        selectedRemovePlayerIds.value = []
+        toast.add({
+          severity: 'success',
+          summary: 'Rimosso',
+          detail:
+            players.length === 1
+              ? `${players[0]?.name ?? 'Giocatore'} rimosso`
+              : `${players.length} giocatori rimossi`,
+          life: 3000,
+        })
       } catch (error) {
         toast.add({ severity: 'error', summary: 'Errore', detail: (error as Error).message, life: 4000 })
       }
     },
   })
+}
+
+function removeSelectedPlayers(): void {
+  const players = localOrder.value.filter((player) => selectedRemovePlayerIds.value.includes(player.id))
+  confirmRemovePlayers(players)
 }
 
 function onDragStart(index: number): void {
@@ -608,6 +678,13 @@ async function saveResult(): Promise<void> {
           <span class="inline-flex items-center gap-[0.375rem] px-3 py-1 rounded-full bg-surface-100 text-sm text-color">
             <i class="pi pi-user" /> {{ categoryLabels[tournament.category] ?? tournament.category }}
           </span>
+          <span class="inline-flex items-center gap-[0.375rem] px-3 py-1 rounded-full bg-surface-100 text-sm text-color">
+            <i class="pi pi-users" /> Limite {{ formatParticipantLimit(tournament.participant_limit) }}
+          </span>
+          <span v-if="tournament.format === 'round_robin_elimination'" class="inline-flex items-center gap-[0.375rem] px-3 py-1 rounded-full bg-surface-100 text-sm text-color">
+            <i class="pi pi-sitemap" />
+            {{ tournament.group_count ?? '—' }} gironi · {{ tournament.qualifiers_per_group ?? '—' }} qualificati/girone
+          </span>
         </div>
       </div>
 
@@ -629,12 +706,15 @@ async function saveResult(): Promise<void> {
               <!-- Admin mode -->
               <template v-if="canViewAdmin">
                 <div class="flex items-center justify-between gap-3 flex-wrap">
-                  <span class="text-sm text-muted-color">{{ enrolledPlayers.length }} giocatori iscritti</span>
+                  <span class="text-sm text-muted-color">
+                    {{ enrolledPlayers.length }} giocatori iscritti
+                    <template v-if="tournament.participant_limit"> su {{ tournament.participant_limit }}</template>
+                  </span>
                   <Button
                     label="Aggiungi giocatore"
                     icon="pi pi-user-plus"
                     size="small"
-                    :disabled="availablePlayers.length === 0 || auth.isGuest"
+                    :disabled="availablePlayers.length === 0 || auth.isGuest || !canAddMorePlayers"
                     @click="addPlayerVisible = true"
                   />
                 </div>
@@ -646,6 +726,26 @@ async function saveResult(): Promise<void> {
 
                 <template v-else>
                   <div class="flex flex-col gap-[0.375rem]">
+                    <div class="flex items-center justify-between gap-3 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2">
+                      <label class="inline-flex items-center gap-2 text-sm font-medium cursor-pointer">
+                        <Checkbox
+                          :binary="true"
+                          :model-value="allPlayersSelected"
+                          :indeterminate="somePlayersSelected"
+                          @update:model-value="toggleRemoveAll"
+                        />
+                        <span>Seleziona tutto</span>
+                      </label>
+                      <Button
+                        label="Rimuovi selezionati"
+                        icon="pi pi-trash"
+                        size="small"
+                        severity="danger"
+                        outlined
+                        :disabled="selectedRemovePlayerIds.length === 0 || auth.isGuest"
+                        @click="removeSelectedPlayers"
+                      />
+                    </div>
                     <div
                       v-for="(player, index) in localOrder"
                       :key="player.id"
@@ -660,6 +760,13 @@ async function saveResult(): Promise<void> {
                       <span class="text-muted-color cursor-grab" aria-hidden="true">
                         <i class="pi pi-bars" />
                       </span>
+                      <Checkbox
+                        :binary="true"
+                        :model-value="selectedRemovePlayerIds.includes(player.id)"
+                        :disabled="auth.isGuest"
+                        @update:model-value="(checked) => toggleRemovePlayer(player.id, checked)"
+                        @click.stop
+                      />
                       <span class="text-sm font-bold text-muted-color w-8 shrink-0">#{{ index + 1 }}</span>
                       <div class="flex-1 min-w-0">
                         <span class="block font-medium text-color">{{ player.name }}</span>
@@ -667,16 +774,6 @@ async function saveResult(): Promise<void> {
                           <template v-if="player.club">{{ player.club }} · </template>Rank {{ player.ranking }}
                         </span>
                       </div>
-                      <Button
-                        icon="pi pi-times"
-                        text
-                        rounded
-                        size="small"
-                        severity="danger"
-                        aria-label="Rimuovi"
-                        :disabled="auth.isGuest"
-                        @click="confirmRemovePlayer(player)"
-                      />
                     </div>
                   </div>
 
@@ -705,6 +802,7 @@ async function saveResult(): Promise<void> {
                       v-if="!isEnrolled && tournament.status === 'upcoming'"
                       label="Iscriviti"
                       icon="pi pi-user-plus"
+                      :disabled="!canAddMorePlayers"
                       @click="handleEnroll"
                     />
                     <Button
@@ -715,6 +813,9 @@ async function saveResult(): Promise<void> {
                       outlined
                       @click="handleWithdraw"
                     />
+                  </div>
+                  <div v-if="!canAddMorePlayers && tournament.participant_limit" class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    Torneo al completo: raggiunto il limite di {{ tournament.participant_limit }} partecipanti.
                   </div>
                   <div class="flex flex-col gap-2">
                     <div
@@ -1036,20 +1137,23 @@ async function saveResult(): Promise<void> {
 
   <Dialog v-model:visible="addPlayerVisible" header="Aggiungi giocatore" :style="{ width: '360px' }" modal>
     <div class="flex flex-col gap-4 pt-2">
-      <Select
-        v-model="selectedPlayerId"
+      <MultiSelect
+        v-model="selectedPlayerIds"
         :options="availablePlayersOptions"
         option-label="name"
         option-value="id"
-        placeholder="Seleziona giocatore"
+        display="chip"
         filter
         filter-placeholder="Cerca nome, club o ranking"
         :filter-fields="['searchText']"
+        placeholder="Seleziona uno o più giocatori"
+        selected-items-label="{0} giocatori selezionati"
+        :max-selected-labels="2"
         fluid
       />
       <div class="flex items-center justify-end gap-3 flex-wrap">
         <Button label="Annulla" severity="secondary" outlined @click="addPlayerVisible = false" />
-        <Button label="Aggiungi" :loading="addingPlayer" :disabled="!selectedPlayerId" @click="addPlayer" />
+        <Button label="Aggiungi" :loading="addingPlayer" :disabled="selectedPlayerIds.length === 0" @click="addPlayer" />
       </div>
     </div>
   </Dialog>

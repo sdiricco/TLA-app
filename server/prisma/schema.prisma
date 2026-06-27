@@ -39,19 +39,22 @@ model Player {
 }
 
 model Tournament {
-  id        String             @id @default(uuid())
-  name      String
-  location  String?
-  startDate DateTime?          @map("start_date")
-  endDate   DateTime?          @map("end_date")
-  format    String
-  category  String
-  status    String             @default("upcoming")
-  published Boolean            @default(false)
-  players   TournamentPlayer[]
-  matches   Match[]
-  createdAt DateTime           @default(now()) @map("created_at")
-  updatedAt DateTime           @updatedAt @map("updated_at")
+  id                  String             @id @default(uuid())
+  name                String
+  location            String?
+  startDate           DateTime?          @map("start_date")
+  endDate             DateTime?          @map("end_date")
+  format              String
+  category            String
+  status              String             @default("upcoming")
+  published           Boolean            @default(false)
+  participantLimit    Int?               @map("participant_limit")
+  groupCount          Int?               @map("group_count")
+  qualifiersPerGroup  Int?               @map("qualifiers_per_group")
+  players             TournamentPlayer[]
+  matches             Match[]
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
 
   @@index([startDate])
   @@index([status])

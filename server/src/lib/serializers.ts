@@ -38,6 +38,9 @@ export function serializeTournament(tournament: {
   category: string
   status: string
   published: boolean
+  participantLimit: number | null
+  groupCount: number | null
+  qualifiersPerGroup: number | null
   createdAt: Date
   updatedAt: Date
 }): Tournament {
@@ -51,6 +54,9 @@ export function serializeTournament(tournament: {
     category: tournament.category as Tournament['category'],
     status: tournament.status as Tournament['status'],
     published: tournament.published,
+    participant_limit: tournament.participantLimit,
+    group_count: tournament.groupCount,
+    qualifiers_per_group: tournament.qualifiersPerGroup,
     created_at: tournament.createdAt.toISOString(),
     updated_at: tournament.updatedAt.toISOString(),
   }
@@ -66,6 +72,9 @@ export function serializeTournamentWithPlayers(tournament: {
   category: string
   status: string
   published: boolean
+  participantLimit: number | null
+  groupCount: number | null
+  qualifiersPerGroup: number | null
   createdAt: Date
   updatedAt: Date
   players?: Array<{

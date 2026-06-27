@@ -20,6 +20,7 @@ export const tournamentHandlers = [
       format: 'single_elimination',
       category: 'singles',
       name: '',
+      participant_limit: 32,
       ...body,
     }
     tournaments.push(newTournament)
@@ -42,6 +43,9 @@ export const tournamentHandlers = [
     const tournament = tournaments.find((t) => t.id === params['id'])
     if (!tournament) return HttpResponse.json({ message: 'Torneo non trovato' }, { status: 404 })
     const { playerId } = (await request.json()) as { playerId: string }
+    if (tournament.participant_limit && !tournament.playerIds.includes(playerId) && tournament.playerIds.length >= tournament.participant_limit) {
+      return HttpResponse.json({ message: 'Torneo al completo' }, { status: 400 })
+    }
     if (!tournament.playerIds.includes(playerId)) {
       tournament.playerIds.push(playerId)
     }
@@ -64,6 +68,9 @@ export const tournamentHandlers = [
     const { playerId } = (await request.json()) as { playerId: string }
     const tournament = tournaments.find((t) => t.id === params['id'])
     if (!tournament) return HttpResponse.json({ message: 'Non trovato' }, { status: 404 })
+    if (tournament.participant_limit && !tournament.playerIds.includes(playerId) && tournament.playerIds.length >= tournament.participant_limit) {
+      return HttpResponse.json({ message: 'Torneo al completo' }, { status: 400 })
+    }
     if (!tournament.playerIds.includes(playerId)) tournament.playerIds.push(playerId)
     return new HttpResponse(null, { status: 204 })
   }),
