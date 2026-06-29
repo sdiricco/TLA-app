@@ -41,6 +41,18 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'tournaments/new',
+          name: 'tournament-create',
+          component: () => import('../views/TournamentFormView.vue'),
+          meta: { requiresAuth: true, requiresAdmin: true },
+        },
+        {
+          path: 'tournaments/:id/edit',
+          name: 'tournament-edit',
+          component: () => import('../views/TournamentFormView.vue'),
+          meta: { requiresAuth: true, requiresAdmin: true },
+        },
+        {
           path: 'tournaments/:id',
           name: 'tournament-detail',
           component: () => import('../views/TournamentDetailView.vue'),
@@ -50,6 +62,18 @@ const router = createRouter({
           path: 'players',
           name: 'players',
           component: () => import('../views/PlayersView.vue'),
+          meta: { requiresAuth: true, requiresAdmin: true },
+        },
+        {
+          path: 'players/new',
+          name: 'player-create',
+          component: () => import('../views/PlayerFormView.vue'),
+          meta: { requiresAuth: true, requiresAdmin: true },
+        },
+        {
+          path: 'players/:id/edit',
+          name: 'player-edit',
+          component: () => import('../views/PlayerFormView.vue'),
           meta: { requiresAuth: true, requiresAdmin: true },
         },
         {

@@ -20,6 +20,10 @@ export const usePlayersStore = defineStore('players', () => {
     }
   }
 
+  async function getById(id: string): Promise<Player> {
+    return playersService.getById(id)
+  }
+
   async function create(data: PlayerCreate): Promise<Player> {
     const newPlayer = await playersService.create(data)
     players.value.push(newPlayer)
@@ -38,5 +42,5 @@ export const usePlayersStore = defineStore('players', () => {
     players.value = players.value.filter((p) => p.id !== id)
   }
 
-  return { players, loading, error, fetchAll, create, update, remove }
+  return { players, loading, error, fetchAll, getById, create, update, remove }
 })

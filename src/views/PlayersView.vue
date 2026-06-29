@@ -1,82 +1,27 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import Button from 'primevue/button'
+import { RouterLink, useRouter } from 'vue-router'
 import Avatar from 'primevue/avatar'
+import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
-import Dialog from 'primevue/dialog'
-import DatePicker from 'primevue/datepicker'
-import InputNumber from 'primevue/inputnumber'
-import InputText from 'primevue/inputtext'
 import Tag from 'primevue/tag'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '../stores/auth'
 import { usePlayersStore } from '../stores/players'
 import { profilesService } from '../services/profilesService'
-import type { Player, PlayerCreate, Profile } from '../types'
-
-interface PlayerForm {
-  name: string
-  ranking: number | null
-  birth_date: Date | null
-  photo_url: string
-  club: string
-  phone: string
-}
+import type { Player, Profile } from '../types'
 
 const store = usePlayersStore()
-const router = useRouter()
 const auth = useAuthStore()
+const router = useRouter()
 const confirm = useConfirm()
 const toast = useToast()
 const canViewAdmin = computed(() => auth.isAdmin || auth.isGuest)
 
-const dialogVisible = ref(false)
-const saving = ref(false)
-const editingId = ref<string | null>(null)
-const form = ref<PlayerForm>({ name: '', ranking: null, birth_date: null, photo_url: '', club: '', phone: '' })
-
-function emptyForm(): PlayerForm {
-  return { name: '', ranking: null, birth_date: null, photo_url: '', club: '', phone: '' }
-}
-
-function openCreate(): void {
-  if (auth.isGuest) return
-  editingId.value = null
-  form.value = emptyForm()
-  dialogVisible.value = true
-}
-
-function openEdit(player: Player): void {
-  if (auth.isGuest) return
-  editingId.value = player.id
-  form.value = {
-    name: player.name,
-    ranking: player.ranking,
-    birth_date: player.birth_date ? new Date(player.birth_date) : null,
-    photo_url: player.photo_url ?? '',
-    club: player.club ?? '',
-    phone: player.phone ?? '',
-  }
-  dialogVisible.value = true
-}
-
-function toDateString(value: Date | null): string | null {
-  return value ? value.toISOString().split('T')[0] ?? null : null
-}
-
-function toPlayerPayload(data: PlayerForm): PlayerCreate {
-  return {
-    name: data.name,
-    ranking: data.ranking ?? 0,
-    birth_date: toDateString(data.birth_date),
-    photo_url: data.photo_url || null,
-    club: data.club || null,
-    phone: data.phone || null,
-  }
-}
+const unlinkedProfiles = ref<Profile[]>([])
+const addingUserId = ref<string | null>(null)
 
 function formatAge(birthDate: string | null | undefined): string {
   if (!birthDate) return 'Età non disponibile'
@@ -96,28 +41,14 @@ function getPlayerInitials(player: Player): string {
     .join('')
 }
 
-function goToProfile(playerId: string): void {
-  void router.push({ name: 'player-detail', params: { id: playerId } })
+function openCreate(): void {
+  if (auth.isGuest) return
+  void router.push({ name: 'player-create' })
 }
 
-async function savePlayer(): Promise<void> {
+function openEdit(player: Player): void {
   if (auth.isGuest) return
-  saving.value = true
-  try {
-    const payload = toPlayerPayload(form.value)
-    if (editingId.value) {
-      await store.update(editingId.value, payload)
-      toast.add({ severity: 'success', summary: 'Salvato', detail: 'Giocatore aggiornato', life: 3000 })
-    } else {
-      await store.create(payload)
-      toast.add({ severity: 'success', summary: 'Creato', detail: 'Giocatore aggiunto', life: 3000 })
-    }
-    dialogVisible.value = false
-  } catch (e) {
-    toast.add({ severity: 'error', summary: 'Errore', detail: (e as Error).message, life: 4000 })
-  } finally {
-    saving.value = false
-  }
+  void router.push({ name: 'player-edit', params: { id: player.id } })
 }
 
 function confirmDelete(player: Player): void {
@@ -140,14 +71,6 @@ function confirmDelete(player: Player): void {
   })
 }
 
-onMounted(async () => {
-  await store.fetchAll()
-  unlinkedProfiles.value = await profilesService.getUnlinkedProfiles()
-})
-
-const unlinkedProfiles = ref<Profile[]>([])
-const addingUserId = ref<string | null>(null)
-
 async function addAsPlayer(profile: Profile): Promise<void> {
   if (auth.isGuest) return
   addingUserId.value = profile.id
@@ -155,6 +78,8 @@ async function addAsPlayer(profile: Profile): Promise<void> {
     await store.create({
       name: profile.name ?? 'Nuovo giocatore',
       ranking: 0,
+      birth_date: null,
+      photo_url: null,
       club: null,
       phone: null,
       user_id: profile.id,
@@ -167,6 +92,11 @@ async function addAsPlayer(profile: Profile): Promise<void> {
     addingUserId.value = null
   }
 }
+
+onMounted(async () => {
+  await store.fetchAll()
+  unlinkedProfiles.value = await profilesService.getUnlinkedProfiles()
+})
 </script>
 
 <template>
@@ -199,12 +129,7 @@ async function addAsPlayer(profile: Profile): Promise<void> {
 
       <Column header="" style="width: 4rem; text-align: center">
         <template #body="{ data }">
-          <Avatar
-            :label="getPlayerInitials(data)"
-            :image="data.photo_url ?? undefined"
-            shape="circle"
-            class="mx-auto"
-          />
+          <Avatar :label="getPlayerInitials(data)" :image="data.photo_url ?? undefined" shape="circle" class="mx-auto" />
         </template>
       </Column>
 
@@ -239,21 +164,44 @@ async function addAsPlayer(profile: Profile): Promise<void> {
 
       <Column header="Profilo" style="width: 8rem">
         <template #body="{ data }">
-          <Button label="Apri" size="small" text @click="goToProfile(data.id)" />
+          <RouterLink
+            :to="{ name: 'player-detail', params: { id: data.id } }"
+            class="inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
+          >
+            Apri
+          </RouterLink>
         </template>
       </Column>
 
       <Column header="Azioni" style="width: 7rem">
         <template #body="{ data }">
           <div class="flex gap-1">
-            <Button v-if="canViewAdmin" icon="pi pi-pencil" text rounded size="small" aria-label="Modifica" :disabled="auth.isGuest" @click="openEdit(data)" />
-            <Button v-if="canViewAdmin" icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Elimina" :disabled="auth.isGuest" @click="confirmDelete(data)" />
+            <Button
+              v-if="canViewAdmin"
+              icon="pi pi-pencil"
+              text
+              rounded
+              size="small"
+              aria-label="Modifica"
+              :disabled="auth.isGuest"
+              @click="openEdit(data)"
+            />
+            <Button
+              v-if="canViewAdmin"
+              icon="pi pi-trash"
+              text
+              rounded
+              size="small"
+              severity="danger"
+              aria-label="Elimina"
+              :disabled="auth.isGuest"
+              @click="confirmDelete(data)"
+            />
           </div>
         </template>
       </Column>
     </DataTable>
 
-    <!-- Utenti registrati non ancora giocatori -->
     <div v-if="canViewAdmin && unlinkedProfiles.length > 0" class="mt-6">
       <h3 class="m-0 mb-3 text-lg font-semibold">Utenti registrati</h3>
       <p class="mt-0 mb-3 text-sm text-muted-color">Questi utenti hanno un account ma non sono ancora nella lista giocatori.</p>
@@ -279,49 +227,4 @@ async function addAsPlayer(profile: Profile): Promise<void> {
       </div>
     </div>
   </div>
-
-  <Dialog
-    v-model:visible="dialogVisible"
-    :header="editingId ? 'Modifica giocatore' : 'Nuovo giocatore'"
-    :style="{ width: '400px' }"
-    modal
-  >
-    <form class="flex flex-col gap-4 pt-2" @submit.prevent="savePlayer">
-      <div class="flex flex-col gap-[0.375rem]">
-        <label for="p-name" class="text-sm font-medium">Nome *</label>
-        <InputText id="p-name" v-model="form.name" placeholder="Mario Rossi" fluid required autofocus />
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div class="flex flex-col gap-[0.375rem]">
-          <label for="p-ranking" class="text-sm font-medium">Ranking</label>
-          <InputNumber id="p-ranking" v-model="form.ranking" placeholder="1" :min="1" :max="9999" fluid />
-        </div>
-        <div class="flex flex-col gap-[0.375rem]">
-          <label for="p-birth-date" class="text-sm font-medium">Data nascita</label>
-          <DatePicker id="p-birth-date" v-model="form.birth_date" date-format="dd/mm/yy" placeholder="gg/mm/aaaa" fluid show-button-bar />
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-[0.375rem]">
-        <label for="p-photo" class="text-sm font-medium">Foto profilo</label>
-        <InputText id="p-photo" v-model="form.photo_url" placeholder="URL immagine profilo" fluid />
-      </div>
-
-      <div class="flex flex-col gap-[0.375rem]">
-        <label for="p-club" class="text-sm font-medium">Club</label>
-        <InputText id="p-club" v-model="form.club" placeholder="TC Milano" fluid />
-      </div>
-
-      <div class="flex flex-col gap-[0.375rem]">
-        <label for="p-phone" class="text-sm font-medium">Contatto</label>
-        <InputText id="p-phone" v-model="form.phone" placeholder="333-0000000" fluid />
-      </div>
-
-      <div class="flex justify-end gap-2 pt-2">
-        <Button type="button" label="Annulla" severity="secondary" outlined @click="dialogVisible = false" />
-        <Button type="submit" :label="editingId ? 'Salva' : 'Crea'" :loading="saving" />
-      </div>
-    </form>
-  </Dialog>
 </template>

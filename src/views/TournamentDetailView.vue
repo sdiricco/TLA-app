@@ -10,7 +10,6 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
-import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import MultiSelect from 'primevue/multiselect'
 import Select from 'primevue/select'
@@ -34,7 +33,6 @@ const toast = useToast()
 const tournament = ref<TournamentWithPlayers | null>(null)
 const loading = ref(true)
 const myPlayer = ref<Player | null>(null)
-const addPlayerVisible = ref(false)
 const selectedPlayerIds = ref<string[]>([])
 const addingPlayer = ref(false)
 const savingSeeds = ref(false)
@@ -48,14 +46,10 @@ const printableBracketRef = ref<HTMLElement | null>(null)
 const localOrder = ref<Player[]>([])
 const dragIndex = ref<number | null>(null)
 
-// Assign dialog state
-const assignDialogVisible = ref(false)
 const selectedMatch = ref<Match | null>(null)
 const selectedSlot = ref<MatchSlot>('player1_id')
 const assignPlayerId = ref<string | null>(null)
 
-// Result dialog state
-const resultDialogVisible = ref(false)
 const editResult = ref('')
 const editWinnerId = ref<string | null>(null)
 
@@ -318,12 +312,6 @@ watch(
   { immediate: true },
 )
 
-watch(addPlayerVisible, (visible) => {
-  if (visible) {
-    selectedPlayerIds.value = []
-  }
-})
-
 watch(
   localOrder,
   (players) => {
@@ -482,7 +470,6 @@ async function addPlayer(): Promise<void> {
       await tournamentsStore.addPlayer(tournament.value.id, playerId)
     }
     await loadTournament()
-    addPlayerVisible.value = false
     selectedPlayerIds.value = []
     toast.add({
       severity: 'success',
@@ -597,12 +584,13 @@ function confirmResetDraw(): void {
   })
 }
 
-function openAssignDialog(match: Match, slot: MatchSlot): void {
+function openAssignPanel(match: Match, slot: MatchSlot): void {
   if (auth.isGuest) return
   selectedMatch.value = match
   selectedSlot.value = slot
   assignPlayerId.value = match[slot]
-  assignDialogVisible.value = true
+  editResult.value = match.result ?? ''
+  editWinnerId.value = match.winner_id
 }
 
 async function confirmAssign(): Promise<void> {
@@ -612,7 +600,8 @@ async function confirmAssign(): Promise<void> {
     slot: selectedSlot.value,
     player_id: assignPlayerId.value,
   })
-  assignDialogVisible.value = false
+  await loadPage()
+  closeMatchPanel()
 }
 
 async function clearSlot(): Promise<void> {
@@ -622,15 +611,15 @@ async function clearSlot(): Promise<void> {
     slot: selectedSlot.value,
     player_id: null,
   })
-  assignDialogVisible.value = false
+  await loadPage()
+  closeMatchPanel()
 }
 
-function openResultDialog(match: Match): void {
+function openResultPanel(match: Match): void {
   if (auth.isGuest) return
   selectedMatch.value = match
   editResult.value = match.result ?? ''
   editWinnerId.value = match.winner_id
-  resultDialogVisible.value = true
 }
 
 async function saveResult(): Promise<void> {
@@ -640,7 +629,15 @@ async function saveResult(): Promise<void> {
     result: editResult.value,
     winner_id: editWinnerId.value,
   })
-  resultDialogVisible.value = false
+  await loadPage()
+  closeMatchPanel()
+}
+
+function closeMatchPanel(): void {
+  selectedMatch.value = null
+  assignPlayerId.value = null
+  editResult.value = ''
+  editWinnerId.value = null
 }
 </script>
 
@@ -741,13 +738,71 @@ async function saveResult(): Promise<void> {
                     {{ enrolledPlayers.length }} giocatori iscritti
                     <template v-if="tournament.participant_limit"> su {{ tournament.participant_limit }}</template>
                   </span>
-                  <Button
-                    label="Aggiungi giocatore"
-                    icon="pi pi-user-plus"
-                    size="small"
-                    :disabled="availablePlayers.length === 0 || auth.isGuest || !canAddMorePlayers"
-                    @click="addPlayerVisible = true"
-                  />
+                  <span v-if="!canAddMorePlayers && tournament.participant_limit" class="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                    Torneo al completo
+                  </span>
+                </div>
+
+                <div class="rounded-2xl border border-surface-200 bg-surface-50 p-4">
+                  <div class="mb-3 flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <div class="font-semibold text-color">Aggiungi giocatori</div>
+                      <div class="text-sm text-muted-color">Ricerca e selezione multipla con chip</div>
+                    </div>
+                    <Button
+                      label="Aggiungi"
+                      icon="pi pi-user-plus"
+                      size="small"
+                      :disabled="availablePlayers.length === 0 || auth.isGuest || !canAddMorePlayers || selectedPlayerIds.length === 0"
+                      :loading="addingPlayer"
+                      @click="addPlayer"
+                    />
+                  </div>
+                  <MultiSelect
+                    v-model="selectedPlayerIds"
+                    :options="availablePlayersOptions"
+                    option-label="name"
+                    option-value="id"
+                    display="chip"
+                    filter
+                    filter-placeholder="Cerca nome, club o ranking"
+                    :filter-fields="['searchText']"
+                    placeholder="Seleziona uno o più giocatori"
+                    selected-items-label="{0} giocatori selezionati"
+                    :max-selected-labels="2"
+                    fluid
+                  >
+                    <template #option="{ option }">
+                      <div class="flex w-full items-center gap-3 py-1">
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-50 text-sm font-bold text-primary-700">
+                          <img
+                            v-if="option.photo_url"
+                            :src="option.photo_url"
+                            :alt="option.name"
+                            class="h-full w-full rounded-full object-cover"
+                          />
+                          <span v-else>{{ getPlayerInitials(option) }}</span>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-2">
+                            <span class="truncate font-medium text-color">{{ option.name }}</span>
+                            <Tag :value="`#${option.ranking}`" severity="secondary" class="text-[0.65rem]" />
+                          </div>
+                          <div class="text-xs text-muted-color">
+                            <template v-if="option.club">{{ option.club }} · </template>{{ formatAge(option.birth_date) }}
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                    <template #chip="{ value }">
+                      <div class="flex items-center gap-2">
+                        <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-[0.65rem] font-bold text-primary-700">
+                          {{ getPlayerInitialsById(value) }}
+                        </span>
+                        <span>{{ getPlayerName(value) }}</span>
+                      </div>
+                    </template>
+                  </MultiSelect>
                 </div>
 
                 <div v-if="localOrder.length === 0" class="flex flex-col items-center justify-center gap-3 min-h-[220px] text-center text-muted-color">
@@ -777,26 +832,26 @@ async function saveResult(): Promise<void> {
                         @click="removeSelectedPlayers"
                       />
                     </div>
-                      <div
-                        v-for="(player, index) in localOrder"
-                        :key="player.id"
-                        class="flex items-center gap-3 p-3 rounded-lg bg-surface-50 border border-surface-200 cursor-grab"
-                        :class="{ 'opacity-50 cursor-grabbing': dragIndex === index }"
+                    <div
+                      v-for="(player, index) in localOrder"
+                      :key="player.id"
+                      class="flex items-center gap-3 p-3 rounded-lg bg-surface-50 border border-surface-200 cursor-grab"
+                      :class="{ 'opacity-50 cursor-grabbing': dragIndex === index }"
                       :draggable="canModify"
                       @dragstart="canModify && onDragStart(index)"
                       @dragover.prevent
                       @dragend="dragIndex = null"
                       @drop="canModify && onDrop(index)"
-                      >
+                    >
                         <span class="text-muted-color cursor-grab" aria-hidden="true">
                           <i class="pi pi-bars" />
                         </span>
                         <Checkbox
-                        :binary="true"
-                        :model-value="selectedRemovePlayerIds.includes(player.id)"
-                        :disabled="auth.isGuest"
-                        @update:model-value="(checked) => toggleRemovePlayer(player.id, checked)"
-                        @click.stop
+                          :binary="true"
+                          :model-value="selectedRemovePlayerIds.includes(player.id)"
+                          :disabled="auth.isGuest"
+                          @update:model-value="(checked) => toggleRemovePlayer(player.id, checked)"
+                          @click.stop
                         />
                       <span class="text-sm font-bold text-muted-color w-8 shrink-0">#{{ index + 1 }}</span>
                       <div class="flex-1 min-w-0">
@@ -1027,7 +1082,7 @@ async function saveResult(): Promise<void> {
                               'text-muted-color': isByeSlot(match, 'player1_id') || isTbdSlot(match, 'player1_id'),
                               'cursor-pointer hover:bg-surface-100': canModify,
                             }"
-                            @click="canModify && openAssignDialog(match, 'player1_id')"
+                            @click="canModify && openAssignPanel(match, 'player1_id')"
                           >
                             <div class="flex min-w-0 items-center gap-3">
                               <span
@@ -1051,7 +1106,7 @@ async function saveResult(): Promise<void> {
                               'text-muted-color': isByeSlot(match, 'player2_id') || isTbdSlot(match, 'player2_id'),
                               'cursor-pointer hover:bg-surface-100': canModify,
                             }"
-                            @click="canModify && openAssignDialog(match, 'player2_id')"
+                            @click="canModify && openAssignPanel(match, 'player2_id')"
                           >
                             <div class="flex min-w-0 items-center gap-3">
                               <span
@@ -1072,7 +1127,7 @@ async function saveResult(): Promise<void> {
                             v-if="match.player1_id && match.player2_id"
                             class="border-t border-surface-100 px-4 py-2 text-center text-xs text-muted-color"
                             :class="{ 'cursor-pointer hover:bg-surface-100': canModify }"
-                            @click="canModify && openResultDialog(match)"
+                            @click="canModify && openResultPanel(match)"
                           >
                             <span class="font-medium">
                               {{ match.result || (canViewAdmin ? 'Inserisci risultato' : '—') }}
@@ -1116,7 +1171,7 @@ async function saveResult(): Promise<void> {
                                   'text-muted-color': isByeSlot(entry.match, 'player1_id') || isTbdSlot(entry.match, 'player1_id'),
                                   'cursor-pointer hover:bg-surface-100': canModify,
                                 }"
-                                @click="canModify && openAssignDialog(entry.match, 'player1_id')"
+                                @click="canModify && openAssignPanel(entry.match, 'player1_id')"
                               >
                                 <div class="flex min-w-0 items-center gap-3">
                                   <span
@@ -1140,7 +1195,7 @@ async function saveResult(): Promise<void> {
                                   'text-muted-color': isByeSlot(entry.match, 'player2_id') || isTbdSlot(entry.match, 'player2_id'),
                                   'cursor-pointer hover:bg-surface-100': canModify,
                                 }"
-                                @click="canModify && openAssignDialog(entry.match, 'player2_id')"
+                                @click="canModify && openAssignPanel(entry.match, 'player2_id')"
                               >
                                 <div class="flex min-w-0 items-center gap-3">
                                   <span
@@ -1161,7 +1216,7 @@ async function saveResult(): Promise<void> {
                                 v-if="entry.match.player1_id && entry.match.player2_id"
                                 class="border-t border-surface-100 px-4 py-2 text-center text-xs text-muted-color"
                                 :class="{ 'cursor-pointer hover:bg-surface-100': canModify }"
-                                @click="canModify && openResultDialog(entry.match)"
+                                @click="canModify && openResultPanel(entry.match)"
                               >
                                 <span class="font-medium">
                                   {{ entry.match.result || (canViewAdmin ? 'Inserisci risultato' : '—') }}
@@ -1179,115 +1234,71 @@ async function saveResult(): Promise<void> {
           </TabPanel>
         </TabPanels>
       </Tabs>
-    </template>
-  </div>
 
-  <Dialog v-model:visible="addPlayerVisible" header="Aggiungi giocatore" :style="{ width: '520px' }" modal>
-    <div class="flex flex-col gap-4 pt-2">
-      <MultiSelect
-        v-model="selectedPlayerIds"
-        :options="availablePlayersOptions"
-        option-label="name"
-        option-value="id"
-        display="chip"
-        filter
-        filter-placeholder="Cerca nome, club o ranking"
-        :filter-fields="['searchText']"
-        placeholder="Seleziona uno o più giocatori"
-        selected-items-label="{0} giocatori selezionati"
-        :max-selected-labels="2"
-        fluid
-        >
-        <template #option="{ option }">
-          <div class="flex w-full items-center gap-3 py-1">
-            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-50 text-sm font-bold text-primary-700">
-              <img
-                v-if="option.photo_url"
-                :src="option.photo_url"
-                :alt="option.name"
-                class="h-full w-full rounded-full object-cover"
-              />
-              <span v-else>{{ getPlayerInitials(option) }}</span>
-            </div>
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2">
-                <span class="truncate font-medium text-color">{{ option.name }}</span>
-                <Tag :value="`#${option.ranking}`" severity="secondary" class="text-[0.65rem]" />
-              </div>
-              <div class="text-xs text-muted-color">
-                <template v-if="option.club">{{ option.club }} · </template>{{ formatAge(option.birth_date) }}
-              </div>
+      <div v-if="selectedMatch && canModify" class="rounded-2xl border border-surface-200 bg-surface-50 p-4">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div class="font-semibold text-color">Incontro selezionato</div>
+            <div class="text-sm text-muted-color">Modifica assegnazione e risultato senza modali</div>
+          </div>
+          <Button label="Chiudi" severity="secondary" outlined size="small" @click="closeMatchPanel" />
+        </div>
+
+        <div class="mt-4 grid gap-4 lg:grid-cols-2">
+          <div class="rounded-xl border border-surface-200 bg-surface-0 p-4">
+            <div class="mb-3 text-sm font-semibold text-color">Assegna giocatore</div>
+            <Select
+              v-model="assignPlayerId"
+              :options="availableForSlotOptions"
+              option-label="name"
+              option-value="id"
+              placeholder="Seleziona giocatore"
+              filter
+              filter-placeholder="Cerca nome, club o ranking"
+              :filter-fields="['searchText']"
+              fluid
+            />
+            <div class="mt-3 flex justify-end gap-2">
+              <Button v-if="selectedSlotHasPlayer" label="Rimuovi" severity="danger" outlined @click="clearSlot" />
+              <Button label="Assegna" :disabled="!assignPlayerId" @click="confirmAssign" />
             </div>
           </div>
-        </template>
-        <template #chip="{ value }">
-          <div class="flex items-center gap-2">
-            <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-[0.65rem] font-bold text-primary-700">
-              {{ getPlayerInitialsById(value) }}
-            </span>
-            <span>{{ getPlayerName(value) }}</span>
-          </div>
-        </template>
-      </MultiSelect>
-      <div class="flex items-center justify-end gap-3 flex-wrap">
-        <Button label="Annulla" severity="secondary" outlined @click="addPlayerVisible = false" />
-        <Button label="Aggiungi" :loading="addingPlayer" :disabled="selectedPlayerIds.length === 0" @click="addPlayer" />
-      </div>
-    </div>
-  </Dialog>
 
-  <Dialog v-model:visible="assignDialogVisible" header="Assegna giocatore" modal :style="{ width: '340px' }">
-    <div class="flex flex-col gap-4 pt-2">
-      <Select
-        v-model="assignPlayerId"
-        :options="availableForSlotOptions"
-        option-label="name"
-        option-value="id"
-        placeholder="Seleziona giocatore"
-        filter
-        filter-placeholder="Cerca nome, club o ranking"
-        :filter-fields="['searchText']"
-        fluid
-      />
-      <div class="flex justify-end gap-2">
-        <Button v-if="selectedSlotHasPlayer" label="Rimuovi" severity="danger" outlined @click="clearSlot" />
-        <Button label="Annulla" severity="secondary" outlined @click="assignDialogVisible = false" />
-        <Button label="Assegna" :disabled="!assignPlayerId" @click="confirmAssign" />
-      </div>
-    </div>
-  </Dialog>
-
-  <Dialog v-model:visible="resultDialogVisible" header="Inserisci risultato" modal :style="{ width: '360px' }">
-    <div class="flex flex-col gap-4 pt-2">
-      <div class="flex flex-col gap-1">
-        <label class="text-sm font-medium">Risultato</label>
-        <InputText v-model="editResult" placeholder="es. 6-3 6-4" fluid />
-      </div>
-      <div class="flex flex-col gap-1">
-        <label class="text-sm font-medium">Vincitore</label>
-        <div class="flex flex-col gap-2">
-          <div
-            class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer"
-            :class="editWinnerId === selectedMatch?.player1_id ? 'border-primary-400 bg-primary-50' : 'border-surface-200'"
-            @click="editWinnerId = selectedMatch?.player1_id ?? null"
-          >
-            <i class="pi pi-circle-fill text-xs" :class="editWinnerId === selectedMatch?.player1_id ? 'text-primary-500' : 'text-surface-300'" />
-            <span>{{ getPlayerName(selectedMatch?.player1_id) }}</span>
-          </div>
-          <div
-            class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer"
-            :class="editWinnerId === selectedMatch?.player2_id ? 'border-primary-400 bg-primary-50' : 'border-surface-200'"
-            @click="editWinnerId = selectedMatch?.player2_id ?? null"
-          >
-            <i class="pi pi-circle-fill text-xs" :class="editWinnerId === selectedMatch?.player2_id ? 'text-primary-500' : 'text-surface-300'" />
-            <span>{{ getPlayerName(selectedMatch?.player2_id) }}</span>
+          <div class="rounded-xl border border-surface-200 bg-surface-0 p-4">
+            <div class="mb-3 text-sm font-semibold text-color">Inserisci risultato</div>
+            <div class="flex flex-col gap-4">
+              <div class="flex flex-col gap-1">
+                <label class="text-sm font-medium">Risultato</label>
+                <InputText v-model="editResult" placeholder="es. 6-3 6-4" fluid />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-sm font-medium">Vincitore</label>
+                <div class="flex flex-col gap-2">
+                  <div
+                    class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer"
+                    :class="editWinnerId === selectedMatch?.player1_id ? 'border-primary-400 bg-primary-50' : 'border-surface-200'"
+                    @click="editWinnerId = selectedMatch?.player1_id ?? null"
+                  >
+                    <i class="pi pi-circle-fill text-xs" :class="editWinnerId === selectedMatch?.player1_id ? 'text-primary-500' : 'text-surface-300'" />
+                    <span>{{ getPlayerName(selectedMatch?.player1_id) }}</span>
+                  </div>
+                  <div
+                    class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer"
+                    :class="editWinnerId === selectedMatch?.player2_id ? 'border-primary-400 bg-primary-50' : 'border-surface-200'"
+                    @click="editWinnerId = selectedMatch?.player2_id ?? null"
+                  >
+                    <i class="pi pi-circle-fill text-xs" :class="editWinnerId === selectedMatch?.player2_id ? 'text-primary-500' : 'text-surface-300'" />
+                    <span>{{ getPlayerName(selectedMatch?.player2_id) }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex justify-end gap-2 pt-2">
+                <Button label="Salva risultato" :disabled="!editResult || !editWinnerId" @click="saveResult" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <div class="flex justify-end gap-2 pt-2">
-        <Button label="Annulla" severity="secondary" outlined @click="resultDialogVisible = false" />
-        <Button label="Salva" :disabled="!editResult || !editWinnerId" @click="saveResult" />
-      </div>
-    </div>
-  </Dialog>
+    </template>
+  </div>
 </template>

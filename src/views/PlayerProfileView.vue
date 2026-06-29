@@ -72,7 +72,12 @@ const fullName = computed(() => player.value?.name ?? '')
       </div>
       <div class="flex gap-2">
         <Button label="Torna ai giocatori" severity="secondary" outlined @click="router.push({ name: 'players' })" />
-        <Button v-if="auth.isAdmin" label="Anagrafica" icon="pi pi-pencil" @click="router.push({ name: 'players' })" />
+        <Button
+          v-if="auth.isAdmin && player"
+          label="Modifica"
+          icon="pi pi-pencil"
+          @click="router.push({ name: 'player-edit', params: { id: player.id } })"
+        />
       </div>
     </div>
 
