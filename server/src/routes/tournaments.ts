@@ -112,9 +112,9 @@ tournamentsRouter.post('/', requireAdmin, async (req, res) => {
 
     if (
       data.format === 'round_robin_elimination' &&
-      groupCount !== null &&
-      qualifiersPerGroup !== null &&
-      participantLimit !== null &&
+      groupCount != null &&
+      qualifiersPerGroup != null &&
+      participantLimit != null &&
       groupCount * qualifiersPerGroup > participantLimit
     ) {
       res.status(400).json({ message: 'I qualificati totali non possono superare il limite partecipanti' })
@@ -197,9 +197,9 @@ tournamentsRouter.put('/:id', requireAdmin, async (req, res) => {
 
     if (
       body.format === 'round_robin_elimination' &&
-      groupCount !== null &&
-      qualifiersPerGroup !== null &&
-      participantLimit !== null &&
+      groupCount != null &&
+      qualifiersPerGroup != null &&
+      participantLimit != null &&
       groupCount * qualifiersPerGroup > participantLimit
     ) {
       res.status(400).json({ message: 'I qualificati totali non possono superare il limite partecipanti' })

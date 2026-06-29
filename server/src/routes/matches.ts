@@ -31,9 +31,46 @@ matchesRouter.put('/:id', requireAdmin, async (req, res) => {
   const { result, winner_id } = req.body as { result: string; winner_id: string }
   const matchId = req.params['id'] as string
   try {
-    const match = await prisma.match.update({
-      where: { id: matchId },
-      data: { result, winnerId: winner_id, status: 'completed' },
+    const match = await prisma.$transaction(async (tx) => {
+      const updated = await tx.match.update({
+        where: { id: matchId },
+        data: { result, winnerId: winner_id, status: 'completed' },
+      })
+
+      const currentMatch = await tx.match.findUnique({
+        where: { id: matchId },
+        select: {
+          tournamentId: true,
+          round: true,
+          position: true,
+        },
+      })
+
+      if (currentMatch) {
+        const nextRound = currentMatch.round + 1
+        const nextPosition = Math.floor(currentMatch.position / 2)
+        const nextSlot = currentMatch.position % 2 === 0 ? 'player1Id' : 'player2Id'
+
+        const nextMatch = await tx.match.findFirst({
+          where: {
+            tournamentId: currentMatch.tournamentId,
+            round: nextRound,
+            position: nextPosition,
+          },
+          select: { id: true },
+        })
+
+        if (nextMatch) {
+          await tx.match.update({
+            where: { id: nextMatch.id },
+            data: {
+              [nextSlot]: winner_id,
+            },
+          })
+        }
+      }
+
+      return updated
     })
     res.json(serializeMatch(match))
   } catch {

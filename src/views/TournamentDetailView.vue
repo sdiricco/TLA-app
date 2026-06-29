@@ -10,6 +10,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
+import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import MultiSelect from 'primevue/multiselect'
 import Select from 'primevue/select'
@@ -50,6 +51,8 @@ const selectedMatch = ref<Match | null>(null)
 const selectedSlot = ref<MatchSlot>('player1_id')
 const assignPlayerId = ref<string | null>(null)
 
+const resultDialogVisible = ref(false)
+const resultMatch = ref<Match | null>(null)
 const editResult = ref('')
 const editWinnerId = ref<string | null>(null)
 
@@ -617,27 +620,36 @@ async function clearSlot(): Promise<void> {
 
 function openResultPanel(match: Match): void {
   if (auth.isGuest) return
-  selectedMatch.value = match
+  resultMatch.value = match
   editResult.value = match.result ?? ''
   editWinnerId.value = match.winner_id
+  resultDialogVisible.value = true
 }
 
 async function saveResult(): Promise<void> {
   if (auth.isGuest) return
-  if (!selectedMatch.value || !editResult.value || !editWinnerId.value) return
-  await matchesStore.enterResult(selectedMatch.value.id, {
+  if (!resultMatch.value || !editResult.value || !editWinnerId.value) return
+  await matchesStore.enterResult(resultMatch.value.id, {
     result: editResult.value,
     winner_id: editWinnerId.value,
   })
   await loadPage()
-  closeMatchPanel()
+  resultDialogVisible.value = false
+  resultMatch.value = null
+  editResult.value = ''
+  editWinnerId.value = null
+}
+
+function closeResultDialog(): void {
+  resultDialogVisible.value = false
+  resultMatch.value = null
+  editResult.value = ''
+  editWinnerId.value = null
 }
 
 function closeMatchPanel(): void {
   selectedMatch.value = null
   assignPlayerId.value = null
-  editResult.value = ''
-  editWinnerId.value = null
 }
 </script>
 
@@ -1263,42 +1275,49 @@ function closeMatchPanel(): void {
               <Button label="Assegna" :disabled="!assignPlayerId" @click="confirmAssign" />
             </div>
           </div>
-
           <div class="rounded-xl border border-surface-200 bg-surface-0 p-4">
-            <div class="mb-3 text-sm font-semibold text-color">Inserisci risultato</div>
-            <div class="flex flex-col gap-4">
-              <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium">Risultato</label>
-                <InputText v-model="editResult" placeholder="es. 6-3 6-4" fluid />
-              </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium">Vincitore</label>
-                <div class="flex flex-col gap-2">
-                  <div
-                    class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer"
-                    :class="editWinnerId === selectedMatch?.player1_id ? 'border-primary-400 bg-primary-50' : 'border-surface-200'"
-                    @click="editWinnerId = selectedMatch?.player1_id ?? null"
-                  >
-                    <i class="pi pi-circle-fill text-xs" :class="editWinnerId === selectedMatch?.player1_id ? 'text-primary-500' : 'text-surface-300'" />
-                    <span>{{ getPlayerName(selectedMatch?.player1_id) }}</span>
-                  </div>
-                  <div
-                    class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer"
-                    :class="editWinnerId === selectedMatch?.player2_id ? 'border-primary-400 bg-primary-50' : 'border-surface-200'"
-                    @click="editWinnerId = selectedMatch?.player2_id ?? null"
-                  >
-                    <i class="pi pi-circle-fill text-xs" :class="editWinnerId === selectedMatch?.player2_id ? 'text-primary-500' : 'text-surface-300'" />
-                    <span>{{ getPlayerName(selectedMatch?.player2_id) }}</span>
-                  </div>
-                </div>
-              </div>
-              <div class="flex justify-end gap-2 pt-2">
-                <Button label="Salva risultato" :disabled="!editResult || !editWinnerId" @click="saveResult" />
-              </div>
+            <div class="mb-3 text-sm font-semibold text-color">Risultato</div>
+            <p class="m-0 text-sm text-muted-color">Usa il modale per inserire o modificare il risultato dell'incontro.</p>
+            <div class="mt-3 flex justify-end gap-2">
+              <Button label="Inserisci risultato" icon="pi pi-pencil" :disabled="!selectedMatch" @click="selectedMatch && openResultPanel(selectedMatch)" />
             </div>
           </div>
         </div>
       </div>
     </template>
   </div>
+
+  <Dialog v-model:visible="resultDialogVisible" header="Inserisci risultato" modal :style="{ width: '360px' }">
+    <div v-if="resultMatch" class="flex flex-col gap-4 pt-2">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium">Risultato</label>
+        <InputText v-model="editResult" placeholder="es. 6-3 6-4" fluid />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium">Vincitore</label>
+        <div class="flex flex-col gap-2">
+          <div
+            class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer"
+            :class="editWinnerId === resultMatch.player1_id ? 'border-primary-400 bg-primary-50' : 'border-surface-200'"
+            @click="editWinnerId = resultMatch.player1_id ?? null"
+          >
+            <i class="pi pi-circle-fill text-xs" :class="editWinnerId === resultMatch.player1_id ? 'text-primary-500' : 'text-surface-300'" />
+            <span>{{ getPlayerName(resultMatch.player1_id) }}</span>
+          </div>
+          <div
+            class="flex items-center gap-2 p-3 rounded-lg border cursor-pointer"
+            :class="editWinnerId === resultMatch.player2_id ? 'border-primary-400 bg-primary-50' : 'border-surface-200'"
+            @click="editWinnerId = resultMatch.player2_id ?? null"
+          >
+            <i class="pi pi-circle-fill text-xs" :class="editWinnerId === resultMatch.player2_id ? 'text-primary-500' : 'text-surface-300'" />
+            <span>{{ getPlayerName(resultMatch.player2_id) }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <Button label="Annulla" severity="secondary" outlined @click="closeResultDialog" />
+        <Button label="Salva" :disabled="!editResult || !editWinnerId" @click="saveResult" />
+      </div>
+    </div>
+  </Dialog>
 </template>
