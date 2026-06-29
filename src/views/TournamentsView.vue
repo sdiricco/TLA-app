@@ -101,7 +101,7 @@ function formatDate(date: string | null | undefined): string {
 }
 
 function formatParticipantLimit(limit: number | null | undefined): string {
-  if (!limit) return 'Illimitato'
+  if (limit == null) return 'Illimitato'
   return `${limit} max`
 }
 
@@ -144,7 +144,7 @@ function openEdit(tournament: Tournament): void {
     format: tournament.format,
     category: tournament.category,
     status: tournament.status,
-    participant_limit: tournament.participant_limit ?? null,
+    participant_limit: tournament.participant_limit ?? 32,
     group_count: tournament.group_count ?? null,
     qualifiers_per_group: tournament.qualifiers_per_group ?? null,
   }
@@ -310,7 +310,7 @@ onMounted(() => store.fetchAll())
             </div>
             <div class="flex items-center gap-2 text-sm text-muted-color">
               <i class="pi pi-users text-[0.8125rem] w-4 text-center" />
-              <span>Limite: {{ formatParticipantLimit(t.participant_limit) }}</span>
+              <span>Limite partecipanti: {{ formatParticipantLimit(t.participant_limit) }}</span>
             </div>
             <div v-if="t.format === 'round_robin_elimination'" class="flex items-center gap-2 text-sm text-muted-color">
               <i class="pi pi-sitemap text-[0.8125rem] w-4 text-center" />

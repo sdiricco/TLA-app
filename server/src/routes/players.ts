@@ -9,6 +9,13 @@ export const playersRouter = Router()
 
 playersRouter.use(requireAuth)
 
+function parseNullableDate(value: unknown): Date | null | undefined {
+  if (value === undefined) return undefined
+  if (value === null || value === '') return null
+  const date = new Date(String(value))
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
 playersRouter.get('/me', async (req, res) => {
   const authReq = req as AuthenticatedRequest
   const userId = authReq.authUser?.id
@@ -55,6 +62,8 @@ playersRouter.post('/', requireAdmin, async (req, res) => {
     data: {
       name: data.name,
       ranking: data.ranking ?? 0,
+      birthDate: parseNullableDate(data.birth_date) ?? null,
+      photoUrl: data.photo_url ?? null,
       club: data.club ?? null,
       phone: data.phone ?? null,
       userId: data.user_id ?? null,
@@ -72,6 +81,8 @@ playersRouter.put('/:id', requireAdmin, async (req, res) => {
       data: {
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.ranking !== undefined ? { ranking: data.ranking ?? 0 } : {}),
+        ...(data.birth_date !== undefined ? { birthDate: parseNullableDate(data.birth_date) } : {}),
+        ...(data.photo_url !== undefined ? { photoUrl: data.photo_url ?? null } : {}),
         ...(data.club !== undefined ? { club: data.club ?? null } : {}),
         ...(data.phone !== undefined ? { phone: data.phone ?? null } : {}),
         ...(data.user_id !== undefined ? { userId: data.user_id ?? null } : {}),

@@ -10,6 +10,8 @@ export function serializePlayer(player: {
   id: string
   name: string
   ranking: number
+  birthDate: Date | null
+  photoUrl: string | null
   club: string | null
   phone: string | null
   userId: string | null
@@ -20,6 +22,8 @@ export function serializePlayer(player: {
     id: player.id,
     name: player.name,
     ranking: player.ranking,
+    birth_date: toIso(player.birthDate),
+    photo_url: player.photoUrl,
     club: player.club,
     phone: player.phone,
     user_id: player.userId,

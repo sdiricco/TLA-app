@@ -138,7 +138,10 @@ const availablePlayersOptions = computed<PlayerSelectOption[]>(() =>
 )
 
 const playerById = computed(() => new Map(playersStore.players.map((player) => [player.id, player])))
-const seedByPlayerId = computed(() => new Map(enrolledPlayers.value.map((player, index) => [player.id, index + 1])))
+const seedByPlayerId = computed(() => {
+  const entries = tournament.value?.tournament_players ?? []
+  return new Map(entries.filter((entry) => entry.seed != null).map((entry) => [entry.player_id, entry.seed as number]))
+})
 const hasMatches = computed(() => matchesStore.matches.length > 0)
 const isRoundRobin = computed(() => tournament.value?.format === 'round_robin')
 const isRoundRobinElimination = computed(() => tournament.value?.format === 'round_robin_elimination')
@@ -348,6 +351,30 @@ function formatDate(date: string | null | undefined): string {
   return new Date(date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+function formatAge(birthDate: string | null | undefined): string {
+  if (!birthDate) return 'Età non disponibile'
+  const dob = new Date(birthDate)
+  if (Number.isNaN(dob.getTime())) return 'Età non disponibile'
+  const diff = Date.now() - dob.getTime()
+  const ageDate = new Date(diff)
+  return `${Math.abs(ageDate.getUTCFullYear() - 1970)} anni`
+}
+
+function getPlayerInitials(player: Player): string {
+  return player.name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+}
+
+function getPlayerInitialsById(playerId: string | null | undefined): string {
+  if (!playerId) return ''
+  const player = playerById.value.get(playerId)
+  return player ? getPlayerInitials(player) : ''
+}
+
 function getPlayer(playerId: string | null): Player | null {
   return playerId ? playerById.value.get(playerId) ?? null : null
 }
@@ -359,6 +386,10 @@ function getPlayerName(playerId: string | null | undefined): string {
 
 function getSeed(playerId: string | null): number | null {
   return playerId ? seedByPlayerId.value.get(playerId) ?? null : null
+}
+
+function isSeededPlayer(playerId: string | null): boolean {
+  return getSeed(playerId) !== null
 }
 
 function getOtherSlot(slot: MatchSlot): MatchSlot {
@@ -679,7 +710,7 @@ async function saveResult(): Promise<void> {
             <i class="pi pi-user" /> {{ categoryLabels[tournament.category] ?? tournament.category }}
           </span>
           <span class="inline-flex items-center gap-[0.375rem] px-3 py-1 rounded-full bg-surface-100 text-sm text-color">
-            <i class="pi pi-users" /> Limite {{ formatParticipantLimit(tournament.participant_limit) }}
+            <i class="pi pi-users" /> Limite partecipanti {{ formatParticipantLimit(tournament.participant_limit) }}
           </span>
           <span v-if="tournament.format === 'round_robin_elimination'" class="inline-flex items-center gap-[0.375rem] px-3 py-1 rounded-full bg-surface-100 text-sm text-color">
             <i class="pi pi-sitemap" />
@@ -746,30 +777,40 @@ async function saveResult(): Promise<void> {
                         @click="removeSelectedPlayers"
                       />
                     </div>
-                    <div
-                      v-for="(player, index) in localOrder"
-                      :key="player.id"
-                      class="flex items-center gap-3 p-3 rounded-lg bg-surface-50 border border-surface-200 cursor-grab"
-                      :class="{ 'opacity-50 cursor-grabbing': dragIndex === index }"
+                      <div
+                        v-for="(player, index) in localOrder"
+                        :key="player.id"
+                        class="flex items-center gap-3 p-3 rounded-lg bg-surface-50 border border-surface-200 cursor-grab"
+                        :class="{ 'opacity-50 cursor-grabbing': dragIndex === index }"
                       :draggable="canModify"
                       @dragstart="canModify && onDragStart(index)"
                       @dragover.prevent
                       @dragend="dragIndex = null"
                       @drop="canModify && onDrop(index)"
-                    >
-                      <span class="text-muted-color cursor-grab" aria-hidden="true">
-                        <i class="pi pi-bars" />
-                      </span>
-                      <Checkbox
+                      >
+                        <span class="text-muted-color cursor-grab" aria-hidden="true">
+                          <i class="pi pi-bars" />
+                        </span>
+                        <Checkbox
                         :binary="true"
                         :model-value="selectedRemovePlayerIds.includes(player.id)"
                         :disabled="auth.isGuest"
                         @update:model-value="(checked) => toggleRemovePlayer(player.id, checked)"
                         @click.stop
-                      />
+                        />
                       <span class="text-sm font-bold text-muted-color w-8 shrink-0">#{{ index + 1 }}</span>
                       <div class="flex-1 min-w-0">
-                        <span class="block font-medium text-color">{{ player.name }}</span>
+                        <div class="flex items-center gap-2">
+                          <span class="block font-medium text-color" :class="{ 'font-semibold text-primary-700': isSeededPlayer(player.id) }">
+                            {{ player.name }}
+                          </span>
+                          <span
+                            v-if="getSeed(player.id)"
+                            class="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-primary-200 bg-primary-50 px-2 text-[0.7rem] font-bold text-primary-700"
+                          >
+                            TS {{ getSeed(player.id) }}
+                          </span>
+                        </div>
                         <span class="block text-[0.8125rem] text-muted-color">
                           <template v-if="player.club">{{ player.club }} · </template>Rank {{ player.ranking }}
                         </span>
@@ -824,7 +865,13 @@ async function saveResult(): Promise<void> {
                       class="flex items-center gap-3 p-3 rounded-lg bg-surface-50 border border-surface-200"
                     >
                       <span class="text-sm font-bold text-muted-color w-8">#{{ index + 1 }}</span>
-                      <span class="font-medium text-color">{{ player.name }}</span>
+                      <span class="font-medium text-color" :class="{ 'font-semibold text-primary-700': isSeededPlayer(player.id) }">{{ player.name }}</span>
+                      <span
+                        v-if="getSeed(player.id)"
+                        class="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-primary-200 bg-primary-50 px-2 text-[0.7rem] font-bold text-primary-700"
+                      >
+                        TS {{ getSeed(player.id) }}
+                      </span>
                     </div>
                   </div>
                 </template>
@@ -985,11 +1032,11 @@ async function saveResult(): Promise<void> {
                             <div class="flex min-w-0 items-center gap-3">
                               <span
                                 v-if="getSeed(match.player1_id)"
-                                class="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-surface-200 bg-surface-50 px-2 text-[0.75rem] font-bold text-muted-color"
+                                class="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-primary-200 bg-primary-50 px-2 text-[0.75rem] font-bold text-primary-700"
                               >
-                                #{{ getSeed(match.player1_id) }}
+                                TS {{ getSeed(match.player1_id) }}
                               </span>
-                              <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">
+                              <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit" :class="{ 'text-primary-700': isSeededPlayer(match.player1_id) }">
                                 {{ getSlotLabel(match, 'player1_id') }}
                               </span>
                             </div>
@@ -1009,11 +1056,11 @@ async function saveResult(): Promise<void> {
                             <div class="flex min-w-0 items-center gap-3">
                               <span
                                 v-if="getSeed(match.player2_id)"
-                                class="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-surface-200 bg-surface-50 px-2 text-[0.75rem] font-bold text-muted-color"
+                                class="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-primary-200 bg-primary-50 px-2 text-[0.75rem] font-bold text-primary-700"
                               >
-                                #{{ getSeed(match.player2_id) }}
+                                TS {{ getSeed(match.player2_id) }}
                               </span>
-                              <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">
+                              <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit" :class="{ 'text-primary-700': isSeededPlayer(match.player2_id) }">
                                 {{ getSlotLabel(match, 'player2_id') }}
                               </span>
                             </div>
@@ -1074,11 +1121,11 @@ async function saveResult(): Promise<void> {
                                 <div class="flex min-w-0 items-center gap-3">
                                   <span
                                     v-if="getSeed(entry.match.player1_id)"
-                                    class="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-surface-200 bg-surface-50 px-2 text-[0.75rem] font-bold text-muted-color"
+                                    class="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-primary-200 bg-primary-50 px-2 text-[0.75rem] font-bold text-primary-700"
                                   >
-                                    #{{ getSeed(entry.match.player1_id) }}
+                                    TS {{ getSeed(entry.match.player1_id) }}
                                   </span>
-                                  <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">
+                                  <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit" :class="{ 'text-primary-700': isSeededPlayer(entry.match.player1_id) }">
                                     {{ getSlotLabel(entry.match, 'player1_id') }}
                                   </span>
                                 </div>
@@ -1098,11 +1145,11 @@ async function saveResult(): Promise<void> {
                                 <div class="flex min-w-0 items-center gap-3">
                                   <span
                                     v-if="getSeed(entry.match.player2_id)"
-                                    class="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-surface-200 bg-surface-50 px-2 text-[0.75rem] font-bold text-muted-color"
+                                    class="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-primary-200 bg-primary-50 px-2 text-[0.75rem] font-bold text-primary-700"
                                   >
-                                    #{{ getSeed(entry.match.player2_id) }}
+                                    TS {{ getSeed(entry.match.player2_id) }}
                                   </span>
-                                  <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit">
+                                  <span class="overflow-hidden whitespace-nowrap text-ellipsis font-semibold text-inherit" :class="{ 'text-primary-700': isSeededPlayer(entry.match.player2_id) }">
                                     {{ getSlotLabel(entry.match, 'player2_id') }}
                                   </span>
                                 </div>
@@ -1135,7 +1182,7 @@ async function saveResult(): Promise<void> {
     </template>
   </div>
 
-  <Dialog v-model:visible="addPlayerVisible" header="Aggiungi giocatore" :style="{ width: '360px' }" modal>
+  <Dialog v-model:visible="addPlayerVisible" header="Aggiungi giocatore" :style="{ width: '520px' }" modal>
     <div class="flex flex-col gap-4 pt-2">
       <MultiSelect
         v-model="selectedPlayerIds"
@@ -1150,7 +1197,38 @@ async function saveResult(): Promise<void> {
         selected-items-label="{0} giocatori selezionati"
         :max-selected-labels="2"
         fluid
-      />
+        >
+        <template #option="{ option }">
+          <div class="flex w-full items-center gap-3 py-1">
+            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-50 text-sm font-bold text-primary-700">
+              <img
+                v-if="option.photo_url"
+                :src="option.photo_url"
+                :alt="option.name"
+                class="h-full w-full rounded-full object-cover"
+              />
+              <span v-else>{{ getPlayerInitials(option) }}</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="truncate font-medium text-color">{{ option.name }}</span>
+                <Tag :value="`#${option.ranking}`" severity="secondary" class="text-[0.65rem]" />
+              </div>
+              <div class="text-xs text-muted-color">
+                <template v-if="option.club">{{ option.club }} · </template>{{ formatAge(option.birth_date) }}
+              </div>
+            </div>
+          </div>
+        </template>
+        <template #chip="{ value }">
+          <div class="flex items-center gap-2">
+            <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-[0.65rem] font-bold text-primary-700">
+              {{ getPlayerInitialsById(value) }}
+            </span>
+            <span>{{ getPlayerName(value) }}</span>
+          </div>
+        </template>
+      </MultiSelect>
       <div class="flex items-center justify-end gap-3 flex-wrap">
         <Button label="Annulla" severity="secondary" outlined @click="addPlayerVisible = false" />
         <Button label="Aggiungi" :loading="addingPlayer" :disabled="selectedPlayerIds.length === 0" @click="addPlayer" />

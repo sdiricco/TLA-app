@@ -19,6 +19,8 @@ export interface Player {
   id: string
   name: string
   ranking: number
+  birth_date?: string | null
+  photo_url?: string | null
   club?: string | null
   phone?: string | null
   user_id?: string | null

@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
+import Avatar from 'primevue/avatar'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import Dialog from 'primevue/dialog'
+import DatePicker from 'primevue/datepicker'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import Tag from 'primevue/tag'
@@ -17,11 +20,14 @@ import type { Player, PlayerCreate, Profile } from '../types'
 interface PlayerForm {
   name: string
   ranking: number | null
+  birth_date: Date | null
+  photo_url: string
   club: string
   phone: string
 }
 
 const store = usePlayersStore()
+const router = useRouter()
 const auth = useAuthStore()
 const confirm = useConfirm()
 const toast = useToast()
@@ -30,10 +36,10 @@ const canViewAdmin = computed(() => auth.isAdmin || auth.isGuest)
 const dialogVisible = ref(false)
 const saving = ref(false)
 const editingId = ref<string | null>(null)
-const form = ref<PlayerForm>({ name: '', ranking: null, club: '', phone: '' })
+const form = ref<PlayerForm>({ name: '', ranking: null, birth_date: null, photo_url: '', club: '', phone: '' })
 
 function emptyForm(): PlayerForm {
-  return { name: '', ranking: null, club: '', phone: '' }
+  return { name: '', ranking: null, birth_date: null, photo_url: '', club: '', phone: '' }
 }
 
 function openCreate(): void {
@@ -49,19 +55,49 @@ function openEdit(player: Player): void {
   form.value = {
     name: player.name,
     ranking: player.ranking,
+    birth_date: player.birth_date ? new Date(player.birth_date) : null,
+    photo_url: player.photo_url ?? '',
     club: player.club ?? '',
     phone: player.phone ?? '',
   }
   dialogVisible.value = true
 }
 
+function toDateString(value: Date | null): string | null {
+  return value ? value.toISOString().split('T')[0] ?? null : null
+}
+
 function toPlayerPayload(data: PlayerForm): PlayerCreate {
   return {
     name: data.name,
     ranking: data.ranking ?? 0,
+    birth_date: toDateString(data.birth_date),
+    photo_url: data.photo_url || null,
     club: data.club || null,
     phone: data.phone || null,
   }
+}
+
+function formatAge(birthDate: string | null | undefined): string {
+  if (!birthDate) return 'Età non disponibile'
+  const dob = new Date(birthDate)
+  if (Number.isNaN(dob.getTime())) return 'Età non disponibile'
+  const diff = Date.now() - dob.getTime()
+  const ageDate = new Date(diff)
+  return `${Math.abs(ageDate.getUTCFullYear() - 1970)} anni`
+}
+
+function getPlayerInitials(player: Player): string {
+  return player.name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+}
+
+function goToProfile(playerId: string): void {
+  void router.push({ name: 'player-detail', params: { id: playerId } })
 }
 
 async function savePlayer(): Promise<void> {
@@ -161,6 +197,17 @@ async function addAsPlayer(profile: Profile): Promise<void> {
         </div>
       </template>
 
+      <Column header="" style="width: 4rem; text-align: center">
+        <template #body="{ data }">
+          <Avatar
+            :label="getPlayerInitials(data)"
+            :image="data.photo_url ?? undefined"
+            shape="circle"
+            class="mx-auto"
+          />
+        </template>
+      </Column>
+
       <Column field="ranking" header="#" sortable style="width: 4rem; text-align: center">
         <template #body="{ data }">
           <Tag v-if="data.ranking" :value="String(data.ranking)" severity="secondary" />
@@ -169,6 +216,12 @@ async function addAsPlayer(profile: Profile): Promise<void> {
       </Column>
 
       <Column field="name" header="Nome" sortable />
+
+      <Column header="Età" style="width: 8rem">
+        <template #body="{ data }">
+          <span>{{ formatAge(data.birth_date) }}</span>
+        </template>
+      </Column>
 
       <Column field="club" header="Club">
         <template #body="{ data }">
@@ -181,6 +234,12 @@ async function addAsPlayer(profile: Profile): Promise<void> {
         <template #body="{ data }">
           <span v-if="data.phone">{{ data.phone }}</span>
           <span v-else class="text-muted-color">—</span>
+        </template>
+      </Column>
+
+      <Column header="Profilo" style="width: 8rem">
+        <template #body="{ data }">
+          <Button label="Apri" size="small" text @click="goToProfile(data.id)" />
         </template>
       </Column>
 
@@ -233,9 +292,20 @@ async function addAsPlayer(profile: Profile): Promise<void> {
         <InputText id="p-name" v-model="form.name" placeholder="Mario Rossi" fluid required autofocus />
       </div>
 
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-[0.375rem]">
+          <label for="p-ranking" class="text-sm font-medium">Ranking</label>
+          <InputNumber id="p-ranking" v-model="form.ranking" placeholder="1" :min="1" :max="9999" fluid />
+        </div>
+        <div class="flex flex-col gap-[0.375rem]">
+          <label for="p-birth-date" class="text-sm font-medium">Data nascita</label>
+          <DatePicker id="p-birth-date" v-model="form.birth_date" date-format="dd/mm/yy" placeholder="gg/mm/aaaa" fluid show-button-bar />
+        </div>
+      </div>
+
       <div class="flex flex-col gap-[0.375rem]">
-        <label for="p-ranking" class="text-sm font-medium">Ranking</label>
-        <InputNumber id="p-ranking" v-model="form.ranking" placeholder="1" :min="1" :max="9999" fluid />
+        <label for="p-photo" class="text-sm font-medium">Foto profilo</label>
+        <InputText id="p-photo" v-model="form.photo_url" placeholder="URL immagine profilo" fluid />
       </div>
 
       <div class="flex flex-col gap-[0.375rem]">

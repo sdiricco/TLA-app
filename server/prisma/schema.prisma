@@ -23,6 +23,8 @@ model Player {
   id               String             @id @default(uuid())
   name             String
   ranking          Int
+  birthDate        DateTime?          @map("birth_date")
+  photoUrl         String?            @map("photo_url")
   club             String?
   phone            String?
   userId           String?            @unique @map("user_id")
