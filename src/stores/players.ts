@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { playersService } from '../services/playersService'
+import { playersService } from '../services/playersApi'
 import type { Player, PlayerCreate, PlayerUpdate } from '../types'
 
 export const usePlayersStore = defineStore('players', () => {

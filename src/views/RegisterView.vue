@@ -16,22 +16,24 @@
   /**
    * Reactive vars
    */
+  const name = ref('');
   const email = ref('');
   const password = ref('');
+  const confirmPassword = ref('');
 
   /**
    * Actions
    */
   async function handleSubmit(): Promise<void> {
-    await auth.login(email.value, password.value);
+    if (password.value !== confirmPassword.value) {
+      auth.error = 'Le password non coincidono.';
+      return;
+    }
+
+    await auth.register(email.value, password.value, name.value);
     if (auth.isAuthenticated) {
       await router.push('/');
     }
-  }
-
-  async function continueAsGuest(): Promise<void> {
-    await auth.loginAsGuest();
-    await router.push('/dashboard');
   }
 </script>
 
@@ -44,17 +46,29 @@
     <div class="flex flex-col items-center gap-1 px-6 pt-8 pb-4 text-center">
       <i class="pi pi-circle-fill text-[2.5rem] text-primary-500" />
       <h1 class="mt-2 mb-0 text-[1.75rem] font-bold">TLA App</h1>
-      <p class="m-0 text-muted-color text-sm">Tennis League Administration</p>
+      <p class="m-0 text-muted-color text-sm">Crea il tuo account</p>
     </div>
 
     <!-- ------------------------------------------------ -->
-    <!-- Form Login -->
+    <!-- Form Registration -->
     <!-- ------------------------------------------------ -->
-
     <form class="flex flex-col gap-5" @submit.prevent="handleSubmit">
       <Message v-if="auth.error" severity="error" :closable="false">
         {{ auth.error }}
       </Message>
+
+      <!-- Name -->
+      <div class="flex flex-col gap-1.5">
+        <label for="name" class="text-sm font-medium">Nome</label>
+        <InputText
+          id="name"
+          v-model="name"
+          placeholder="Mario Rossi"
+          autocomplete="name"
+          fluid
+          required
+        />
+      </div>
 
       <!-- Email -->
       <div class="flex flex-col gap-1.5">
@@ -73,34 +87,50 @@
       <!-- Password -->
       <div class="flex flex-col gap-1.5">
         <label for="password" class="text-sm font-medium">Password</label>
-        <Password id="password" v-model="password" placeholder="••••••••" fluid toggle-mask />
-      </div>
-
-      <!-- Button: Login -->
-      <Button type="submit" label="Accedi" icon="pi pi-sign-in" :loading="auth.loading" fluid />
-
-      <!-- Button: Go to Registration page -->
-      <div class="flex items-center justify-center gap-1 text-sm text-muted-color">
-        <span>Non hai un account?</span>
-        <Button
-          type="button"
-          label="Registrati"
-          variant="link"
-          size="small"
-          @click="router.push({ name: 'register' })"
+        <Password
+          id="password"
+          v-model="password"
+          placeholder="••••••••"
+          :feedback="true"
+          autocomplete="new-password"
+          fluid
+          toggle-mask
         />
       </div>
 
-      <!-- Button: Continue as Guest -->
+      <!-- Confirm Password -->
+      <div class="flex flex-col gap-1.5">
+        <label for="confirmPassword" class="text-sm font-medium">Conferma password</label>
+        <Password
+          id="confirmPassword"
+          v-model="confirmPassword"
+          placeholder="••••••••"
+          autocomplete="new-password"
+          fluid
+          toggle-mask
+        />
+      </div>
+
+      <!-- Button: Register -->
       <Button
-        type="button"
-        label="Entra come ospite"
-        icon="pi pi-eye"
-        severity="secondary"
-        outlined
+        type="submit"
+        label="Registrati"
+        icon="pi pi-user-plus"
+        :loading="auth.loading"
         fluid
-        @click="continueAsGuest"
       />
+
+      <!-- Button: Go to Login page -->
+      <div class="flex items-center justify-center gap-1 text-sm text-muted-color">
+        <span>Hai già un account?</span>
+        <Button
+          type="button"
+          label="Accedi"
+          variant="link"
+          size="small"
+          @click="router.push({ name: 'login' })"
+        />
+      </div>
     </form>
   </div>
 </template>

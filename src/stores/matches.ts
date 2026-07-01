@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { matchesService } from '../services/matchesService'
+import { matchesService } from '../services/matchesApi'
 import type { Match, MatchAssignInput, MatchResultInput } from '../types'
 
 export const useMatchesStore = defineStore('matches', () => {

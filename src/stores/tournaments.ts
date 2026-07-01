@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { tournamentsService } from '../services/tournamentsService'
+import { tournamentsService } from '../services/tournamentsApi'
 import type { Tournament, TournamentCreate, TournamentUpdate, TournamentWithPlayers } from '../types'
 
 export const useTournamentsStore = defineStore('tournaments', () => {

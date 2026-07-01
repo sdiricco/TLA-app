@@ -1,0 +1,8 @@
+import type { Profile, ProfilesService } from '../types'
+import { authApiClient } from './authApiClient'
+import { apiRequest } from './request'
+
+export const profilesService: ProfilesService = {
+  getMyProfile: () => apiRequest<Profile>(authApiClient, { url: '/auth/profile', method: 'GET' }),
+  getUnlinkedProfiles: () => apiRequest<Profile[]>(authApiClient, { url: '/auth/profiles/unlinked', method: 'GET' }),
+}

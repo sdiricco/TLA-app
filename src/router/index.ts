@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
+import RegisterView from '../views/RegisterView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -16,6 +17,12 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
+      meta: { public: true },
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: RegisterView,
       meta: { public: true },
     },
     {
@@ -99,7 +106,7 @@ router.beforeEach(async (to) => {
   }
 
   // Authenticated on login page → redirect by role
-  if (to.name === 'login' && auth.isAuthenticated) {
+  if ((to.name === 'login' || to.name === 'register') && auth.isAuthenticated) {
     return auth.isAdmin || auth.isGuest ? { name: 'dashboard' } : { name: 'tournaments' }
   }
 
