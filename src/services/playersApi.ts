@@ -1,9 +1,21 @@
-import type { Player, PlayerCreate, PlayerUpdate, PlayersService } from '../types'
+import type {
+  PaginatedResponse,
+  Player,
+  PlayerCreate,
+  PlayerListQuery,
+  PlayerUpdate,
+  PlayersService,
+} from '../types'
 import { apiClient } from './apiClient'
 import { apiRequest } from './request'
 
 export const playersService: PlayersService = {
-  getAll: () => apiRequest<Player[]>(apiClient, { url: '/players', method: 'GET' }),
+  getAll: (query?: PlayerListQuery) =>
+    apiRequest<PaginatedResponse<Player>>(apiClient, {
+      url: '/players',
+      method: 'GET',
+      params: query,
+    }),
   getById: (id) => apiRequest<Player>(apiClient, { url: `/players/${id}`, method: 'GET' }),
   create: (data: PlayerCreate) => apiRequest<Player>(apiClient, { url: '/players', method: 'POST', data }),
   update: (id: string, data: PlayerUpdate) =>

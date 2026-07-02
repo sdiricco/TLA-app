@@ -50,6 +50,24 @@ function parseNullableInt(value: unknown): number | null | undefined {
   return parsed
 }
 
+function parseNonNegativeInt(value: unknown, fallback: number): number {
+  if (value === undefined) return fallback
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error('Invalid pagination value')
+  }
+  return parsed
+}
+
+function parsePositiveInt(value: unknown, fallback: number): number {
+  if (value === undefined) return fallback
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error('Invalid pagination value')
+  }
+  return parsed
+}
+
 function tournamentCapacityReached(limit: number | null, count: number): boolean {
   return limit !== null && count >= limit
 }
@@ -81,11 +99,50 @@ async function assertCanAddParticipant(tournamentId: string, playerId: string): 
   }
 }
 
-tournamentsRouter.get('/', async (_req, res) => {
-  const tournaments = await prisma.tournament.findMany({
-    orderBy: { startDate: 'desc' },
-  })
-  res.json(tournaments.map(serializeTournament))
+tournamentsRouter.get('/', async (req, res) => {
+  try {
+    const { name, category, status, page: pageParam, perPage: perPageParam } = req.query as {
+      name?: string
+      category?: string
+      status?: string
+      page?: string
+      perPage?: string
+    }
+
+    const page = parseNonNegativeInt(pageParam, 0)
+    const perPage = Math.min(parsePositiveInt(perPageParam, 12), 100)
+    const where = {
+      ...(name
+        ? {
+            name: {
+              contains: name,
+              mode: 'insensitive' as const,
+            },
+          }
+        : {}),
+      ...(category ? { category } : {}),
+      ...(status ? { status } : {}),
+    }
+
+    const [total, tournaments] = await prisma.$transaction([
+      prisma.tournament.count({ where }),
+      prisma.tournament.findMany({
+        where,
+        orderBy: [{ startDate: 'desc' }, { name: 'asc' }],
+        skip: page * perPage,
+        take: perPage,
+      }),
+    ])
+
+    res.json({
+      page,
+      perPage,
+      total,
+      values: tournaments.map(serializeTournament),
+    })
+  } catch (error) {
+    res.status(400).json({ message: error instanceof Error ? error.message : 'Invalid query params' })
+  }
 })
 
 tournamentsRouter.get('/:id', async (req, res) => {

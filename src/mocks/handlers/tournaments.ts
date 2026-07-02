@@ -4,8 +4,42 @@ import type { MockTournament } from '../../types'
 
 const tournaments: MockTournament[] = [...mockTournaments]
 
+function matchesFilter(value: string | null | undefined, filter: string | null): boolean {
+  if (!filter) return true
+  return (value ?? '').toLowerCase().includes(filter.toLowerCase())
+}
+
+function toPaginatedResponse(list: MockTournament[], page: number, perPage: number) {
+  const start = page * perPage
+  return {
+    page,
+    perPage,
+    total: list.length,
+    values: list.slice(start, start + perPage),
+  }
+}
+
+function parseQueryInt(value: string | null, fallback: number, min: number): number {
+  const parsed = value === null ? fallback : Number(value)
+  if (!Number.isInteger(parsed) || parsed < min) return fallback
+  return parsed
+}
+
 export const tournamentHandlers = [
-  http.get('/api/tournaments', () => HttpResponse.json(tournaments)),
+  http.get('/api/tournaments', ({ request }) => {
+    const url = new URL(request.url)
+    const page = parseQueryInt(url.searchParams.get('page'), 0, 0)
+    const perPage = parseQueryInt(url.searchParams.get('perPage'), 12, 1)
+    const name = url.searchParams.get('name')
+    const category = url.searchParams.get('category')
+    const status = url.searchParams.get('status')
+    const filtered = tournaments
+      .filter((tournament) => matchesFilter(tournament.name, name))
+      .filter((tournament) => (category ? tournament.category === category : true))
+      .filter((tournament) => (status ? tournament.status === status : true))
+      .sort((a, b) => new Date(b.start_date ?? 0).getTime() - new Date(a.start_date ?? 0).getTime())
+    return HttpResponse.json(toPaginatedResponse(filtered, page, perPage))
+  }),
   http.get('/api/tournaments/:id', ({ params }) => {
     const tournament = tournaments.find((t) => t.id === params['id'])
     if (!tournament) return HttpResponse.json({ message: 'Torneo non trovato' }, { status: 404 })

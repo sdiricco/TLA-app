@@ -16,6 +16,24 @@ function parseNullableDate(value: unknown): Date | null | undefined {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
+function parseNonNegativeInt(value: unknown, fallback: number): number {
+  if (value === undefined) return fallback
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error('Invalid pagination value')
+  }
+  return parsed
+}
+
+function parsePositiveInt(value: unknown, fallback: number): number {
+  if (value === undefined) return fallback
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error('Invalid pagination value')
+  }
+  return parsed
+}
+
 playersRouter.get('/me', async (req, res) => {
   const authReq = req as AuthenticatedRequest
   const userId = authReq.authUser?.id
@@ -35,11 +53,54 @@ playersRouter.get('/me', async (req, res) => {
   res.json(player ? serializePlayer(player) : null)
 })
 
-playersRouter.get('/', async (_req, res) => {
-  const players = await prisma.player.findMany({
-    orderBy: { ranking: 'asc' },
-  })
-  res.json(players.map(serializePlayer))
+playersRouter.get('/', async (req, res) => {
+  try {
+    const { name, club, page: pageParam, perPage: perPageParam } = req.query as {
+      name?: string
+      club?: string
+      page?: string
+      perPage?: string
+    }
+    const page = parseNonNegativeInt(pageParam, 0)
+    const perPage = Math.min(parsePositiveInt(perPageParam, 20), 100)
+    const where = {
+      ...(name
+        ? {
+            name: {
+              contains: name,
+              mode: 'insensitive' as const,
+            },
+          }
+        : {}),
+      ...(club
+        ? {
+            club: {
+              contains: club,
+              mode: 'insensitive' as const,
+            },
+          }
+        : {}),
+    }
+
+    const [total, players] = await prisma.$transaction([
+      prisma.player.count({ where }),
+      prisma.player.findMany({
+        where,
+        orderBy: [{ ranking: 'asc' }, { name: 'asc' }],
+        skip: page * perPage,
+        take: perPage,
+      }),
+    ])
+
+    res.json({
+      page,
+      perPage,
+      total,
+      values: players.map(serializePlayer),
+    })
+  } catch (error) {
+    res.status(400).json({ message: error instanceof Error ? error.message : 'Invalid query params' })
+  }
 })
 
 playersRouter.get('/:id', async (req, res) => {

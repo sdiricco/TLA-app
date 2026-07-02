@@ -31,6 +31,20 @@ export interface Player {
 export type PlayerCreate = Omit<Player, 'id' | 'created_at' | 'updated_at'>
 export type PlayerUpdate = Partial<PlayerCreate>
 
+export interface PlayerListQuery {
+  name?: string
+  club?: string
+  page?: number
+  perPage?: number
+}
+
+export interface PaginatedResponse<T> {
+  page: number
+  perPage: number
+  total: number
+  values: T[]
+}
+
 export type TournamentFormat =
   | 'single_elimination'
   | 'double_elimination'
@@ -60,6 +74,14 @@ export interface Tournament {
 
 export type TournamentCreate = Omit<Tournament, 'id' | 'created_at' | 'updated_at'>
 export type TournamentUpdate = Partial<TournamentCreate>
+
+export interface TournamentListQuery {
+  name?: string
+  category?: TournamentCategory
+  status?: TournamentStatus
+  page?: number
+  perPage?: number
+}
 
 // ── Tournament detail ────────────────────────────────────────────────────────
 
@@ -130,7 +152,7 @@ export interface AuthService {
 }
 
 export interface PlayersService {
-  getAll(): Promise<Player[]>
+  getAll(query?: PlayerListQuery): Promise<PaginatedResponse<Player>>
   getById(id: string): Promise<Player>
   create(data: PlayerCreate): Promise<Player>
   update(id: string, data: PlayerUpdate): Promise<Player>
@@ -139,7 +161,7 @@ export interface PlayersService {
 }
 
 export interface TournamentsService {
-  getAll(): Promise<Tournament[]>
+  getAll(query?: TournamentListQuery): Promise<PaginatedResponse<Tournament>>
   getById(id: string): Promise<TournamentWithPlayers>
   create(data: TournamentCreate): Promise<Tournament>
   update(id: string, data: TournamentUpdate): Promise<Tournament>

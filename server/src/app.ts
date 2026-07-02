@@ -1,5 +1,7 @@
 import cors from 'cors'
 import express from 'express'
+import swaggerUi from 'swagger-ui-express'
+import { openApiSpec } from './docs/openapi'
 import { authRouter } from './routes/auth'
 import { healthRouter } from './routes/health'
 import { matchesRouter } from './routes/matches'
@@ -18,6 +20,20 @@ export function createApp() {
   app.use(express.json())
 
   app.use('/api', healthRouter)
+  app.use('/api/docs', swaggerUi.serve)
+  app.get(
+    '/api/docs',
+    swaggerUi.setup(openApiSpec, {
+      explorer: true,
+      swaggerOptions: {
+        persistAuthorization: true,
+        displayRequestDuration: true,
+      },
+    }),
+  )
+  app.get('/api/docs.json', (_req, res) => {
+    res.json(openApiSpec)
+  })
   app.use('/api/auth', authRouter)
   app.use('/api/players', playersRouter)
   app.use('/api/tournaments', tournamentsRouter)

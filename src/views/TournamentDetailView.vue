@@ -75,7 +75,7 @@ async function loadPage(): Promise<void> {
     const tournamentId = route.params['id'] as string
     const [loadedTournament] = await Promise.all([
       tournamentsStore.getById(tournamentId),
-      playersStore.fetchAll(),
+      playersStore.fetchAll({ page: 0, perPage: 100 }),
       matchesStore.loadForTournament(tournamentId),
     ])
     tournament.value = loadedTournament

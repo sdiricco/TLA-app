@@ -1,12 +1,38 @@
 import { http, HttpResponse } from 'msw'
 import { mockPlayers } from '../data/players'
-import type { Player } from '../../types'
+import type { PaginatedResponse, Player } from '../../types'
 
 const players: Player[] = [...mockPlayers]
 const GUEST_TOKEN = 'tla_guest_token'
 
+function matchesFilter(value: string | null | undefined, filter: string | null): boolean {
+  if (!filter) return true
+  return (value ?? '').toLowerCase().includes(filter.toLowerCase())
+}
+
+function toPaginatedResponse(list: Player[], page: number, perPage: number): PaginatedResponse<Player> {
+  const start = page * perPage
+  return {
+    page,
+    perPage,
+    total: list.length,
+    values: list.slice(start, start + perPage),
+  }
+}
+
 export const playerHandlers = [
-  http.get('/api/players', () => HttpResponse.json(players)),
+  http.get('/api/players', ({ request }) => {
+    const url = new URL(request.url)
+    const page = Number(url.searchParams.get('page') ?? '0')
+    const perPage = Number(url.searchParams.get('perPage') ?? '20')
+    const name = url.searchParams.get('name')
+    const club = url.searchParams.get('club')
+    const filtered = players
+      .filter((player) => matchesFilter(player.name, name))
+      .filter((player) => matchesFilter(player.club, club))
+      .sort((a, b) => a.ranking - b.ranking || a.name.localeCompare(b.name))
+    return HttpResponse.json(toPaginatedResponse(filtered, page, perPage))
+  }),
   http.get('/api/players/me', ({ request }) => {
     const auth = request.headers.get('Authorization')
     if (auth === `Bearer ${GUEST_TOKEN}`) {
@@ -29,7 +55,8 @@ export const playerHandlers = [
   }),
   http.post('/api/players', async ({ request }) => {
     const body = (await request.json()) as Omit<Player, 'id'>
-    const newPlayer: Player = { id: `p-${Date.now()}`, ...body }
+    const now = new Date().toISOString()
+    const newPlayer: Player = { id: `p-${Date.now()}`, created_at: now, updated_at: now, ...body }
     players.push(newPlayer)
     return HttpResponse.json(newPlayer, { status: 201 })
   }),
@@ -37,7 +64,7 @@ export const playerHandlers = [
     const index = players.findIndex((p) => p.id === params['id'])
     if (index === -1) return HttpResponse.json({ message: 'Giocatore non trovato' }, { status: 404 })
     const body = (await request.json()) as Partial<Player>
-    players[index] = { ...players[index]!, ...body }
+    players[index] = { ...players[index]!, ...body, updated_at: new Date().toISOString() }
     return HttpResponse.json(players[index])
   }),
   http.delete('/api/players/:id', ({ params }) => {

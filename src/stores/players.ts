@@ -1,20 +1,29 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { playersService } from '../services/playersApi'
-import type { Player, PlayerCreate, PlayerUpdate } from '../types'
+import type { PaginatedResponse, Player, PlayerCreate, PlayerListQuery, PlayerUpdate } from '../types'
 
 export const usePlayersStore = defineStore('players', () => {
   const players = ref<Player[]>([])
+  const page = ref(0)
+  const perPage = ref(20)
+  const total = ref(0)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function fetchAll(): Promise<void> {
+  async function fetchAll(query?: PlayerListQuery): Promise<PaginatedResponse<Player>> {
     loading.value = true
     error.value = null
     try {
-      players.value = await playersService.getAll()
+      const response = await playersService.getAll(query)
+      players.value = response.values
+      page.value = response.page
+      perPage.value = response.perPage
+      total.value = response.total
+      return response
     } catch (e) {
       error.value = (e as Error).message
+      throw e
     } finally {
       loading.value = false
     }
@@ -27,6 +36,7 @@ export const usePlayersStore = defineStore('players', () => {
   async function create(data: PlayerCreate): Promise<Player> {
     const newPlayer = await playersService.create(data)
     players.value.push(newPlayer)
+    total.value += 1
     return newPlayer
   }
 
@@ -40,7 +50,20 @@ export const usePlayersStore = defineStore('players', () => {
   async function remove(id: string): Promise<void> {
     await playersService.remove(id)
     players.value = players.value.filter((p) => p.id !== id)
+    total.value = Math.max(0, total.value - 1)
   }
 
-  return { players, loading, error, fetchAll, getById, create, update, remove }
+  return {
+    players,
+    page,
+    perPage,
+    total,
+    loading,
+    error,
+    fetchAll,
+    getById,
+    create,
+    update,
+    remove,
+  }
 })

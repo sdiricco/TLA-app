@@ -1,6 +1,8 @@
 import type {
+  PaginatedResponse,
   Tournament,
   TournamentCreate,
+  TournamentListQuery,
   TournamentUpdate,
   TournamentWithPlayers,
   TournamentsService,
@@ -9,7 +11,12 @@ import { apiClient } from './apiClient'
 import { apiRequest } from './request'
 
 export const tournamentsService: TournamentsService = {
-  getAll: () => apiRequest<Tournament[]>(apiClient, { url: '/tournaments', method: 'GET' }),
+  getAll: (query?: TournamentListQuery) =>
+    apiRequest<PaginatedResponse<Tournament>>(apiClient, {
+      url: '/tournaments',
+      method: 'GET',
+      params: query,
+    }),
   getById: (id) => apiRequest<TournamentWithPlayers>(apiClient, { url: `/tournaments/${id}`, method: 'GET' }),
   create: (data: TournamentCreate) => apiRequest<Tournament>(apiClient, { url: '/tournaments', method: 'POST', data }),
   update: (id, data: TournamentUpdate) =>

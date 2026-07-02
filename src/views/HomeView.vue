@@ -20,7 +20,7 @@
     upcoming: tournamentsStore.tournaments.filter((t) => t.status === 'upcoming').length,
     ongoing: tournamentsStore.tournaments.filter((t) => t.status === 'ongoing').length,
     completed: tournamentsStore.tournaments.filter((t) => t.status === 'completed').length,
-    totalPlayers: playersStore.players.length,
+    totalPlayers: playersStore.total,
   }));
 
   const statCards = computed(() => [
@@ -51,7 +51,7 @@
    */
   onMounted(async () => {
     loading.value = true;
-    await Promise.all([tournamentsStore.fetchAll(), playersStore.fetchAll()]);
+    await Promise.all([tournamentsStore.fetchAll({ perPage: 100 }), playersStore.fetchAll({ perPage: 1 })]);
     loading.value = false;
   });
 </script>

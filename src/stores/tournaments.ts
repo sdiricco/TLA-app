@@ -1,20 +1,36 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { tournamentsService } from '../services/tournamentsApi'
-import type { Tournament, TournamentCreate, TournamentUpdate, TournamentWithPlayers } from '../types'
+import type {
+  PaginatedResponse,
+  Tournament,
+  TournamentCreate,
+  TournamentListQuery,
+  TournamentUpdate,
+  TournamentWithPlayers,
+} from '../types'
 
 export const useTournamentsStore = defineStore('tournaments', () => {
   const tournaments = ref<Tournament[]>([])
+  const page = ref(0)
+  const perPage = ref(12)
+  const total = ref(0)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function fetchAll(): Promise<void> {
+  async function fetchAll(query?: TournamentListQuery): Promise<PaginatedResponse<Tournament>> {
     loading.value = true
     error.value = null
     try {
-      tournaments.value = await tournamentsService.getAll()
+      const response = await tournamentsService.getAll(query)
+      tournaments.value = response.values
+      page.value = response.page
+      perPage.value = response.perPage
+      total.value = response.total
+      return response
     } catch (e) {
       error.value = (e as Error).message
+      throw e
     } finally {
       loading.value = false
     }
@@ -27,6 +43,7 @@ export const useTournamentsStore = defineStore('tournaments', () => {
   async function create(data: TournamentCreate): Promise<Tournament> {
     const tournament = await tournamentsService.create(data)
     tournaments.value.unshift(tournament)
+    total.value += 1
     return tournament
   }
 
@@ -40,6 +57,7 @@ export const useTournamentsStore = defineStore('tournaments', () => {
   async function remove(id: string): Promise<void> {
     await tournamentsService.remove(id)
     tournaments.value = tournaments.value.filter((tournament) => tournament.id !== id)
+    total.value = Math.max(0, total.value - 1)
   }
 
   async function addPlayer(tournamentId: string, playerId: string): Promise<void> {
@@ -72,6 +90,9 @@ export const useTournamentsStore = defineStore('tournaments', () => {
 
   return {
     tournaments,
+    page,
+    perPage,
+    total,
     loading,
     error,
     fetchAll,
