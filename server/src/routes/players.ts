@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { Prisma } from '@prisma/client'
 import type { PlayerCreate, PlayerUpdate } from '../../../src/types'
 import { prisma } from '../db/prisma'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
@@ -34,6 +35,27 @@ function parsePositiveInt(value: unknown, fallback: number): number {
   return parsed
 }
 
+function parsePlayerSort(
+  sortBy: unknown,
+  sortOrder: unknown,
+): Prisma.PlayerOrderByWithRelationInput[] {
+  const allowedFields = new Set(['ranking', 'name', 'club', 'created_at'])
+  const field = typeof sortBy === 'string' && allowedFields.has(sortBy) ? sortBy : 'ranking'
+  const order: Prisma.SortOrder = sortOrder === 'desc' ? 'desc' : 'asc'
+
+  switch (field) {
+    case 'name':
+      return [{ name: order }, { ranking: 'asc' }]
+    case 'club':
+      return [{ club: { sort: order, nulls: 'last' } }, { name: 'asc' }]
+    case 'created_at':
+      return [{ createdAt: order }, { name: 'asc' }]
+    case 'ranking':
+    default:
+      return [{ ranking: order }, { name: 'asc' }]
+  }
+}
+
 playersRouter.get('/me', async (req, res) => {
   const authReq = req as AuthenticatedRequest
   const userId = authReq.authUser?.id
@@ -55,14 +77,17 @@ playersRouter.get('/me', async (req, res) => {
 
 playersRouter.get('/', async (req, res) => {
   try {
-    const { name, club, page: pageParam, perPage: perPageParam } = req.query as {
+    const { name, club, page: pageParam, perPage: perPageParam, sortBy, sortOrder } = req.query as {
       name?: string
       club?: string
       page?: string
       perPage?: string
+      sortBy?: string
+      sortOrder?: string
     }
     const page = parseNonNegativeInt(pageParam, 0)
     const perPage = Math.min(parsePositiveInt(perPageParam, 20), 100)
+    const orderBy = parsePlayerSort(sortBy, sortOrder)
     const where = {
       ...(name
         ? {
@@ -86,7 +111,7 @@ playersRouter.get('/', async (req, res) => {
       prisma.player.count({ where }),
       prisma.player.findMany({
         where,
-        orderBy: [{ ranking: 'asc' }, { name: 'asc' }],
+        orderBy,
         skip: page * perPage,
         take: perPage,
       }),

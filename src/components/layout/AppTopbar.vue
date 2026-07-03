@@ -15,7 +15,7 @@ async function handleLogout(): Promise<void> {
 </script>
 
 <template>
-  <header class="hidden max-md:flex items-center gap-1 px-1 h-14 bg-surface-0 border-b border-surface-200 sticky top-0 z-10">
+  <header class="mobile-topbar hidden max-md:flex items-center gap-1 px-1 h-14 sticky top-0 z-10">
     <Button
       icon="pi pi-bars"
       text
@@ -24,9 +24,9 @@ async function handleLogout(): Promise<void> {
       @click="layout.toggleSidebar()"
     />
 
-    <div class="flex items-center gap-2 font-bold text-base text-color">
-      <i class="pi pi-circle-fill text-primary-500" />
-      <span>TLA App</span>
+    <div class="flex items-center gap-2 font-bold text-base">
+      <span class="mobile-ball" />
+      <span>TLA</span>
     </div>
 
     <div class="flex-1" />
@@ -41,3 +41,9 @@ async function handleLogout(): Promise<void> {
     />
   </header>
 </template>
+
+<style scoped>
+.mobile-topbar { border-bottom: 1px solid rgb(255 255 255 / 10%); background: #064e3b; color: white; box-shadow: 0 5px 18px rgb(15 50 38 / 15%); }
+.mobile-topbar :deep(.p-button) { color: rgb(255 255 255 / 82%); }
+.mobile-ball { width: 1.15rem; height: 1.15rem; border-radius: 50%; background: #b7f34a; }
+</style>

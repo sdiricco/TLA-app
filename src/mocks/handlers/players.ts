@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { mockPlayers } from '../data/players'
-import type { PaginatedResponse, Player } from '../../types'
+import type { PaginatedResponse, Player, PlayerSortField, SortOrder } from '../../types'
 
 const players: Player[] = [...mockPlayers]
 const GUEST_TOKEN = 'tla_guest_token'
@@ -20,6 +20,32 @@ function toPaginatedResponse(list: Player[], page: number, perPage: number): Pag
   }
 }
 
+function compareNullableText(left: string | null | undefined, right: string | null | undefined, order: SortOrder): number {
+  const leftValue = left?.trim() ?? ''
+  const rightValue = right?.trim() ?? ''
+  return order === 'asc' ? leftValue.localeCompare(rightValue) : rightValue.localeCompare(leftValue)
+}
+
+function compareNumbers(left: number, right: number, order: SortOrder): number {
+  return order === 'asc' ? left - right : right - left
+}
+
+function sortPlayers(list: Player[], sortBy: PlayerSortField, sortOrder: SortOrder): Player[] {
+  return [...list].sort((left, right) => {
+    switch (sortBy) {
+      case 'name':
+        return compareNullableText(left.name, right.name, sortOrder) || compareNumbers(left.ranking, right.ranking, 'asc')
+      case 'club':
+        return compareNullableText(left.club, right.club, sortOrder) || compareNullableText(left.name, right.name, 'asc')
+      case 'created_at':
+        return compareNullableText(left.created_at, right.created_at, sortOrder) || compareNullableText(left.name, right.name, 'asc')
+      case 'ranking':
+      default:
+        return compareNumbers(left.ranking, right.ranking, sortOrder) || compareNullableText(left.name, right.name, 'asc')
+    }
+  })
+}
+
 export const playerHandlers = [
   http.get('/api/players', ({ request }) => {
     const url = new URL(request.url)
@@ -27,11 +53,13 @@ export const playerHandlers = [
     const perPage = Number(url.searchParams.get('perPage') ?? '20')
     const name = url.searchParams.get('name')
     const club = url.searchParams.get('club')
+    const sortBy = (url.searchParams.get('sortBy') as PlayerSortField | null) ?? 'ranking'
+    const sortOrder = (url.searchParams.get('sortOrder') as SortOrder | null) ?? 'asc'
     const filtered = players
       .filter((player) => matchesFilter(player.name, name))
       .filter((player) => matchesFilter(player.club, club))
-      .sort((a, b) => a.ranking - b.ranking || a.name.localeCompare(b.name))
-    return HttpResponse.json(toPaginatedResponse(filtered, page, perPage))
+    const sorted = sortPlayers(filtered, sortBy, sortOrder)
+    return HttpResponse.json(toPaginatedResponse(sorted, page, perPage))
   }),
   http.get('/api/players/me', ({ request }) => {
     const auth = request.headers.get('Authorization')

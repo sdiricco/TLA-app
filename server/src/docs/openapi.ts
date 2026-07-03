@@ -26,6 +26,8 @@ const playerSchema = {
   },
 }
 
+const tournamentCategoryEnum = ['maschile', 'femminile']
+
 const tournamentSchema = {
   type: 'object',
   required: ['id', 'name', 'format', 'category', 'status', 'published'],
@@ -33,13 +35,17 @@ const tournamentSchema = {
     id: { type: 'string' },
     name: { type: 'string' },
     location: { type: 'string', nullable: true },
+    registration_start_date: { type: 'string', nullable: true },
+    registration_end_date: { type: 'string', nullable: true },
+    game_formula: { type: 'string', nullable: true },
+    registration_fee: { type: 'number', nullable: true },
     start_date: { type: 'string', nullable: true },
     end_date: { type: 'string', nullable: true },
     format: {
       type: 'string',
       enum: ['single_elimination', 'double_elimination', 'round_robin', 'round_robin_elimination'],
     },
-    category: { type: 'string', enum: ['singles', 'doubles'] },
+    category: { type: 'string', enum: tournamentCategoryEnum },
     status: { type: 'string', enum: ['upcoming', 'ongoing', 'completed'] },
     published: { type: 'boolean' },
     participant_limit: { type: 'integer', nullable: true },
@@ -67,17 +73,17 @@ const tournamentWithPlayersSchema = {
 
 const matchSchema = {
   type: 'object',
-  required: ['id', 'tournament_id', 'round', 'position', 'status'],
+  required: ['id', 'tournament_id', 'round_index', 'position', 'status'],
   properties: {
     id: { type: 'string' },
     tournament_id: { type: 'string' },
-    round: { type: 'integer' },
+    round_index: { type: 'integer', minimum: 0 },
     position: { type: 'integer' },
     player1_id: { type: 'string', nullable: true },
     player2_id: { type: 'string', nullable: true },
     result: { type: 'string', nullable: true },
     winner_id: { type: 'string', nullable: true },
-    status: { type: 'string', enum: ['pending', 'completed'] },
+    status: { type: 'string', enum: ['waiting', 'ready', 'completed'] },
     created_at: { type: 'string', nullable: true },
     updated_at: { type: 'string', nullable: true },
   },
@@ -134,6 +140,47 @@ export const openApiSpec = {
         },
       },
       Match: matchSchema,
+      TournamentMatchesResponse: {
+        type: 'object',
+        required: ['tournament', 'draw', 'rounds', 'matches'],
+        properties: {
+          tournament: {
+            type: 'object',
+            required: ['id', 'name', 'format', 'category', 'status'],
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              format: { type: 'string' },
+              category: { type: 'string' },
+              status: { type: 'string' },
+            },
+          },
+          draw: {
+            type: 'object',
+            required: ['draw_size', 'participants_count', 'rounds_count'],
+            properties: {
+              draw_size: { type: 'integer', minimum: 0 },
+              participants_count: { type: 'integer', minimum: 0 },
+              rounds_count: { type: 'integer', minimum: 0 },
+            },
+          },
+          rounds: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['index', 'name', 'short_name', 'matches_count', 'completed_matches_count'],
+              properties: {
+                index: { type: 'integer', minimum: 0 },
+                name: { type: 'string' },
+                short_name: { type: 'string', example: 'R16' },
+                matches_count: { type: 'integer', minimum: 0 },
+                completed_matches_count: { type: 'integer', minimum: 0 },
+              },
+            },
+          },
+          matches: { type: 'array', items: { $ref: '#/components/schemas/Match' } },
+        },
+      },
       ApiError: {
         type: 'object',
         properties: {
@@ -276,6 +323,8 @@ export const openApiSpec = {
           { name: 'club', in: 'query', required: false, schema: { type: 'string' } },
           { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 0 } },
           { name: 'perPage', in: 'query', required: false, schema: { type: 'integer', minimum: 1 } },
+          { name: 'sortBy', in: 'query', required: false, schema: { type: 'string', enum: ['ranking', 'name', 'club', 'created_at'] } },
+          { name: 'sortOrder', in: 'query', required: false, schema: { type: 'string', enum: ['asc', 'desc'] } },
         ],
         responses: {
           200: {
@@ -343,7 +392,7 @@ export const openApiSpec = {
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'name', in: 'query', required: false, schema: { type: 'string' } },
-          { name: 'category', in: 'query', required: false, schema: { type: 'string', enum: ['singles', 'doubles'] } },
+          { name: 'category', in: 'query', required: false, schema: { type: 'string', enum: tournamentCategoryEnum } },
           { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['upcoming', 'ongoing', 'completed'] } },
           { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 0, default: 0 } },
           { name: 'perPage', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 12 } },
@@ -372,13 +421,17 @@ export const openApiSpec = {
                 properties: {
                   name: { type: 'string' },
                   location: { type: 'string', nullable: true },
+                  registration_start_date: { type: 'string', nullable: true },
+                  registration_end_date: { type: 'string', nullable: true },
+                  game_formula: { type: 'string', nullable: true },
+                  registration_fee: { type: 'number', nullable: true },
                   start_date: { type: 'string', nullable: true },
                   end_date: { type: 'string', nullable: true },
                   format: {
                     type: 'string',
                     enum: ['single_elimination', 'double_elimination', 'round_robin', 'round_robin_elimination'],
                   },
-                  category: { type: 'string', enum: ['singles', 'doubles'] },
+                  category: { type: 'string', enum: tournamentCategoryEnum },
                   status: { type: 'string', enum: ['upcoming', 'ongoing', 'completed'] },
                   published: { type: 'boolean' },
                   participant_limit: { type: 'integer', nullable: true },
@@ -433,13 +486,17 @@ export const openApiSpec = {
                     properties: {
                       name: { type: 'string' },
                       location: { type: 'string', nullable: true },
+                      registration_start_date: { type: 'string', nullable: true },
+                      registration_end_date: { type: 'string', nullable: true },
+                      game_formula: { type: 'string', nullable: true },
+                      registration_fee: { type: 'number', nullable: true },
                       start_date: { type: 'string', nullable: true },
                       end_date: { type: 'string', nullable: true },
                       format: {
                         type: 'string',
                         enum: ['single_elimination', 'double_elimination', 'round_robin', 'round_robin_elimination'],
                       },
-                      category: { type: 'string', enum: ['singles', 'doubles'] },
+                      category: { type: 'string', enum: tournamentCategoryEnum },
                       status: { type: 'string', enum: ['upcoming', 'ongoing', 'completed'] },
                       published: { type: 'boolean' },
                       participant_limit: { type: 'integer', nullable: true },
@@ -553,21 +610,32 @@ export const openApiSpec = {
     },
     '/tournaments/{id}/matches': {
       get: {
-        summary: 'Lista match di un torneo',
+        summary: 'Tabellone completo e match di un torneo',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: {
           200: {
-            description: 'Lista match',
+            description: 'Metadati del tabellone, turni e tutti i match inclusi quelli futuri',
             content: {
               'application/json': {
-                schema: {
-                  type: 'array',
-                  items: { $ref: '#/components/schemas/Match' },
-                },
+                schema: { $ref: '#/components/schemas/TournamentMatchesResponse' },
               },
             },
           },
+        },
+      },
+    },
+    '/tournaments/{id}/draw.pdf': {
+      get: {
+        summary: 'Scarica il tabellone del torneo in PDF',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: {
+            description: 'Tabellone PDF vettoriale',
+            content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } },
+          },
+          409: { description: 'Tabellone non ancora generato' },
         },
       },
     },

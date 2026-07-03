@@ -36,6 +36,10 @@ export function serializeTournament(tournament: {
   id: string
   name: string
   location: string | null
+  registrationStartDate: Date | null
+  registrationEndDate: Date | null
+  gameFormula: string | null
+  registrationFee: { toNumber(): number } | null
   startDate: Date | null
   endDate: Date | null
   format: string
@@ -52,6 +56,10 @@ export function serializeTournament(tournament: {
     id: tournament.id,
     name: tournament.name,
     location: tournament.location,
+    registration_start_date: toIso(tournament.registrationStartDate),
+    registration_end_date: toIso(tournament.registrationEndDate),
+    game_formula: tournament.gameFormula,
+    registration_fee: tournament.registrationFee?.toNumber() ?? null,
     start_date: toIso(tournament.startDate),
     end_date: toIso(tournament.endDate),
     format: tournament.format as Tournament['format'],
@@ -70,6 +78,10 @@ export function serializeTournamentWithPlayers(tournament: {
   id: string
   name: string
   location: string | null
+  registrationStartDate: Date | null
+  registrationEndDate: Date | null
+  gameFormula: string | null
+  registrationFee: { toNumber(): number } | null
   startDate: Date | null
   endDate: Date | null
   format: string
@@ -125,16 +137,21 @@ export function serializeMatch(match: {
   createdAt: Date
   updatedAt: Date
 }): Match {
+  const status: Match['status'] = match.status === 'completed'
+    ? 'completed'
+    : match.player1Id && match.player2Id
+      ? 'ready'
+      : 'waiting'
   return {
     id: match.id,
     tournament_id: match.tournamentId,
-    round: match.round,
+    round_index: match.round - 1,
     position: match.position,
     player1_id: match.player1Id,
     player2_id: match.player2Id,
     result: match.result,
     winner_id: match.winnerId,
-    status: match.status as Match['status'],
+    status,
     created_at: match.createdAt.toISOString(),
     updated_at: match.updatedAt.toISOString(),
   }

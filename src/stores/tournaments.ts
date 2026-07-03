@@ -16,14 +16,20 @@ export const useTournamentsStore = defineStore('tournaments', () => {
   const perPage = ref(12)
   const total = ref(0)
   const loading = ref(false)
+  const loadingMore = ref(false)
   const error = ref<string | null>(null)
 
-  async function fetchAll(query?: TournamentListQuery): Promise<PaginatedResponse<Tournament>> {
-    loading.value = true
+  async function fetchAll(
+    query?: TournamentListQuery,
+    options: { append?: boolean } = {},
+  ): Promise<PaginatedResponse<Tournament>> {
+    const append = options.append === true
+    loading.value = !append
+    loadingMore.value = append
     error.value = null
     try {
       const response = await tournamentsService.getAll(query)
-      tournaments.value = response.values
+      tournaments.value = append ? [...tournaments.value, ...response.values] : response.values
       page.value = response.page
       perPage.value = response.perPage
       total.value = response.total
@@ -33,6 +39,7 @@ export const useTournamentsStore = defineStore('tournaments', () => {
       throw e
     } finally {
       loading.value = false
+      loadingMore.value = false
     }
   }
 
@@ -94,6 +101,7 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     perPage,
     total,
     loading,
+    loadingMore,
     error,
     fetchAll,
     getById,

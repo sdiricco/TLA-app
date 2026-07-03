@@ -1,25 +1,19 @@
 <script setup lang="ts">
   import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-  import { RouterLink, useRouter } from 'vue-router'
+  import { useRouter } from 'vue-router'
   import Avatar from 'primevue/avatar'
   import Button from 'primevue/button'
-  import Column from 'primevue/column'
-  import DataTable from 'primevue/datatable'
   import InputText from 'primevue/inputtext'
-  import Tag from 'primevue/tag'
-  import { useConfirm } from 'primevue/useconfirm'
-  import { useToast } from 'primevue/usetoast'
+  import Select from 'primevue/select'
+  import Skeleton from 'primevue/skeleton'
   import { useAuthStore } from '../stores/auth'
   import { usePlayersStore } from '../stores/players'
-  import type { Player } from '../types'
+  import type { Player, PlayerSortField, SortOrder } from '../types'
   import { formatAge, getPlayerInitials } from '@/utils/main'
 
-  /**
-   * Interfaces
-   */
-  interface PageEvent {
-    page?: number
-    rows?: number
+  interface SelectOption<T> {
+    label: string
+    value: T
   }
 
   /**
@@ -28,16 +22,39 @@
   const store = usePlayersStore();
   const auth = useAuthStore();
   const router = useRouter();
-  const confirm = useConfirm();
-  const toast = useToast();
 
   /**
    * Reactive vars
    */
-  const canViewAdmin = computed(() => auth.isAdmin || auth.isGuest)
+  const canViewAdmin = computed(() => auth.isAdmin)
   const searchName = ref('')
   const searchClub = ref('')
+  const sortBy = ref<PlayerSortField>('ranking')
+  const sortOrder = ref<SortOrder>('asc')
+  const hasMorePlayers = computed(() => store.players.length < store.total)
   let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * Sorting options
+   */
+  const sortFieldOptions: SelectOption<PlayerSortField>[] = [
+    { label: 'Ranking', value: 'ranking' },
+    { label: 'Nome', value: 'name' },
+    { label: 'Club', value: 'club' },
+    { label: 'Più recenti', value: 'created_at' },
+  ]
+
+  const sortOrderOptions: SelectOption<SortOrder>[] = [
+    { label: 'Crescente', value: 'asc' },
+    { label: 'Decrescente', value: 'desc' },
+  ]
+
+  /**
+   * Function: Format fallback content
+   */
+  function formatValue(value: string | null | undefined): string {
+    return value?.trim() ? value : '—'
+  }
 
   /**
    * Action: open create player page
@@ -48,44 +65,10 @@
   }
 
   /**
-   * Action: open edit player page
+   * Action: open player detail page
    */
-  function openEdit(player: Player): void {
-    if (auth.isGuest) return
-    void router.push({ name: 'player-edit', params: { id: player.id } })
-  }
-
-  /**
-   * Action: confirm delete player
-   */
-  function confirmDelete(player: Player): void {
-    if (auth.isGuest) return
-    confirm.require({
-      message: `Eliminare ${player.name}?`,
-      header: 'Conferma eliminazione',
-      icon: 'pi pi-exclamation-triangle',
-      rejectLabel: 'Annulla',
-      acceptLabel: 'Elimina',
-      accept: async () => {
-        try {
-          await store.remove(player.id)
-          await loadPlayers(store.page, store.perPage)
-          toast.add({
-            severity: 'success',
-            summary: 'Eliminato',
-            detail: `${player.name} rimosso`,
-            life: 3000,
-          });
-        } catch (e) {
-          toast.add({
-            severity: 'error',
-            summary: 'Errore',
-            detail: (e as Error).message,
-            life: 4000,
-          })
-        }
-      },
-    })
+  function openDetail(player: Player): void {
+    void router.push({ name: 'player-detail', params: { id: player.id } })
   }
 
   /**
@@ -97,14 +80,28 @@
       club: searchClub.value.trim() || undefined,
       page,
       perPage,
+      sortBy: sortBy.value,
+      sortOrder: sortOrder.value,
     })
   }
 
   /**
-   * Function: Handle paginator change
+   * Function: Load the next page and append it to the list
    */
-  function onPage(event: PageEvent): void {
-    void loadPlayers(event.page ?? 0, event.rows ?? store.perPage)
+  async function loadMore(): Promise<void> {
+    if (store.loadingMore || !hasMorePlayers.value) return
+
+    await store.fetchAll(
+      {
+        name: searchName.value.trim() || undefined,
+        club: searchClub.value.trim() || undefined,
+        page: store.page + 1,
+        perPage: store.perPage,
+        sortBy: sortBy.value,
+        sortOrder: sortOrder.value,
+      },
+      { append: true },
+    )
   }
 
   /**
@@ -113,6 +110,8 @@
   function clearFilters(): void {
     searchName.value = ''
     searchClub.value = ''
+    sortBy.value = 'ranking'
+    sortOrder.value = 'asc'
     void loadPlayers(0, store.perPage)
   }
 
@@ -123,7 +122,7 @@
     void loadPlayers()
   })
 
-  watch([searchName, searchClub], () => {
+  watch([searchName, searchClub, sortBy, sortOrder], () => {
     if (searchTimer) clearTimeout(searchTimer)
     searchTimer = setTimeout(() => {
       void loadPlayers(0, store.perPage)
@@ -136,174 +135,213 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
-    <!-- ------------------------------------------------ -->
-    <!-- Header -->
-    <!-- ------------------------------------------------ -->
-    <div class="flex items-start justify-between gap-4 flex-wrap">
+  <div class="players-page">
+    <header class="page-header">
       <div>
-        <h2 class="m-0 text-2xl">Giocatori</h2>
-        <p class="mt-1 mb-0 text-sm text-muted-color">
-          {{ store.total }} giocatori registrati
-        </p>
+        <p class="eyebrow">ROSTER DEL CIRCOLO</p>
+        <h1>I protagonisti del campo.</h1>
+        <p class="page-subtitle">Consulta profili, ranking e informazioni dei tuoi giocatori.</p>
       </div>
       <Button
         v-if="canViewAdmin"
-        label="Aggiungi"
+        class="create-button"
+        label="Nuovo giocatore"
         icon="pi pi-plus"
         :disabled="auth.isGuest"
         @click="openCreate"
       />
-    </div>
+    </header>
 
-    <!-- ------------------------------------------------ -->
-    <!-- Filters -->
-    <!-- ------------------------------------------------ -->
-    <div class="grid gap-3 rounded-2xl border border-surface-200 bg-surface-0 p-4 lg:grid-cols-3">
-      <div class="flex flex-col gap-1.5">
+    <section class="summary-strip">
+      <div class="summary-icon"><i class="pi pi-users" /></div>
+      <div><strong>{{ store.total }}</strong><span>Giocatori registrati</span></div>
+      <span class="summary-copy">Una community, infinite sfide.</span>
+    </section>
+
+    <section class="filters-panel" aria-label="Filtri giocatori">
+      <div class="filter-title"><i class="pi pi-sliders-h" /><span>Cerca e ordina</span></div>
+      <div class="filters-grid">
+        <div class="filter-field">
         <label for="player-name-filter" class="text-sm font-medium">Cerca per nome</label>
-        <InputText
-          id="player-name-filter"
-          v-model="searchName"
-          placeholder="Mario Rossi"
-          fluid
-        />
-      </div>
+          <span class="input-wrap"><i class="pi pi-search" /><InputText id="player-name-filter" v-model="searchName" placeholder="Es. Mario Rossi" fluid /></span>
+        </div>
 
-      <div class="flex flex-col gap-1.5">
+        <div class="filter-field">
         <label for="player-club-filter" class="text-sm font-medium">Cerca per club</label>
-        <InputText
-          id="player-club-filter"
-          v-model="searchClub"
-          placeholder="TC Milano"
-          fluid
-        />
-      </div>
+          <span class="input-wrap"><i class="pi pi-building-columns" /><InputText id="player-club-filter" v-model="searchClub" placeholder="Es. TC Milano" fluid /></span>
+        </div>
 
-      <div class="flex items-end gap-2">
-        <Button label="Azzera filtri" severity="secondary" outlined fluid @click="clearFilters" />
+        <div class="filter-field">
+        <label for="player-sort-field" class="text-sm font-medium">Ordina per</label>
+          <Select
+          id="player-sort-field"
+          v-model="sortBy"
+          :options="sortFieldOptions"
+          option-label="label"
+          option-value="value"
+          fluid
+          />
+        </div>
+
+        <div class="filter-field compact-sort">
+        <label for="player-sort-order" class="text-sm font-medium">Direzione</label>
+          <Select
+          id="player-sort-order"
+          v-model="sortOrder"
+          :options="sortOrderOptions"
+          option-label="label"
+          option-value="value"
+          fluid
+          />
+        </div>
+
+        <div class="filter-action">
+          <Button label="Azzera" icon="pi pi-refresh" severity="secondary" text @click="clearFilters" />
+        </div>
+      </div>
+    </section>
+
+    <div class="section-heading">
+      <div><h2>Giocatori</h2><span>{{ store.total }} profili</span></div>
+      <span class="view-label"><i class="pi pi-th-large" /> Vista griglia</span>
+    </div>
+
+    <div v-if="store.loading" class="players-grid">
+      <div v-for="item in 8" :key="item" class="player-card skeleton-card">
+        <Skeleton shape="circle" size="4.5rem" />
+        <Skeleton width="70%" height="1.4rem" />
+        <Skeleton width="45%" height="0.85rem" />
+        <Skeleton width="100%" height="4.5rem" borderRadius="12px" />
       </div>
     </div>
 
-    <!-- ------------------------------------------------ -->
-    <!-- Players table -->
-    <!-- ------------------------------------------------ -->
-    <DataTable
-      :value="store.players"
-      :loading="store.loading"
-      lazy
-      :first="store.page * store.perPage"
-      :rows="store.perPage"
-      :total-records="store.total"
-      :rows-per-page-options="[10, 20, 50]"
-      sort-field="ranking"
-      :sort-order="1"
-      striped-rows
-      show-gridlines
-      paginator
-      paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
-      @page="onPage"
-    >
-      <!-- Empty slot -->
-      <template #empty>
-        <div class="flex flex-col items-center gap-3 py-10 px-4 text-muted-color text-center">
-          <i class="pi pi-users text-[2rem] text-muted-color" />
-          <p class="m-0 leading-relaxed">
-            Nessun giocatore trovato.
-            <br />
-            Clicca
-            <strong>Aggiungi</strong>
-            per iniziare.
-          </p>
+    <div v-else-if="store.players.length === 0" class="empty-state">
+      <span><i class="pi pi-users" /></span>
+      <h3>Nessun giocatore trovato</h3>
+      <p>Modifica i filtri oppure aggiungi il primo giocatore.</p>
+    </div>
+
+    <div v-else class="players-grid">
+      <article
+        v-for="player in store.players"
+        :key="player.id"
+        class="player-card"
+        :class="{ 'top-player': player.ranking && player.ranking <= 3 }"
+        tabindex="0"
+        @click="openDetail(player)"
+        @keydown.enter="openDetail(player)"
+      >
+        <div class="card-topline">
+          <span v-if="player.ranking" class="ranking-pill"><i class="pi pi-bolt" /> RANKING #{{ player.ranking }}</span>
+          <span v-else class="ranking-pill unranked">NON CLASSIFICATO</span>
+          <span class="card-arrow"><i class="pi pi-arrow-up-right" /></span>
         </div>
-      </template>
 
-      <!-- Column: photo_url -->
-      <Column header="" style="width: 4rem; text-align: center">
-        <template #body="{ data }">
-          <Avatar
-            :label="getPlayerInitials(data)"
-            :image="data.photo_url ?? undefined"
-            shape="circle"
-            class="mx-auto"
-          />
-        </template>
-      </Column>
-
-      <!-- Column: ranking -->
-      <Column field="ranking" header="#" sortable style="width: 4rem; text-align: center">
-        <template #body="{ data }">
-          <Tag v-if="data.ranking" :value="String(data.ranking)" severity="secondary" />
-          <span v-else class="text-muted-color">—</span>
-        </template>
-      </Column>
-
-      <!-- Column: name -->
-      <Column field="name" header="Nome" sortable />
-
-      <!-- Column: birth_date -->
-      <Column header="Età" style="width: 8rem">
-        <template #body="{ data }">
-          <span>{{ formatAge(data.birth_date) }}</span>
-        </template>
-      </Column>
-
-      <!-- Column: club -->
-      <Column field="club" header="Club">
-        <template #body="{ data }">
-          <span v-if="data.club">{{ data.club }}</span>
-          <span v-else class="text-muted-color">—</span>
-        </template>
-      </Column>
-
-      <!-- Column: phone -->
-      <Column field="phone" header="Contatto">
-        <template #body="{ data }">
-          <span v-if="data.phone">{{ data.phone }}</span>
-          <span v-else class="text-muted-color">—</span>
-        </template>
-      </Column>
-
-      <!-- Column: id -->
-      <Column header="Profilo" style="width: 8rem">
-        <template #body="{ data }">
-          <RouterLink
-            :to="{ name: 'player-detail', params: { id: data.id } }"
-            class="inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium text-primary-600 transition-colors hover:bg-primary-50 hover:text-primary-700"
-          >
-            Apri
-          </RouterLink>
-        </template>
-      </Column>
-
-      <!-- Column: Actions -->
-      <Column header="Azioni" style="width: 7rem">
-        <template #body="{ data }">
-          <div class="flex gap-1">
-            <Button
-              v-if="canViewAdmin"
-              icon="pi pi-pencil"
-              text
-              rounded
-              size="small"
-              aria-label="Modifica"
-              :disabled="auth.isGuest"
-              @click="openEdit(data)"
-            />
-            <Button
-              v-if="canViewAdmin"
-              icon="pi pi-trash"
-              text
-              rounded
-              size="small"
-              severity="danger"
-              aria-label="Elimina"
-              :disabled="auth.isGuest"
-              @click="confirmDelete(data)"
-            />
+        <div class="player-identity">
+          <div class="avatar-wrap">
+            <Avatar :label="getPlayerInitials(player)" :image="player.photo_url ?? undefined" shape="circle" size="xlarge" />
+            <span v-if="player.ranking && player.ranking <= 3" class="top-badge"><i class="pi pi-star-fill" /></span>
           </div>
-        </template>
-      </Column>
-    </DataTable>
+          <div><h3>{{ player.name }}</h3><span><i class="pi pi-user" />{{ formatAge(player.birth_date) }}</span></div>
+        </div>
+
+        <div class="player-details">
+          <div><span class="detail-icon"><i class="pi pi-building-columns" /></span><p><small>CLUB</small>{{ formatValue(player.club) }}</p></div>
+          <div><span class="detail-icon"><i class="pi pi-phone" /></span><p><small>TELEFONO</small>{{ formatValue(player.phone) }}</p></div>
+        </div>
+
+        <footer class="card-footer"><span>Profilo giocatore</span><span>Visualizza <i class="pi pi-chevron-right" /></span></footer>
+      </article>
+
+      <div class="load-more-area">
+        <Button
+          v-if="hasMorePlayers"
+          label="Carica altro"
+          icon="pi pi-chevron-down"
+          severity="secondary"
+          outlined
+          :loading="store.loadingMore"
+          @click="loadMore"
+        />
+
+        <p v-else class="all-loaded"><i class="pi pi-check-circle" /> Hai visualizzato tutti i giocatori</p>
+      </div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+  .players-page { --green: #047857; --lime: #b7f34a; display: flex; max-width: 1480px; margin: 0 auto; flex-direction: column; gap: 1.5rem; color: #17211d; }
+  .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; padding-top: 0.4rem; }
+  .eyebrow { margin: 0 0 0.5rem; color: var(--green); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; }
+  .page-header h1 { margin: 0; font-size: clamp(2rem, 3vw, 3rem); line-height: 1; letter-spacing: -0.055em; }
+  .page-subtitle { margin: 0.75rem 0 0; color: #68756f; font-size: 0.95rem; }
+  .create-button { height: 3rem; border-color: var(--green); border-radius: 12px; background: var(--green); box-shadow: 0 10px 22px rgb(4 120 87 / 18%); font-weight: 700; }
+  .summary-strip { display: flex; align-items: center; gap: 0.9rem; padding: 0.85rem 1rem; border: 1px solid #dfe9e5; border-radius: 16px; background: linear-gradient(90deg, #fff, #f4fbf8); }
+  .summary-icon { display: grid; place-items: center; width: 2.65rem; height: 2.65rem; border-radius: 11px; background: #d1fae5; color: var(--green); }
+  .summary-strip div:nth-child(2) { display: grid; min-width: 125px; }
+  .summary-strip strong { font-size: 1.15rem; line-height: 1; }
+  .summary-strip div span { margin-top: 0.25rem; color: #78847f; font-size: 0.68rem; }
+  .summary-copy { margin-left: auto; color: #7b8782; font-size: 0.76rem; font-style: italic; }
+  .filters-panel { padding: 1rem; border: 1px solid #dfe7e3; border-radius: 18px; background: rgb(255 255 255 / 88%); box-shadow: 0 8px 30px rgb(26 54 43 / 5%); }
+  .filter-title { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; color: #3f4c46; font-size: 0.75rem; font-weight: 800; }
+  .filter-title i { color: var(--green); }
+  .filters-grid { display: grid; grid-template-columns: 1.15fr 1.15fr 0.9fr 0.9fr auto; gap: 0.75rem; }
+  .filter-field { display: flex; min-width: 0; flex-direction: column; gap: 0.4rem; }
+  .filter-field label { color: #69756f; font-size: 0.68rem; font-weight: 700; }
+  .input-wrap { position: relative; }
+  .input-wrap > i { position: absolute; z-index: 2; top: 50%; left: 0.9rem; transform: translateY(-50%); color: #91a099; font-size: 0.8rem; }
+  .input-wrap :deep(.p-inputtext) { padding-left: 2.4rem; }
+  .filter-field :deep(.p-inputtext), .filter-field :deep(.p-select) { height: 2.75rem; border-color: #dce5e1; border-radius: 10px; background: #fbfdfc; font-size: 0.82rem; }
+  .filter-field :deep(.p-inputtext:focus), .filter-field :deep(.p-select.p-focus) { border-color: #10b981; box-shadow: 0 0 0 3px rgb(16 185 129 / 10%); }
+  .filter-action { display: flex; align-items: flex-end; }
+  .filter-action :deep(.p-button) { height: 2.75rem; color: #66736d; font-size: 0.78rem; }
+  .section-heading { display: flex; align-items: center; justify-content: space-between; margin-top: 0.25rem; }
+  .section-heading > div { display: flex; align-items: baseline; gap: 0.65rem; }
+  .section-heading h2 { margin: 0; font-size: 1.2rem; letter-spacing: -0.025em; }
+  .section-heading span { color: #8b9691; font-size: 0.72rem; }
+  .view-label { display: flex; align-items: center; gap: 0.4rem; }
+  .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(310px, 100%), 1fr)); gap: 1rem; }
+  .player-card { position: relative; overflow: hidden; padding: 1.2rem; border: 1px solid #e1e8e5; border-radius: 18px; background: #fff; box-shadow: 0 8px 24px rgb(30 60 48 / 6%); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
+  .player-card::before { position: absolute; inset: 0 0 auto; height: 3px; background: #cbd5d1; content: ''; }
+  .player-card.top-player::before { background: linear-gradient(90deg, #a8e83e, #10b981); }
+  .player-card:hover, .player-card:focus-visible { transform: translateY(-3px); border-color: #b9d8cc; box-shadow: 0 16px 36px rgb(18 73 51 / 11%); outline: none; }
+  .card-topline { display: flex; align-items: center; justify-content: space-between; }
+  .ranking-pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.55rem; border-radius: 99px; background: #e9fbd4; color: #39720d; font-size: 0.58rem; font-weight: 850; letter-spacing: 0.06em; }
+  .ranking-pill.unranked { background: #f1f5f3; color: #81908a; }
+  .card-arrow { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: #f0f7f4; color: var(--green); font-size: 0.72rem; transition: 180ms; }
+  .player-card:hover .card-arrow { background: var(--green); color: #fff; }
+  .player-identity { display: flex; align-items: center; gap: 1rem; padding: 1.35rem 0 1.15rem; }
+  .avatar-wrap { position: relative; }
+  .avatar-wrap :deep(.p-avatar) { width: 4.4rem; height: 4.4rem; border: 3px solid white; background: #dfe9e5; color: #345047; font-size: 1.35rem; box-shadow: 0 5px 16px rgb(30 66 52 / 13%); }
+  .top-badge { position: absolute; right: -0.2rem; bottom: 0; display: grid; place-items: center; width: 1.35rem; height: 1.35rem; border: 2px solid white; border-radius: 50%; background: var(--lime); color: #38640f; font-size: 0.55rem; }
+  .player-identity > div:last-child { min-width: 0; }
+  .player-identity h3 { overflow: hidden; margin: 0; font-size: 1.08rem; letter-spacing: -0.025em; text-overflow: ellipsis; white-space: nowrap; }
+  .player-identity > div:last-child span { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.35rem; color: #87948e; font-size: 0.68rem; }
+  .player-details { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .player-details > div { display: flex; align-items: center; gap: 0.6rem; min-width: 0; padding: 0.7rem; border-radius: 11px; background: #f6faf8; }
+  .detail-icon { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; flex: 0 0 auto; border-radius: 8px; background: #fff; color: #6b9a85; font-size: 0.7rem; box-shadow: 0 2px 7px rgb(31 66 52 / 7%); }
+  .player-details p { display: grid; min-width: 0; margin: 0; overflow: hidden; color: #53625b; font-size: 0.67rem; text-overflow: ellipsis; white-space: nowrap; }
+  .player-details small { margin-bottom: 0.17rem; color: #9aa49f; font-size: 0.51rem; font-weight: 800; letter-spacing: 0.08em; }
+  .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid #edf1ef; color: #929d98; font-size: 0.62rem; }
+  .card-footer span:last-child { display: flex; align-items: center; gap: 0.35rem; color: var(--green); font-weight: 750; }
+  .skeleton-card { display: flex; min-height: 290px; flex-direction: column; gap: 1rem; cursor: default; }
+  .empty-state { display: flex; min-height: 280px; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed #cbdad4; border-radius: 18px; background: #f9fcfb; text-align: center; }
+  .empty-state > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; background: #d1fae5; color: var(--green); font-size: 1.3rem; }
+  .empty-state h3 { margin: 1rem 0 0.3rem; }
+  .empty-state p { margin: 0; color: #7c8983; font-size: 0.8rem; }
+  .load-more-area { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 1rem; padding-top: 0.35rem; }
+  .all-loaded { display: flex; align-items: center; gap: 0.4rem; margin: 0; color: #8a9690; font-size: 0.72rem; }
+  .all-loaded i { color: #10b981; }
+
+  @media (max-width: 1050px) { .filters-grid { grid-template-columns: 1fr 1fr; } .filter-action { align-items: flex-end; } }
+  @media (max-width: 800px) { .page-header { align-items: flex-start; } .page-subtitle, .summary-copy, .view-label { display: none; } }
+  @media (max-width: 520px) {
+    .players-page { gap: 1.1rem; }
+    .page-header { flex-direction: column; gap: 1rem; }
+    .create-button { width: 100%; }
+    .summary-strip { display: none; }
+    .filters-grid { grid-template-columns: 1fr; }
+    .filter-action :deep(.p-button) { width: 100%; }
+  }
+</style>

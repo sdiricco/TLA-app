@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
   import Button from 'primevue/button';
-  import Card from 'primevue/card';
   import Message from 'primevue/message';
   import Cropper from 'cropperjs';
 
@@ -199,36 +198,28 @@
 </script>
 
 <template>
-  <!-- ------------------------------------------------ -->
-  <!-- Photo Picker -->
-  <!-- ------------------------------------------------ -->
-  <div class="flex flex-col gap-[0.375rem]">
-    <label class="text-sm font-medium">Foto profilo</label>
-
-    <Card>
-      <template #content>
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start">
-          <div
-            class="relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-surface-300 bg-surface-0 shadow-sm"
-          >
+  <div class="photo-picker">
+        <div class="photo-preview">
             <img
               v-if="props.modelValue"
               :src="props.modelValue"
               alt="Anteprima foto profilo"
-              class="h-full w-full object-cover"
+              class="preview-image"
             />
-            <div v-else class="flex flex-col items-center gap-2 text-center text-muted-color">
+            <div v-else class="empty-preview">
               <i class="pi pi-image text-2xl" />
               <span class="text-xs">Nessuna foto</span>
             </div>
-          </div>
+        </div>
 
-          <div class="flex min-w-0 flex-1 flex-col gap-2">
-            <p class="m-0 text-sm text-muted-color">
-              Carica una foto del giocatore e ritagliala nel riquadro quadrato prima di salvare.
+        <div class="photo-copy">
+            <p>
+              Carica una foto nitida del giocatore. Potrai ritagliarla in formato quadrato prima del salvataggio.
             </p>
-            <div class="flex flex-wrap gap-2">
+            <span class="photo-hint">JPG, PNG o WEBP · ritaglio 1:1</span>
+            <div class="photo-actions">
               <Button
+                class="upload-button"
                 type="button"
                 label="Carica immagine"
                 icon="pi pi-upload"
@@ -246,10 +237,7 @@
                 @click="clearPhoto"
               />
             </div>
-          </div>
         </div>
-      </template>
-    </Card>
 
     <Message v-if="errorMessage" severity="warn" :closable="false">
       {{ errorMessage }}
@@ -258,36 +246,62 @@
     <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="handleFileChange" />
   </div>
 
-  <!-- ------------------------------------------------ -->
-  <!-- Crop Editor -->
-  <!-- ------------------------------------------------ -->
-  <Card v-if="editorVisible" class="mt-4">
-    <template #content>
-      <div class="flex flex-col gap-4">
-        <div class="flex items-start justify-between gap-3 flex-wrap">
+  <section v-if="editorVisible" class="crop-editor">
+        <div class="crop-header">
           <div>
-            <div class="font-semibold text-color">Ritaglia immagine</div>
-            <p class="m-0 text-xs text-muted-color">
+            <div>Ritaglia immagine</div>
+            <p>
               Trascina e ridimensiona il riquadro per adattare la foto prima di confermare.
             </p>
           </div>
           <Button label="Annulla" severity="secondary" outlined size="small" @click="cancelCrop" />
         </div>
 
-        <div class="overflow-hidden rounded-3xl border border-surface-300 bg-slate-100">
-          <div ref="cropperHost" class="h-[320px] w-full" />
+        <div class="crop-stage">
+          <div ref="cropperHost" class="cropper-host" />
         </div>
 
-        <div class="flex items-center justify-between gap-3 text-xs text-muted-color">
+        <div class="crop-meta">
           <span>{{ pendingFileName }}</span>
           <span>Crop quadrato 1:1</span>
         </div>
 
-        <div class="flex justify-end gap-2">
+        <div class="crop-actions">
           <Button label="Annulla" severity="secondary" outlined @click="cancelCrop" />
           <Button label="Applica ritaglio" @click="applyCrop" />
         </div>
-      </div>
-    </template>
-  </Card>
+  </section>
 </template>
+
+<style scoped>
+.photo-picker { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1rem; padding: 1rem; border: 1px dashed #cbdad4; border-radius: 14px; background: #f9fcfb; }
+.photo-preview { position: relative; display: grid; place-items: center; width: 6.5rem; height: 6.5rem; overflow: hidden; border: 3px solid white; border-radius: 50%; background: #e7efec; box-shadow: 0 5px 16px rgb(31 66 52 / 12%); }
+.preview-image { width: 100%; height: 100%; object-fit: cover; }
+.empty-preview { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; color: #8c9a94; text-align: center; }
+.empty-preview i { font-size: 1.25rem; }
+.empty-preview span { font-size: 0.58rem; }
+.photo-copy { min-width: 0; }
+.photo-copy > p { max-width: 540px; margin: 0; color: #63716b; font-size: 0.72rem; line-height: 1.55; }
+.photo-hint { display: block; margin-top: 0.3rem; color: #9aa49f; font-size: 0.55rem; font-weight: 700; letter-spacing: 0.05em; }
+.photo-actions { display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 0.8rem; }
+.photo-actions :deep(.p-button) { height: 2.45rem; border-radius: 9px; font-size: 0.68rem; }
+.upload-button { border-color: #047857; background: #047857; }
+.crop-editor { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; padding: 1rem; border: 1px solid #dce5e1; border-radius: 14px; background: white; box-shadow: 0 8px 24px rgb(29 63 49 / 7%); }
+.crop-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.crop-header > div > div { font-size: 0.82rem; font-weight: 750; }
+.crop-header p { margin: 0.25rem 0 0; color: #85918c; font-size: 0.62rem; }
+.crop-stage { overflow: hidden; border: 1px solid #dce5e1; border-radius: 14px; background: #f1f5f3; }
+.cropper-host { width: 100%; height: 320px; }
+.crop-meta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: #8a9690; font-size: 0.58rem; }
+.crop-actions { display: flex; justify-content: flex-end; gap: 0.55rem; }
+.crop-actions :deep(.p-button) { border-radius: 9px; }
+
+@media (max-width: 520px) {
+  .photo-picker { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .photo-copy > p { text-align: center; }
+  .photo-actions { justify-content: center; }
+  .crop-header { align-items: stretch; flex-direction: column; }
+  .crop-meta { align-items: flex-start; flex-direction: column; gap: 0.25rem; }
+  .crop-actions { display: grid; grid-template-columns: 1fr 1fr; }
+}
+</style>

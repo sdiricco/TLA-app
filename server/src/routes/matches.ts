@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../db/prisma'
 import { requireAuth } from '../middleware/requireAuth'
 import { requireAdmin } from '../middleware/requireAdmin'
+import { propagateMatchWinner } from '../lib/matchProgression'
 import { serializeMatch } from '../lib/serializers'
 
 export const matchesRouter = Router()
@@ -32,48 +33,30 @@ matchesRouter.put('/:id', requireAdmin, async (req, res) => {
   const matchId = req.params['id'] as string
   try {
     const match = await prisma.$transaction(async (tx) => {
+      const current = await tx.match.findUnique({
+        where: { id: matchId },
+        include: { tournament: { select: { format: true } } },
+      })
+      if (!current || ![current.player1Id, current.player2Id].includes(winner_id)) {
+        throw new Error('INVALID_MATCH_RESULT')
+      }
       const updated = await tx.match.update({
         where: { id: matchId },
         data: { result, winnerId: winner_id, status: 'completed' },
       })
 
-      const currentMatch = await tx.match.findUnique({
-        where: { id: matchId },
-        select: {
-          tournamentId: true,
-          round: true,
-          position: true,
-        },
-      })
-
-      if (currentMatch) {
-        const nextRound = currentMatch.round + 1
-        const nextPosition = Math.floor(currentMatch.position / 2)
-        const nextSlot = currentMatch.position % 2 === 0 ? 'player1Id' : 'player2Id'
-
-        const nextMatch = await tx.match.findFirst({
-          where: {
-            tournamentId: currentMatch.tournamentId,
-            round: nextRound,
-            position: nextPosition,
-          },
-          select: { id: true },
-        })
-
-        if (nextMatch) {
-          await tx.match.update({
-            where: { id: nextMatch.id },
-            data: {
-              [nextSlot]: winner_id,
-            },
-          })
-        }
+      if (current.tournament.format === 'single_elimination') {
+        await propagateMatchWinner(tx, matchId, winner_id)
       }
 
       return updated
     })
     res.json(serializeMatch(match))
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'INVALID_MATCH_RESULT') {
+      res.status(400).json({ message: 'Il vincitore deve partecipare all’incontro' })
+      return
+    }
     res.status(404).json({ message: 'Non trovato' })
   }
 })

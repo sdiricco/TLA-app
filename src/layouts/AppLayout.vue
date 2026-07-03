@@ -28,7 +28,7 @@ const layout = useLayoutStore()
         <AppSidebar />
       </div>
 
-      <main class="flex-1 overflow-y-auto p-6 bg-surface-50">
+      <main class="app-content flex-1 overflow-y-auto">
         <RouterView />
       </main>
     </div>
@@ -48,4 +48,9 @@ const layout = useLayoutStore()
 .fade-leave-to {
   opacity: 0;
 }
+</style>
+
+<style scoped>
+.app-content { padding: clamp(1.25rem, 2.5vw, 2.5rem); background: radial-gradient(circle at 100% 0, rgb(16 185 129 / 5%), transparent 30rem), #f5f8f7; }
+@media (max-width: 767px) { .app-content { padding: 1.25rem 1rem 2rem; } }
 </style>

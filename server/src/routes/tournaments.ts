@@ -4,7 +4,10 @@ import type { TournamentCreate, TournamentUpdate } from '../../../src/types'
 import { prisma } from '../db/prisma'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
 import { requireAdmin } from '../middleware/requireAdmin'
-import { buildBracketMatches, sortMatches } from '../lib/bracket'
+import { buildBracketMatches, buildRoundRobinMatches, sortMatches } from '../lib/bracket'
+import { autoAdvanceByeMatches, reconcileMatchProgression } from '../lib/matchProgression'
+import { buildTournamentMatchesResponse } from '../../../src/utils/matches'
+import { generateDrawPdf, getDrawPdfFilename } from '../lib/drawPdf'
 import {
   serializeMatch,
   serializeTournament,
@@ -182,6 +185,10 @@ tournamentsRouter.post('/', requireAdmin, async (req, res) => {
       data: {
         name: data.name,
         location: data.location ?? null,
+        registrationStartDate: parseDate(data.registration_start_date ?? null),
+        registrationEndDate: parseDate(data.registration_end_date ?? null),
+        gameFormula: data.game_formula ?? null,
+        registrationFee: data.registration_fee ?? null,
         startDate: parseDate(data.start_date ?? null),
         endDate: parseDate(data.end_date ?? null),
         format: data.format,
@@ -268,6 +275,14 @@ tournamentsRouter.put('/:id', requireAdmin, async (req, res) => {
       data: {
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.location !== undefined ? { location: body.location ?? null } : {}),
+        ...(body.registration_start_date !== undefined
+          ? { registrationStartDate: parseDate(body.registration_start_date ?? null) }
+          : {}),
+        ...(body.registration_end_date !== undefined
+          ? { registrationEndDate: parseDate(body.registration_end_date ?? null) }
+          : {}),
+        ...(body.game_formula !== undefined ? { gameFormula: body.game_formula ?? null } : {}),
+        ...(body.registration_fee !== undefined ? { registrationFee: body.registration_fee ?? null } : {}),
         ...(body.start_date !== undefined ? { startDate: parseDate(body.start_date ?? null) } : {}),
         ...(body.end_date !== undefined ? { endDate: parseDate(body.end_date ?? null) } : {}),
         ...(body.format !== undefined ? { format: body.format } : {}),
@@ -421,13 +436,102 @@ tournamentsRouter.delete('/:id/enroll', async (req, res) => {
   res.status(204).send()
 })
 
+tournamentsRouter.get('/:id/draw.pdf', async (req, res) => {
+  const tournamentId = req.params['id'] as string
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      players: {
+        include: { player: true },
+      },
+    },
+  })
+  if (!tournament) {
+    res.status(404).json({ message: 'Torneo non trovato' })
+    return
+  }
+
+  const matches = await prisma.$transaction(async (tx) => {
+    if (tournament.format === 'single_elimination') {
+      await reconcileMatchProgression(tx, tournamentId)
+    }
+    return tx.match.findMany({
+      where: { tournamentId },
+      orderBy: [{ round: 'asc' }, { position: 'asc' }],
+    })
+  })
+  if (matches.length === 0) {
+    res.status(409).json({ message: 'Il tabellone non è ancora stato generato' })
+    return
+  }
+
+  const tournamentSummary = {
+    id: tournament.id,
+    name: tournament.name,
+    format: tournament.format as TournamentCreate['format'],
+    category: tournament.category as TournamentCreate['category'],
+    status: tournament.status as TournamentCreate['status'],
+  }
+  const response = buildTournamentMatchesResponse(
+    tournamentSummary,
+    tournament.players.length,
+    matches.map(serializeMatch),
+  )
+  const pdf = await generateDrawPdf({
+    ...response,
+    tournament: {
+      ...response.tournament,
+      location: tournament.location,
+      start_date: tournament.startDate?.toISOString(),
+      end_date: tournament.endDate?.toISOString(),
+    },
+    players: tournament.players.map(({ player }) => ({
+      id: player.id,
+      name: player.name,
+      ranking: player.ranking,
+      club: player.club,
+    })),
+  })
+
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', `attachment; filename="${getDrawPdfFilename(tournament.name)}"`)
+  res.setHeader('Content-Length', String(pdf.length))
+  res.send(pdf)
+})
+
 tournamentsRouter.get('/:id/matches', async (req, res) => {
   const tournamentId = req.params['id'] as string
-  const matches = await prisma.match.findMany({
-    where: { tournamentId },
-    orderBy: [{ round: 'asc' }, { position: 'asc' }],
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: {
+      id: true,
+      name: true,
+      format: true,
+      category: true,
+      status: true,
+      _count: { select: { players: true } },
+    },
   })
-  res.json(sortMatches(matches.map(serializeMatch)))
+  if (!tournament) {
+    res.status(404).json({ message: 'Torneo non trovato' })
+    return
+  }
+  const matches = await prisma.$transaction(async (tx) => {
+    if (tournament.format === 'single_elimination') {
+      await reconcileMatchProgression(tx, tournamentId)
+    }
+    return tx.match.findMany({
+      where: { tournamentId },
+      orderBy: [{ round: 'asc' }, { position: 'asc' }],
+    })
+  })
+  res.json(buildTournamentMatchesResponse({
+    id: tournament.id,
+    name: tournament.name,
+    format: tournament.format as TournamentCreate['format'],
+    category: tournament.category as TournamentCreate['category'],
+    status: tournament.status as TournamentCreate['status'],
+  }, tournament._count.players, matches.map(serializeMatch)))
 })
 
 tournamentsRouter.post('/:id/bracket', requireAdmin, async (req, res) => {
@@ -437,7 +541,11 @@ tournamentsRouter.post('/:id/bracket', requireAdmin, async (req, res) => {
     include: {
       players: {
         orderBy: { seed: 'asc' },
-        select: { playerId: true, seed: true },
+        select: {
+          playerId: true,
+          seed: true,
+          player: { select: { ranking: true } },
+        },
       },
     },
   })
@@ -446,14 +554,21 @@ tournamentsRouter.post('/:id/bracket', requireAdmin, async (req, res) => {
     return
   }
 
+  if (!['single_elimination', 'round_robin'].includes(tournament.format)) {
+    res.status(409).json({ message: 'La generazione non è ancora disponibile per questo formato' })
+    return
+  }
+
   const playerIds = [...tournament.players]
-    .sort((a, b) => (a.seed ?? Number.MAX_SAFE_INTEGER) - (b.seed ?? Number.MAX_SAFE_INTEGER))
+    .sort((a, b) => a.player.ranking - b.player.ranking)
     .map((entry) => entry.playerId)
   await prisma.match.deleteMany({
     where: { tournamentId },
   })
 
-  const toInsert = buildBracketMatches(tournamentId, playerIds, () => crypto.randomUUID())
+  const toInsert = tournament.format === 'round_robin'
+    ? buildRoundRobinMatches(tournamentId, playerIds, () => crypto.randomUUID())
+    : buildBracketMatches(tournamentId, playerIds, () => crypto.randomUUID())
   if (toInsert.length === 0) {
     res.json([])
     return
@@ -462,16 +577,21 @@ tournamentsRouter.post('/:id/bracket', requireAdmin, async (req, res) => {
     data: toInsert.map((match) => ({
       id: match.id,
       tournamentId: match.tournament_id,
-      round: match.round,
+      round: match.round_index + 1,
       position: match.position,
       player1Id: match.player1_id,
       player2Id: match.player2_id,
       result: match.result,
       winnerId: match.winner_id,
-      status: match.status,
+      status: match.status === 'completed' ? 'completed' : 'pending',
     })),
   })
   void created
+  if (tournament.format === 'single_elimination') {
+    await prisma.$transaction(async (tx) => {
+      await autoAdvanceByeMatches(tx, tournamentId)
+    })
+  }
   const matches = await prisma.match.findMany({
     where: { tournamentId },
     orderBy: [{ round: 'asc' }, { position: 'asc' }],

@@ -10,7 +10,7 @@
   - Double elimination
   - Round robin (all-play-all)
   - Round robin + knockout (group stage + final bracket)
-- Support singles and doubles categories
+- Support masculine and feminine categories
 
 ### Player Management
 - Add, edit and remove players from the registry

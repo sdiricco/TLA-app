@@ -30,12 +30,16 @@ export interface Player {
 
 export type PlayerCreate = Omit<Player, 'id' | 'created_at' | 'updated_at'>
 export type PlayerUpdate = Partial<PlayerCreate>
+export type PlayerSortField = 'ranking' | 'name' | 'club' | 'created_at'
+export type SortOrder = 'asc' | 'desc'
 
 export interface PlayerListQuery {
   name?: string
   club?: string
   page?: number
   perPage?: number
+  sortBy?: PlayerSortField
+  sortOrder?: SortOrder
 }
 
 export interface PaginatedResponse<T> {
@@ -51,7 +55,7 @@ export type TournamentFormat =
   | 'round_robin'
   | 'round_robin_elimination'
 
-export type TournamentCategory = 'singles' | 'doubles'
+export type TournamentCategory = 'maschile' | 'femminile'
 
 export type TournamentStatus = 'upcoming' | 'ongoing' | 'completed'
 
@@ -59,6 +63,10 @@ export interface Tournament {
   id: string
   name: string
   location?: string | null
+  registration_start_date?: string | null
+  registration_end_date?: string | null
+  game_formula?: string | null
+  registration_fee?: number | null
   start_date?: string | null
   end_date?: string | null
   format: TournamentFormat
@@ -98,12 +106,12 @@ export interface TournamentWithPlayers extends Tournament {
 
 // ── Matches ──────────────────────────────────────────────────────────────────
 
-export type MatchStatus = 'pending' | 'completed'
+export type MatchStatus = 'waiting' | 'ready' | 'completed'
 
 export interface Match {
   id: string
   tournament_id: string
-  round: number
+  round_index: number
   position: number
   player1_id: string | null
   player2_id: string | null
@@ -112,6 +120,25 @@ export interface Match {
   status: MatchStatus
   created_at?: string
   updated_at?: string
+}
+
+export interface MatchRound {
+  index: number
+  name: string
+  short_name: string
+  matches_count: number
+  completed_matches_count: number
+}
+
+export interface TournamentMatchesResponse {
+  tournament: Pick<Tournament, 'id' | 'name' | 'format' | 'category' | 'status'>
+  draw: {
+    draw_size: number
+    participants_count: number
+    rounds_count: number
+  }
+  rounds: MatchRound[]
+  matches: Match[]
 }
 
 export type MatchSlot = 'player1_id' | 'player2_id'
@@ -175,24 +202,10 @@ export interface TournamentsService {
 }
 
 export interface MatchesService {
-  getByTournament(tournamentId: string): Promise<Match[]>
+  getByTournament(tournamentId: string): Promise<TournamentMatchesResponse>
+  downloadDrawPdf(tournamentId: string): Promise<Blob>
   createEmptyBracket(tournamentId: string, numPlayers: number): Promise<Match[]>
   assignPlayer(matchId: string, data: MatchAssignInput): Promise<Match>
   enterResult(matchId: string, data: MatchResultInput): Promise<Match>
   reset(tournamentId: string): Promise<void>
-}
-
-// ── Dashboard ─────────────────────────────────────────────────────────────────
-
-export interface TournamentStats {
-  upcoming: number
-  ongoing: number
-  completed: number
-  totalPlayers: number
-}
-
-export interface PendingEnrollment {
-  playerName: string
-  tournamentName: string
-  enrolledAt: string
 }

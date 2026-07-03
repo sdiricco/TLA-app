@@ -52,7 +52,7 @@ export const tournamentHandlers = [
       status: 'upcoming',
       playerIds: [],
       format: 'single_elimination',
-      category: 'singles',
+      category: 'maschile',
       name: '',
       participant_limit: 32,
       ...body,

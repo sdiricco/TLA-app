@@ -51,7 +51,7 @@ Routes are organized by feature area:
 
 | Path | View | Description |
 |---|---|---|
-| `/` | `HomeView` | Dashboard / landing page |
+| `/` | redirect | Landing route, forwards to `/tournaments` |
 | `/tournaments` | `TournamentsView` | List of all tournaments |
 | `/tournaments/:id` | `TournamentDetailView` | Single tournament detail |
 | `/tournaments/:id/draw` | `DrawView` | Bracket/draw for a tournament |

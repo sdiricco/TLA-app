@@ -9,7 +9,7 @@ const guestUser: User = {
   id: 'guest',
   email: 'ospite@local',
   name: 'Ospite',
-  role: 'admin',
+  role: 'player',
 }
 
 export const authHandlers = [

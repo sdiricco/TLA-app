@@ -9,14 +9,20 @@ export const usePlayersStore = defineStore('players', () => {
   const perPage = ref(20)
   const total = ref(0)
   const loading = ref(false)
+  const loadingMore = ref(false)
   const error = ref<string | null>(null)
 
-  async function fetchAll(query?: PlayerListQuery): Promise<PaginatedResponse<Player>> {
-    loading.value = true
+  async function fetchAll(
+    query?: PlayerListQuery,
+    options: { append?: boolean } = {},
+  ): Promise<PaginatedResponse<Player>> {
+    const append = options.append === true
+    loading.value = !append
+    loadingMore.value = append
     error.value = null
     try {
       const response = await playersService.getAll(query)
-      players.value = response.values
+      players.value = append ? [...players.value, ...response.values] : response.values
       page.value = response.page
       perPage.value = response.perPage
       total.value = response.total
@@ -26,6 +32,7 @@ export const usePlayersStore = defineStore('players', () => {
       throw e
     } finally {
       loading.value = false
+      loadingMore.value = false
     }
   }
 
@@ -59,6 +66,7 @@ export const usePlayersStore = defineStore('players', () => {
     perPage,
     total,
     loading,
+    loadingMore,
     error,
     fetchAll,
     getById,

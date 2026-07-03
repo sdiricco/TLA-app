@@ -33,13 +33,7 @@ const router = createRouter({
         {
           path: '',
           name: 'home',
-          redirect: () => ({ name: 'tournaments' }), // replaced by guard below
-        },
-        {
-          path: 'dashboard',
-          name: 'dashboard',
-          component: () => import('../views/HomeView.vue'),
-          meta: { requiresAuth: true, requiresAdmin: true },
+          redirect: () => ({ name: 'tournaments' }),
         },
         {
           path: 'tournaments',
@@ -66,6 +60,12 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'tournaments/:id/matches/:matchId',
+          name: 'match-detail',
+          component: () => import('../views/MatchDetailView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'players',
           name: 'players',
           component: () => import('../views/PlayersView.vue'),
@@ -89,6 +89,12 @@ const router = createRouter({
           component: () => import('../views/PlayerProfileView.vue'),
           meta: { requiresAuth: true },
         },
+        {
+          path: 'admin/feature-flags',
+          name: 'admin-feature-flags',
+          component: () => import('../views/FeatureFlagsView.vue'),
+          meta: { requiresAuth: true, requiresAdmin: true },
+        },
       ],
     },
   ],
@@ -107,17 +113,12 @@ router.beforeEach(async (to) => {
 
   // Authenticated on login page → redirect by role
   if ((to.name === 'login' || to.name === 'register') && auth.isAuthenticated) {
-    return auth.isAdmin || auth.isGuest ? { name: 'dashboard' } : { name: 'tournaments' }
-  }
-
-  // Player trying to access admin-only route
-  if (to.meta.requiresAdmin && !auth.isAdmin && !auth.isGuest) {
     return { name: 'tournaments' }
   }
 
-  // Root path: redirect by role
-  if (to.name === 'home') {
-    return auth.isAdmin || auth.isGuest ? { name: 'dashboard' } : { name: 'tournaments' }
+  // Player trying to access admin-only route
+  if (to.meta.requiresAdmin && !auth.isAdmin) {
+    return { name: 'tournaments' }
   }
 
   return true

@@ -37,10 +37,10 @@ authApiClient.interceptors.request.use((config) => {
 
   const token = getAuthToken()
   const guestToken = getGuestToken()
-  if (!token || guestToken) return config
+  if (!token && !guestToken) return config
 
   config.headers = AxiosHeaders.from(config.headers)
-  config.headers.set('Authorization', `Bearer ${token}`)
+  config.headers.set('Authorization', `Bearer ${guestToken ? 'tla_guest_token' : token}`)
   return config
 })
 
@@ -56,4 +56,3 @@ authApiClient.interceptors.response.use(
     return Promise.reject(error)
   },
 )
-

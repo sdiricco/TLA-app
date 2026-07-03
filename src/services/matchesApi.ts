@@ -1,10 +1,12 @@
-import type { Match, MatchesService } from '../types';
+import type { Match, MatchesService, TournamentMatchesResponse } from '../types';
 import { apiClient } from './apiClient';
 import { apiRequest } from './request';
 
 export const matchesService: MatchesService = {
   getByTournament: (id) =>
-    apiRequest<Match[]>(apiClient, { url: `/tournaments/${id}/matches`, method: 'GET' }),
+    apiRequest<TournamentMatchesResponse>(apiClient, { url: `/tournaments/${id}/matches`, method: 'GET' }),
+  downloadDrawPdf: (id) =>
+    apiRequest<Blob>(apiClient, { url: `/tournaments/${id}/draw.pdf`, method: 'GET', responseType: 'blob' }),
   createEmptyBracket: (id, numPlayers) =>
     apiRequest<Match[]>(apiClient, {
       url: `/tournaments/${id}/bracket`,

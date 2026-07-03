@@ -4,17 +4,24 @@ import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import DatePicker from 'primevue/datepicker'
+import Dropdown from 'primevue/dropdown'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
-import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
+import Tag from 'primevue/tag'
+import { tournamentCategoryDefinitions, tournamentFormatDefinitions } from '../config/tournamentFormats'
 import { useAuthStore } from '../stores/auth'
+import { useFeatureFlagsStore } from '../stores/featureFlags'
 import { useTournamentsStore } from '../stores/tournaments'
-import type { Tournament, TournamentCategory, TournamentCreate, TournamentFormat, TournamentStatus } from '../types'
+import type { TournamentCategory, TournamentCreate, TournamentFormat, TournamentStatus } from '../types'
 
 interface TournamentForm {
   name: string
   location: string
+  registration_start_date: Date | null
+  registration_end_date: Date | null
+  game_formula: string
+  registration_fee: number | null
   start_date: Date | null
   end_date: Date | null
   format: TournamentFormat
@@ -28,6 +35,7 @@ interface TournamentForm {
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const featureFlags = useFeatureFlagsStore()
 const store = useTournamentsStore()
 const toast = useToast()
 
@@ -37,37 +45,19 @@ const loadingTournament = ref(false)
 const form = ref<TournamentForm>({
   name: '',
   location: '',
+  registration_start_date: null,
+  registration_end_date: null,
+  game_formula: '',
+  registration_fee: null,
   start_date: null,
   end_date: null,
   format: 'single_elimination',
-  category: 'singles',
+  category: 'maschile',
   status: 'upcoming',
   participant_limit: 32,
   group_count: null,
   qualifiers_per_group: null,
 })
-
-const formatLabels: Record<TournamentFormat, string> = {
-  single_elimination: 'Eliminazione diretta',
-  double_elimination: 'Doppia eliminazione',
-  round_robin: "Girone all'italiana",
-  round_robin_elimination: 'Gironi + finale',
-}
-
-const categoryLabels: Record<TournamentCategory, string> = {
-  singles: 'Singolo',
-  doubles: 'Doppio',
-}
-
-const formatOptions = Object.entries(formatLabels).map(([value, label]) => ({
-  label,
-  value: value as TournamentFormat,
-}))
-
-const categoryOptions = Object.entries(categoryLabels).map(([value, label]) => ({
-  label,
-  value: value as TournamentCategory,
-}))
 
 const statusOptions = [
   { label: 'In programma', value: 'upcoming' },
@@ -75,17 +65,56 @@ const statusOptions = [
   { label: 'Completato', value: 'completed' },
 ] satisfies Array<{ label: string; value: TournamentStatus }>
 
+const categoryOptions = computed(() =>
+  tournamentCategoryDefinitions.map((definition) => ({
+    label: definition.title,
+    value: definition.category,
+    disabled: !featureFlags.isTournamentCategoryEnabled(definition.category),
+  })),
+)
+
 const requiresGroupConfig = computed(() => form.value.format === 'round_robin_elimination')
 const isEditing = computed(() => editingId.value !== null)
+const formatCards = computed(() =>
+  tournamentFormatDefinitions.map((definition) => {
+    const enabled = definition.format === 'round_robin' || featureFlags.isTournamentFormatEnabled(definition.format)
+    const selected = form.value.format === definition.format
+    return {
+      ...definition,
+      enabled,
+      selected,
+      locked: definition.locked === true,
+      selectable: enabled || selected,
+    }
+  }),
+)
+
+function normalizeCategory(category: string): TournamentCategory {
+  const candidate = category === 'doubles' ? 'femminile' : category
+  if (candidate === 'maschile' || candidate === 'femminile') {
+    if (featureFlags.isTournamentCategoryEnabled(candidate)) return candidate
+  }
+  return featureFlags.enabledTournamentCategories[0] ?? 'maschile'
+}
+
+function selectFormat(format: TournamentFormat): void {
+  if (format === 'round_robin' || featureFlags.isTournamentFormatEnabled(format) || form.value.format === format) {
+    form.value.format = format
+  }
+}
 
 function emptyForm(): TournamentForm {
   return {
     name: '',
     location: '',
+    registration_start_date: null,
+    registration_end_date: null,
+    game_formula: '',
+    registration_fee: null,
     start_date: null,
     end_date: null,
     format: 'single_elimination',
-    category: 'singles',
+    category: featureFlags.enabledTournamentCategories[0] ?? 'maschile',
     status: 'upcoming',
     participant_limit: 32,
     group_count: null,
@@ -101,6 +130,10 @@ function toTournamentPayload(data: TournamentForm): TournamentCreate {
   return {
     name: data.name,
     location: data.location || null,
+    registration_start_date: toDateString(data.registration_start_date),
+    registration_end_date: toDateString(data.registration_end_date),
+    game_formula: data.game_formula || null,
+    registration_fee: data.registration_fee,
     start_date: toDateString(data.start_date),
     end_date: toDateString(data.end_date),
     format: data.format,
@@ -119,17 +152,30 @@ async function loadTournament(id: string): Promise<void> {
     form.value = {
       name: tournament.name,
       location: tournament.location ?? '',
+      registration_start_date: tournament.registration_start_date
+        ? new Date(tournament.registration_start_date)
+        : null,
+      registration_end_date: tournament.registration_end_date
+        ? new Date(tournament.registration_end_date)
+        : null,
+      game_formula: tournament.game_formula ?? '',
+      registration_fee: tournament.registration_fee ?? null,
       start_date: tournament.start_date ? new Date(tournament.start_date) : null,
       end_date: tournament.end_date ? new Date(tournament.end_date) : null,
       format: tournament.format,
-      category: tournament.category,
+      category: normalizeCategory(tournament.category),
       status: tournament.status,
       participant_limit: tournament.participant_limit ?? 32,
       group_count: tournament.group_count ?? null,
       qualifiers_per_group: tournament.qualifiers_per_group ?? null,
     }
-  } catch {
-    toast.add({ severity: 'error', summary: 'Errore', detail: 'Torneo non trovato', life: 3000 })
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Errore',
+      detail: (error as Error).message || 'Impossibile caricare il torneo',
+      life: 3000,
+    })
     await router.push({ name: 'tournaments' })
   } finally {
     loadingTournament.value = false
@@ -225,6 +271,28 @@ onMounted(() => {
 
           <div class="grid grid-cols-2 gap-3">
             <div class="flex flex-col gap-[0.375rem]">
+              <label class="text-sm font-medium">Data inizio iscrizioni</label>
+              <DatePicker v-model="form.registration_start_date" date-format="dd/mm/yy" placeholder="gg/mm/aaaa" fluid show-button-bar />
+            </div>
+            <div class="flex flex-col gap-[0.375rem]">
+              <label class="text-sm font-medium">Data termine iscrizioni</label>
+              <DatePicker v-model="form.registration_end_date" date-format="dd/mm/yy" placeholder="gg/mm/aaaa" fluid show-button-bar />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-[0.375rem]">
+              <label for="t-game-formula" class="text-sm font-medium">Formula di gioco</label>
+              <InputText id="t-game-formula" v-model="form.game_formula" placeholder="Es. 2 set su 3 con tie-break" fluid />
+            </div>
+            <div class="flex flex-col gap-[0.375rem]">
+              <label class="text-sm font-medium">Quota iscrizione</label>
+              <InputNumber v-model="form.registration_fee" mode="currency" currency="EUR" locale="it-IT" :min="0" :max-fraction-digits="2" fluid />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-[0.375rem]">
               <label class="text-sm font-medium">Data inizio</label>
               <DatePicker v-model="form.start_date" date-format="dd/mm/yy" placeholder="gg/mm/aaaa" fluid show-button-bar />
             </div>
@@ -235,8 +303,52 @@ onMounted(() => {
           </div>
 
           <div class="flex flex-col gap-[0.375rem]">
-            <label class="text-sm font-medium">Formato</label>
-            <Select v-model="form.format" :options="formatOptions" option-label="label" option-value="value" fluid />
+            <label class="text-sm font-medium">Formato *</label>
+            <div class="grid gap-3 md:grid-cols-2">
+              <Card
+                v-for="item in formatCards"
+                :key="item.format"
+                class="overflow-hidden transition-all duration-150"
+                :class="[
+                  item.selectable ? 'cursor-pointer' : 'cursor-not-allowed',
+                  item.selected ? 'border-primary-300 bg-primary-50/60 shadow-sm' : 'border-surface-200',
+                  !item.selectable ? 'opacity-60 grayscale' : 'hover:border-primary-200 hover:bg-surface-50',
+                ]"
+                @click="selectFormat(item.format)"
+              >
+                <template #content>
+                  <div class="flex h-full flex-col gap-3">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+                          :class="item.selected ? 'bg-primary-100 text-primary-600' : 'bg-surface-100 text-muted-color'"
+                        >
+                          <i :class="[item.icon, 'text-lg']" />
+                        </div>
+                        <div>
+                          <h3 class="m-0 text-base font-semibold">{{ item.title }}</h3>
+                          <p class="mt-1 mb-0 text-sm text-muted-color leading-relaxed">
+                            {{ item.description }}
+                          </p>
+                        </div>
+                      </div>
+                      <Tag
+                        :value="item.selectable ? (item.selected ? 'Selezionato' : 'Disponibile') : 'Coming soon'"
+                        :severity="item.selectable ? (item.selected ? 'success' : 'info') : 'secondary'"
+                      />
+                    </div>
+
+                    <div class="flex items-center justify-between gap-3 pt-1 text-sm">
+                      <span class="text-muted-color">
+                        {{ item.selectable ? 'Puoi selezionarlo ora' : 'Bloccato per il momento' }}
+                      </span>
+                      <span v-if="item.selected" class="font-semibold text-primary-600">Attivo</span>
+                    </div>
+                  </div>
+                </template>
+              </Card>
+            </div>
           </div>
 
           <div class="flex flex-col gap-[0.375rem]">
@@ -246,12 +358,25 @@ onMounted(() => {
 
           <div class="grid grid-cols-2 gap-3">
             <div class="flex flex-col gap-[0.375rem]">
-              <label class="text-sm font-medium">Categoria</label>
-              <Select v-model="form.category" :options="categoryOptions" option-label="label" option-value="value" fluid />
+              <label class="text-sm font-medium">Categoria torneo *</label>
+              <p class="m-0 text-xs text-muted-color">
+                Definisce se il torneo è maschile o femminile.
+              </p>
+              <Dropdown
+                v-model="form.category"
+                :options="categoryOptions"
+                option-label="label"
+                option-value="value"
+                option-disabled="disabled"
+                fluid
+              />
             </div>
             <div class="flex flex-col gap-[0.375rem]">
-              <label class="text-sm font-medium">Stato</label>
-              <Select v-model="form.status" :options="statusOptions" option-label="label" option-value="value" fluid />
+              <label class="text-sm font-medium">Stato iniziale</label>
+              <p class="m-0 text-xs text-muted-color">
+                Indica in che fase parte il torneo: programmato, in corso o completato.
+              </p>
+              <Dropdown v-model="form.status" :options="statusOptions" option-label="label" option-value="value" fluid />
             </div>
           </div>
 
