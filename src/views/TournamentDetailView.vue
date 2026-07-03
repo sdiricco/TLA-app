@@ -932,7 +932,7 @@ function openMatchDetail(match: Match): void {
                 </div>
 
                 <template v-else>
-                  <div class="flex items-center justify-end gap-2">
+                  <div class="round-robin-toggle">
                     <Button
                       label="Giornate"
                       icon="pi pi-calendar"
@@ -951,8 +951,12 @@ function openMatchDetail(match: Match): void {
                     />
                   </div>
 
-                  <div v-if="roundRobinViewMode === 'schedule'" class="flex flex-col gap-4">
-                    <Tabs v-model:value="activeBracketRound" scrollable>
+                  <div v-if="roundRobinViewMode === 'schedule'" class="round-robin-schedule">
+                    <div class="schedule-heading">
+                      <div><span class="schedule-icon"><i class="pi pi-calendar" /></span><div><small>CALENDARIO</small><h3>{{ bracketRoundTabs.find((tab) => tab.index === activeBracketRound)?.fullLabel }}</h3></div></div>
+                      <span>{{ activeBracketMatches.length }} incontri</span>
+                    </div>
+                    <Tabs v-model:value="activeBracketRound" scrollable class="round-tabs">
                       <TabList>
                         <Tab
                         v-for="tab in bracketRoundTabs"
@@ -965,32 +969,43 @@ function openMatchDetail(match: Match): void {
                       </TabList>
                     </Tabs>
 
-                    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div class="round-robin-matches">
                       <article
                         v-for="match in activeBracketMatches"
                         :key="match.id"
-                        class="cursor-pointer overflow-hidden rounded-2xl border border-surface-200 bg-surface-0 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md"
+                        class="round-robin-match"
+                        tabindex="0"
                         @click="openMatchDetail(match)"
+                        @keydown.enter="openMatchDetail(match)"
                       >
-                        <div class="flex items-center justify-between border-b border-surface-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.06em] text-muted-color">
-                          <span>Incontro {{ match.position + 1 }}</span>
-                          <span>{{ match.result ?? 'Da giocare' }}</span>
+                        <header class="match-heading">
+                          <span>MATCH {{ String(match.position + 1).padStart(2, '0') }}</span>
+                          <span class="match-status" :class="{ completed: match.status === 'completed' }"><i />{{ match.status === 'completed' ? 'Completato' : 'Da giocare' }}</span>
+                        </header>
+                        <div class="versus-layout">
+                          <div class="versus-player" :class="{ winner: isWinner(match, 'player1_id') }">
+                            <Avatar :label="getPlayerInitialsById(match.player1_id) || '—'" :image="getPlayer(match.player1_id)?.photo_url ?? undefined" shape="circle" />
+                            <strong>{{ getSlotLabel(match, 'player1_id') }}</strong>
+                            <span v-if="isWinner(match, 'player1_id')"><i class="pi pi-check" /> Vincitore</span>
+                          </div>
+                          <div class="versus-center">
+                            <span>VS</span>
+                            <strong v-if="match.result">{{ match.result }}</strong>
+                          </div>
+                          <div class="versus-player" :class="{ winner: isWinner(match, 'player2_id') }">
+                            <Avatar :label="getPlayerInitialsById(match.player2_id) || '—'" :image="getPlayer(match.player2_id)?.photo_url ?? undefined" shape="circle" />
+                            <strong>{{ getSlotLabel(match, 'player2_id') }}</strong>
+                            <span v-if="isWinner(match, 'player2_id')"><i class="pi pi-check" /> Vincitore</span>
+                          </div>
                         </div>
-                        <div class="flex items-center justify-between gap-3 px-4 py-3" :class="{ 'bg-emerald-500/10': isWinner(match, 'player1_id') }">
-                          <span :class="{ 'font-bold': isWinner(match, 'player1_id') }">{{ getSlotLabel(match, 'player1_id') }}</span>
-                          <i v-if="isWinner(match, 'player1_id')" class="pi pi-check text-emerald-600" />
-                        </div>
-                        <div class="flex items-center justify-between gap-3 border-t border-surface-100 px-4 py-3" :class="{ 'bg-emerald-500/10': isWinner(match, 'player2_id') }">
-                          <span :class="{ 'font-bold': isWinner(match, 'player2_id') }">{{ getSlotLabel(match, 'player2_id') }}</span>
-                          <i v-if="isWinner(match, 'player2_id')" class="pi pi-check text-emerald-600" />
-                        </div>
+                        <footer class="match-footer"><span>Apri incontro</span><i class="pi pi-arrow-right" /></footer>
                       </article>
                     </div>
                   </div>
 
-                  <section v-else class="flex flex-col gap-3">
-                    <h3 class="m-0 text-lg font-bold">Classifica</h3>
-                    <div class="overflow-x-auto rounded-2xl border border-surface-200">
+                  <section v-else class="standings-section">
+                    <div class="schedule-heading"><div><span class="schedule-icon"><i class="pi pi-list" /></span><div><small>RISULTATI</small><h3>Classifica generale</h3></div></div><span>{{ roundRobinStandings.length }} giocatori</span></div>
+                    <div class="standings-table-wrap">
                       <table class="w-full min-w-[520px] border-collapse">
                         <thead class="bg-surface-100 text-left">
                           <tr>
@@ -1003,8 +1018,8 @@ function openMatchDetail(match: Match): void {
                         </thead>
                         <tbody>
                           <tr v-for="(row, index) in roundRobinStandings" :key="row.player.id" class="border-t border-surface-200">
-                            <td class="p-3 text-center font-bold">{{ index + 1 }}</td>
-                            <td class="p-3 font-semibold">{{ row.player.name }}</td>
+                            <td class="p-3 text-center font-bold"><span class="position-badge" :class="{ podium: index < 3 }">{{ index + 1 }}</span></td>
+                            <td class="p-3 font-semibold"><div class="standing-player"><Avatar :label="getPlayerInitials(row.player)" :image="row.player.photo_url ?? undefined" shape="circle" /><span>{{ row.player.name }}<small>{{ row.player.club || 'Club non specificato' }}</small></span></div></td>
                             <td class="p-3 text-center">{{ row.played }}</td>
                             <td class="p-3 text-center font-semibold text-emerald-700">{{ row.wins }}</td>
                             <td class="p-3 text-center">{{ row.losses }}</td>
@@ -1319,6 +1334,49 @@ function openMatchDetail(match: Match): void {
 .tournament-tabs :deep(.bg-emerald-500\/10) { background: #e8f8f1 !important; }
 .tournament-tabs :deep(table) { overflow: hidden; border-radius: 14px; font-size: 0.75rem; }
 .tournament-tabs :deep(thead) { background: #f0f7f4 !important; color: #52635b; }
+.round-robin-toggle { display: flex; justify-content: flex-end; gap: 0.45rem; padding: 0.35rem; align-self: flex-end; border-radius: 11px; background: #f1f6f4; }
+.round-robin-toggle :deep(.p-button) { min-width: 7rem; border: 0; box-shadow: none; }
+.round-robin-schedule, .standings-section { display: flex; flex-direction: column; gap: 1rem; }
+.schedule-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.25rem 0.15rem; }
+.schedule-heading > div { display: flex; align-items: center; gap: 0.7rem; }
+.schedule-icon { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 10px; background: #d1fae5; color: var(--green); }
+.schedule-heading small { color: #91a099; font-size: 0.49rem; font-weight: 850; letter-spacing: 0.12em; }
+.schedule-heading h3 { margin: 0.15rem 0 0; font-size: 0.95rem; letter-spacing: -0.025em; }
+.schedule-heading > span { padding: 0.35rem 0.55rem; border-radius: 99px; background: #f0f5f3; color: #7a8982; font-size: 0.58rem; font-weight: 700; }
+.round-tabs { overflow: hidden; border: 1px solid #e4ebe8; border-radius: 13px; background: #fbfdfc; }
+.round-tabs :deep(.p-tablist) { padding-inline: 0.5rem; border: 0; }
+.round-tabs :deep(.p-tab) { min-width: 7rem; justify-content: center; }
+.round-robin-matches { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(350px, 100%), 1fr)); gap: 0.8rem; }
+.round-robin-match { position: relative; overflow: hidden; border: 1px solid #e0e8e4; border-radius: 16px; background: white; box-shadow: 0 6px 20px rgb(29 63 49 / 6%); cursor: pointer; transition: 180ms ease; }
+.round-robin-match::before { position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, #b7f34a, #10b981); content: ''; }
+.round-robin-match:hover, .round-robin-match:focus-visible { transform: translateY(-3px); border-color: #b8d8cb; box-shadow: 0 14px 30px rgb(18 73 51 / 11%); outline: none; }
+.match-heading { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0.85rem 0.55rem; color: #8c9993; font-size: 0.5rem; font-weight: 850; letter-spacing: 0.11em; }
+.match-status { display: inline-flex; align-items: center; gap: 0.32rem; padding: 0.3rem 0.45rem; border-radius: 99px; background: #f1f5f3; color: #7b8983; font-size: 0.48rem; letter-spacing: 0.06em; }
+.match-status i { width: 5px; height: 5px; border-radius: 50%; background: #94a3b8; }
+.match-status.completed { background: #e5f8ef; color: #08764f; }
+.match-status.completed i { background: #10b981; }
+.versus-layout { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 0.65rem; padding: 1rem 0.85rem 1.1rem; }
+.versus-player { display: flex; min-width: 0; flex-direction: column; align-items: center; text-align: center; }
+.versus-player :deep(.p-avatar) { width: 3.8rem; height: 3.8rem; border: 3px solid white; background: #e5edea; color: #345047; font-size: 1.1rem; box-shadow: 0 5px 14px rgb(30 66 52 / 12%); }
+.versus-player.winner :deep(.p-avatar) { box-shadow: 0 0 0 3px #b7f34a, 0 7px 16px rgb(30 66 52 / 14%); }
+.versus-player strong { overflow: hidden; width: 100%; margin-top: 0.55rem; color: #35433d; font-size: 0.7rem; text-overflow: ellipsis; white-space: nowrap; }
+.versus-player > span { display: flex; align-items: center; gap: 0.25rem; margin-top: 0.25rem; color: #078255; font-size: 0.5rem; font-weight: 750; }
+.versus-center { display: flex; min-height: 5.8rem; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem; }
+.versus-center > span { display: grid; place-items: center; width: 2rem; height: 2rem; border: 1px solid #e0e8e4; border-radius: 50%; background: #f7faf9; color: #85928c; font-size: 0.55rem; font-weight: 850; }
+.versus-center strong { max-width: 5rem; color: var(--green); font-size: 0.63rem; text-align: center; }
+.match-footer { display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.85rem; border-top: 1px solid #edf1ef; background: #fbfdfc; color: #8c9892; font-size: 0.55rem; }
+.match-footer i { color: var(--green); transition: transform 180ms; }
+.round-robin-match:hover .match-footer i { transform: translateX(3px); }
+.standings-section { margin-top: 0.25rem; }
+.standings-table-wrap { overflow-x: auto; border: 1px solid #e0e8e4; border-radius: 15px; box-shadow: 0 6px 20px rgb(29 63 49 / 5%); }
+.standings-table-wrap th { color: #75827c; font-size: 0.57rem; letter-spacing: 0.07em; text-transform: uppercase; }
+.standings-table-wrap td { color: #526059; font-size: 0.7rem; }
+.position-badge { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; border-radius: 50%; background: #f0f4f2; color: #6f7c76; }
+.position-badge.podium { background: #e9fbd4; color: #3d720f; }
+.standing-player { display: flex; align-items: center; gap: 0.65rem; }
+.standing-player :deep(.p-avatar) { width: 2.1rem; height: 2.1rem; background: #e4ece8; color: #345047; font-size: 0.62rem; }
+.standing-player > span { display: grid; }
+.standing-player small { margin-top: 0.12rem; color: #9aa49f; font-size: 0.52rem; font-weight: 400; }
 .enrolled-section { display: flex; flex-direction: column; gap: 1rem; }
 .selection-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.7rem 0.85rem; border: 1px solid #e3ebe7; border-radius: 12px; background: #f7faf9; }
 .selection-all { display: inline-flex; align-items: center; gap: 0.55rem; color: #53625b; font-size: 0.7rem; font-weight: 700; cursor: pointer; }
@@ -1368,6 +1426,9 @@ function openMatchDetail(match: Match): void {
   .tournament-tabs :deep(.p-tablist) { padding-inline: 0.4rem; }
   .tournament-tabs :deep(.p-tab) { padding-inline: 0.7rem; }
   .tournament-tabs :deep(.p-tabpanels) { padding: 0.8rem; }
+  .round-robin-toggle { align-self: stretch; }
+  .round-robin-toggle :deep(.p-button) { min-width: 0; flex: 1; }
+  .schedule-heading > span { display: none; }
   .selection-toolbar { align-items: stretch; flex-direction: column; }
   .selection-toolbar :deep(.p-button) { width: 100%; }
 }
