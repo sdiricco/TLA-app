@@ -347,19 +347,34 @@ function getSlotName(playerId: string | null): string {
 
 @media (max-width: 900px) { .management-grid { grid-template-columns: 1fr; } }
 @media (max-width: 680px) {
-  .match-page { gap: 1rem; }
-  .page-header { align-items: flex-start; }
-  .players-versus { grid-template-columns: 1fr; gap: 1.25rem; padding-inline: 0; }
+  .match-page { gap: 0.8rem; }
+  .page-header { align-items: flex-start; gap: 0.7rem; }
+  .back-link { margin-bottom: 0.65rem; }
+  .eyebrow, .page-subtitle { display: none; }
+  .page-header h1 { font-size: 1.65rem; }
+  .header-status { padding: 0.4rem 0.55rem; }
+  .header-status, .arena-topline, .arena-topline strong, .winner-badge, .arena-player > p { font-size: 0.75rem; }
+  .match-arena { padding: 0.85rem; border-radius: 14px; box-shadow: 0 8px 24px rgb(18 73 51 / 12%); }
+  .arena-topline { padding-bottom: 0.65rem; }
+  .players-versus { grid-template-columns: 1fr; gap: 0.7rem; padding: 1rem 0 0.8rem; }
   .versus-center { flex-direction: row; }
   .versus-center i { width: 3rem; height: 1px; }
   .arena-player { width: 100%; }
-  .arena-player h2 { white-space: normal; }
-  .player-stats { max-width: 340px; }
+  .arena-player :deep(.p-avatar) { width: 4rem; height: 4rem; }
+  .arena-player h2 { margin-top: 0.55rem; font-size: 1.25rem; white-space: normal; }
+  .player-stats { max-width: 340px; margin-top: 0.65rem; }
+  .player-stats small, .arena-summary small { font-size: 0.75rem; letter-spacing: 0.04em; }
+  .player-stats strong, .arena-summary strong { font-size: 0.8125rem; }
   .winner-badge { position: static; margin-bottom: 0.7rem; transform: none; }
-  .arena-summary { grid-template-columns: 1fr; }
-  .arena-summary > div { padding: 0.35rem 0; border-right: 0; border-bottom: 1px solid rgb(255 255 255 / 8%); }
-  .arena-summary > div:last-child { border-bottom: 0; }
+  .arena-summary { grid-template-columns: repeat(3, 1fr); gap: 0.25rem; padding-top: 0.75rem; }
+  .arena-summary > div { display: grid; justify-items: center; gap: 0.35rem; padding: 0 0.25rem; border-right: 1px solid rgb(255 255 255 / 8%); text-align: center; }
+  .summary-icon { width: 1.8rem; height: 1.8rem; }
+  .management-section { gap: 0.7rem; }
+  .management-card { padding: 0.85rem; border-radius: 14px; box-shadow: none; }
+  .management-heading p, .management-card header p, .form-field label, .management-card footer > span { font-size: 0.75rem; }
+  .management-card :deep(.p-inputtext), .management-card :deep(.p-select), .management-card footer :deep(.p-button) { font-size: 0.875rem; }
   .management-card footer { align-items: stretch; flex-direction: column; }
   .management-card footer :deep(.p-button) { width: 100%; }
+  .management-card footer { position: sticky; bottom: calc(4.8rem + env(safe-area-inset-bottom)); z-index: 4; margin: auto -0.85rem -0.85rem; padding: 0.65rem 0.85rem; }
 }
 </style>

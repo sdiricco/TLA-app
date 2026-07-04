@@ -12,5 +12,9 @@ export const useLayoutStore = defineStore('layout', () => {
     sidebarOpen.value = false
   }
 
-  return { sidebarOpen, toggleSidebar, closeSidebar }
+  function openSidebar(): void {
+    sidebarOpen.value = true
+  }
+
+  return { sidebarOpen, toggleSidebar, openSidebar, closeSidebar }
 })

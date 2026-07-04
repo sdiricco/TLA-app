@@ -314,12 +314,23 @@
 
 @media (max-width: 900px) { .form-layout { grid-template-columns: 1fr; } .preview-card { position: relative; top: auto; min-height: auto; } .preview-note { margin-top: 1.5rem; } }
 @media (max-width: 620px) {
-  .player-form-page { gap: 1.1rem; }
+  .player-form-page { gap: 0.8rem; }
   .page-header { align-items: stretch; flex-direction: column; gap: 1rem; }
+  .back-link { margin-bottom: 0.65rem; }
+  .eyebrow, .page-subtitle { display: none; }
+  .page-header h1 { font-size: 1.65rem; }
   .cancel-top { display: none; }
+  .preview-card { display: grid; grid-template-columns: auto 1fr; justify-items: start; min-height: auto; padding: 0.75rem; border-radius: 14px; text-align: left; }
+  .preview-label, .preview-ranking, .preview-note { display: none; }
+  .avatar-wrap { grid-row: 1 / 3; margin-right: 0.75rem; }
+  .avatar-wrap :deep(.p-avatar) { width: 3.5rem; height: 3.5rem; border-width: 2px; font-size: 1rem; box-shadow: none; }
+  .preview-card h2 { margin: 0.25rem 0; font-size: 1rem; }
+  .preview-card > p:not(.preview-label), .section-heading p, .field label { font-size: 0.75rem; }
+  .form-card { --form-padding: 0.85rem; border-radius: 14px; box-shadow: none; }
   .fields-grid, .identity-grid { grid-template-columns: 1fr; }
   .phone-field { grid-column: auto; }
-  .form-actions { align-items: stretch; flex-direction: column; }
+  .form-actions { position: sticky; z-index: 4; bottom: calc(4.7rem + env(safe-area-inset-bottom)); align-items: stretch; flex-direction: column; }
+  .form-actions > span { display: none; }
   .form-actions > div { display: grid; grid-template-columns: 1fr 1.3fr; }
 }
 </style>

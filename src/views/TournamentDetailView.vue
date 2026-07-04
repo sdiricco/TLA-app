@@ -809,15 +809,15 @@ function openMatchDetail(match: Match): void {
                           @click.stop
                         />
                         <div class="player-badges">
-                          <span v-if="player.ranking" class="ranking-pill"><i class="pi pi-bolt" /> #{{ player.ranking }}</span>
-                          <span v-if="getSeed(player.id)" class="seed-pill"><i class="pi pi-star-fill" /> TESTA DI SERIE {{ getSeed(player.id) }}</span>
+                          <span v-if="getSeed(player.id)" class="seed-value">TDS {{ getSeed(player.id) }}</span>
+                          <span v-if="player.ranking" class="ranking-value">#{{ player.ranking }}</span>
                         </div>
                         <span class="player-arrow"><i class="pi pi-arrow-up-right" /></span>
                       </div>
 
                       <div class="player-card-identity">
                         <div class="player-avatar"><Avatar :label="getPlayerInitials(player)" :image="player.photo_url ?? undefined" shape="circle" /></div>
-                        <div><h3>{{ player.name }}</h3><span><i class="pi pi-user" /> {{ formatAge(player.birth_date) }}</span></div>
+                        <div><h3>{{ player.name }}</h3></div>
                       </div>
 
                       <div class="player-card-details">
@@ -873,14 +873,14 @@ function openMatchDetail(match: Match): void {
                     >
                       <div class="player-card-top">
                         <div class="player-badges">
-                          <span v-if="player.ranking" class="ranking-pill"><i class="pi pi-bolt" /> #{{ player.ranking }}</span>
-                          <span v-if="getSeed(player.id)" class="seed-pill"><i class="pi pi-star-fill" /> TESTA DI SERIE {{ getSeed(player.id) }}</span>
+                          <span v-if="getSeed(player.id)" class="seed-value">TDS {{ getSeed(player.id) }}</span>
+                          <span v-if="player.ranking" class="ranking-value">#{{ player.ranking }}</span>
                         </div>
                         <span class="player-arrow"><i class="pi pi-arrow-up-right" /></span>
                       </div>
                       <div class="player-card-identity">
                         <div class="player-avatar"><Avatar :label="getPlayerInitials(player)" :image="player.photo_url ?? undefined" shape="circle" /></div>
-                        <div><h3>{{ player.name }}</h3><span><i class="pi pi-user" /> {{ formatAge(player.birth_date) }}</span></div>
+                        <div><h3>{{ player.name }}</h3></div>
                       </div>
                       <div class="player-card-details">
                         <div><span><i class="pi pi-building-columns" /></span><p><small>CLUB</small>{{ formatPlayerValue(player.club) }}</p></div>
@@ -1386,8 +1386,8 @@ function openMatchDetail(match: Match): void {
 .enrolled-player-card:hover, .enrolled-player-card:focus-visible { transform: translateY(-3px); border-color: #b9d8cc; box-shadow: 0 14px 30px rgb(18 73 51 / 10%); outline: none; }
 .player-card-top { display: flex; align-items: center; min-height: 2rem; gap: 0.55rem; }
 .player-badges { display: flex; min-width: 0; flex-wrap: wrap; gap: 0.35rem; }
-.ranking-pill, .seed-pill { display: inline-flex; align-items: center; gap: 0.28rem; padding: 0.3rem 0.48rem; border-radius: 99px; background: #f0f4f2; color: #6e7d76; font-size: 0.53rem; font-weight: 850; letter-spacing: 0.05em; }
-.seed-pill { background: #eafbd5; color: #3d720f; }
+.ranking-value, .seed-value { color: #65726c; font-size: 0.82rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.seed-value { color: var(--green); font-size: 0.72rem; }
 .player-arrow { display: grid; place-items: center; width: 1.85rem; height: 1.85rem; margin-left: auto; flex: 0 0 auto; border-radius: 50%; background: #f0f7f4; color: var(--green); font-size: 0.65rem; transition: 180ms; }
 .enrolled-player-card:hover .player-arrow { background: var(--green); color: white; }
 .player-card-identity { display: flex; align-items: center; gap: 0.85rem; padding: 1rem 0 0.9rem; }
@@ -1412,24 +1412,63 @@ function openMatchDetail(match: Match): void {
 }
 @media (max-width: 620px) {
   .detail-page { gap: 0.8rem; }
-  .tournament-hero { border-radius: 18px; }
-  .hero-actions { display: grid; width: 100%; grid-template-columns: 1fr 1fr; }
+  .tournament-hero { overflow: visible; padding: 0.9rem; border-radius: 14px; box-shadow: 0 8px 24px rgb(18 73 51 / 12%); }
+  .back-link { min-height: 2rem; font-size: 0.74rem; }
+  .status-badge, .visibility-badge { font-size: 0.75rem; }
+  .hero-main { gap: 0.8rem; margin-top: 0.65rem; }
+  .hero-badges { gap: 0.35rem; }
+  .eyebrow { display: none; }
+  .hero-copy h1 { margin-top: 0.65rem; font-size: 1.65rem; line-height: 1.08; }
+  .hero-subtitle { margin-top: 0.45rem; font-size: 0.8125rem; }
+  .hero-actions { display: flex; width: 100%; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 0.15rem; }
   .hero-actions :deep(.p-button) { width: 100%; }
-  .hero-actions .more-action { width: 100%; }
+  .hero-actions :deep(.p-button) { font-size: 0.8125rem; }
+  .hero-actions :deep(.p-button-label) { white-space: nowrap; }
+  .hero-actions .more-action { width: 2.75rem; min-width: 2.75rem; }
   .actions-separator { display: none; }
   .hero-copy h1 { white-space: normal; }
-  .hero-stats { grid-template-columns: 1fr; }
-  .hero-stats > div { padding: 0.35rem 0; border-right: 0; border-bottom: 1px solid rgb(255 255 255 / 8%); }
-  .hero-stats > div:last-child { border-bottom: 0; }
+  .hero-stats { grid-template-columns: 1fr 1fr; gap: 0.55rem; margin-top: 0.8rem; padding-top: 0.8rem; }
+  .hero-stats > div { gap: 0.45rem; padding: 0; border: 0; }
+  .stat-icon { width: 1.8rem; height: 1.8rem; }
+  .hero-stats small { font-size: 0.75rem; letter-spacing: 0.04em; }
+  .hero-stats strong { font-size: 0.8125rem; }
   .hero-extras { display: none; }
-  .tournament-tabs { border-radius: 16px; }
-  .tournament-tabs :deep(.p-tablist) { padding-inline: 0.4rem; }
-  .tournament-tabs :deep(.p-tab) { padding-inline: 0.7rem; }
-  .tournament-tabs :deep(.p-tabpanels) { padding: 0.8rem; }
+  .tournament-tabs { overflow: visible; border-radius: 14px; box-shadow: none; }
+  .tournament-tabs :deep(.p-tablist) { position: sticky; z-index: 5; top: 0; overflow-x: auto; padding-inline: 0.35rem; border-radius: 14px 14px 0 0; }
+  .tournament-tabs :deep(.p-tab) { min-width: max-content; padding: 0.8rem 0.7rem; font-size: 0.8125rem; }
+  .tournament-tabs :deep(.p-button), .tournament-tabs :deep(.p-inputtext), .tournament-tabs :deep(.p-select), .tournament-tabs :deep(.p-multiselect) { font-size: 0.8125rem; }
+  .tournament-tabs :deep(.p-tabpanels) { padding: 0.65rem; }
+  .tournament-tabs :deep(article) { border-radius: 11px !important; box-shadow: none !important; }
+  .tournament-tabs :deep(article:hover) { transform: none; }
   .round-robin-toggle { align-self: stretch; }
   .round-robin-toggle :deep(.p-button) { min-width: 0; flex: 1; }
   .schedule-heading > span { display: none; }
   .selection-toolbar { align-items: stretch; flex-direction: column; }
   .selection-toolbar :deep(.p-button) { width: 100%; }
+  .round-robin-matches { gap: 0.55rem; }
+  .round-robin-match { border-radius: 12px; box-shadow: none; }
+  .match-heading, .match-status, .versus-player > span, .versus-center > span { font-size: 0.75rem; }
+  .versus-player strong, .versus-center strong { font-size: 0.8125rem; }
+  .versus-layout { padding: 0.7rem; }
+  .versus-player :deep(.p-avatar) { width: 2.8rem; height: 2.8rem; }
+  .match-footer { display: none; }
+  .tournament-players-grid { display: flex; flex-direction: column; gap: 0.45rem; }
+  .enrolled-player-card { display: grid; min-height: 4rem; grid-template-columns: auto auto minmax(0, 1fr) auto auto; align-items: center; gap: 0.45rem; padding: 0.45rem 0.55rem; border-radius: 12px; box-shadow: none; }
+  .enrolled-player-card::before { width: 3px; height: auto; inset: 0 auto 0 0; background: #cbd5d1; }
+  .player-card-top, .player-card-identity { display: contents; }
+  .player-badges { grid-column: 4; grid-row: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 0.05rem; }
+  .player-card-top :deep(.p-checkbox) { grid-column: 1; grid-row: 1; margin-right: 0.1rem; }
+  .player-avatar { grid-column: 2; grid-row: 1; }
+  .player-avatar :deep(.p-avatar) { width: 2.75rem; height: 2.75rem; border-width: 2px; font-size: 0.9rem; box-shadow: none; }
+  .player-card-identity > div:last-child { grid-column: 3; grid-row: 1; }
+  .player-card-identity h3 { font-size: 1rem; }
+  .seed-value { font-size: 0.75rem; }
+  .ranking-value { font-size: 0.875rem; }
+  .player-arrow { grid-column: 5; grid-row: 1; width: 2rem; height: 2rem; margin-left: 0; background: transparent; font-size: 0.75rem; }
+  .player-card-details, .player-card-footer { display: none; }
+  .standings-table-wrap { margin-inline: -0.65rem; border-right: 0; border-left: 0; border-radius: 0; }
+  .standing-player { min-width: 10rem; }
+  .standings-table-wrap th, .standing-player small { font-size: 0.75rem; }
+  .standings-table-wrap td { font-size: 0.8125rem; }
 }
 </style>

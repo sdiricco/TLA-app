@@ -242,14 +242,17 @@ onMounted(() => {
 
 <template>
   <div class="flex flex-col gap-5">
-    <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div class="tournament-form-header">
       <div>
+        <button type="button" class="back-link" @click="cancel">
+          <i class="pi pi-arrow-left" />
+          <span>Indietro</span>
+        </button>
         <h2 class="m-0 text-2xl">{{ isEditing ? 'Modifica torneo' : 'Nuovo torneo' }}</h2>
         <p class="mt-1 mb-0 text-sm text-muted-color">
           {{ isEditing ? 'Aggiorna i dati del torneo' : 'Crea un nuovo torneo' }}
         </p>
       </div>
-      <Button label="Annulla" severity="secondary" outlined @click="cancel" />
     </div>
 
     <div v-if="loadingTournament" class="flex justify-center py-10">
@@ -269,7 +272,7 @@ onMounted(() => {
             <InputText id="t-location" v-model="form.location" placeholder="TC Milano" fluid />
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div class="flex flex-col gap-[0.375rem]">
               <label class="text-sm font-medium">Data inizio iscrizioni</label>
               <DatePicker v-model="form.registration_start_date" date-format="dd/mm/yy" placeholder="gg/mm/aaaa" fluid show-button-bar />
@@ -280,7 +283,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div class="flex flex-col gap-[0.375rem]">
               <label for="t-game-formula" class="text-sm font-medium">Formula di gioco</label>
               <InputText id="t-game-formula" v-model="form.game_formula" placeholder="Es. 2 set su 3 con tie-break" fluid />
@@ -291,7 +294,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div class="flex flex-col gap-[0.375rem]">
               <label class="text-sm font-medium">Data inizio</label>
               <DatePicker v-model="form.start_date" date-format="dd/mm/yy" placeholder="gg/mm/aaaa" fluid show-button-bar />
@@ -356,7 +359,7 @@ onMounted(() => {
             <InputNumber v-model="form.participant_limit" :min="2" :use-grouping="false" placeholder="Es. 32" fluid />
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div class="flex flex-col gap-[0.375rem]">
               <label class="text-sm font-medium">Categoria torneo *</label>
               <p class="m-0 text-xs text-muted-color">
@@ -382,7 +385,7 @@ onMounted(() => {
 
           <div v-if="requiresGroupConfig" class="rounded-lg border border-surface-200 bg-surface-50 p-3">
             <div class="mb-3 text-sm font-semibold text-color">Configurazione gironi</div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div class="flex flex-col gap-[0.375rem]">
                 <label class="text-sm font-medium">Numero gironi *</label>
                 <InputNumber v-model="form.group_count" :min="1" :use-grouping="false" placeholder="Es. 4" fluid />
@@ -394,7 +397,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <div class="flex justify-end gap-2 pt-2">
+          <div class="tournament-form-actions flex justify-end gap-2 pt-2">
             <Button type="button" label="Annulla" severity="secondary" outlined @click="cancel" />
             <Button type="submit" :label="isEditing ? 'Salva' : 'Crea'" :loading="saving" />
           </div>
@@ -403,3 +406,17 @@ onMounted(() => {
     </Card>
   </div>
 </template>
+
+<style scoped>
+.tournament-form-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.back-link { display: inline-flex; min-height: 2.5rem; align-items: center; gap: 0.45rem; margin: 0 0 0.65rem; padding: 0; border: 0; background: transparent; color: #63716b; font-size: 0.8125rem; font-weight: 700; cursor: pointer; }
+.back-link:hover { color: var(--app-green); }
+
+@media (max-width: 640px) {
+  h2 { font-size: 1.65rem; line-height: 1.1; }
+  form { gap: 0.9rem; }
+  :deep(.p-card-body), :deep(.p-card-content) { padding: 0.75rem; }
+  .tournament-form-actions { margin: 0 -0.75rem -0.75rem; padding: 0.75rem !important; border-top: 1px solid #e5ece9; background: #fff; }
+  .tournament-form-actions :deep(.p-button) { flex: 1; }
+}
+</style>

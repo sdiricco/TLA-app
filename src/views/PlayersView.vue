@@ -9,7 +9,7 @@
   import { useAuthStore } from '../stores/auth'
   import { usePlayersStore } from '../stores/players'
   import type { Player, PlayerSortField, SortOrder } from '../types'
-  import { formatAge, getPlayerInitials } from '@/utils/main'
+  import { getPlayerInitials } from '@/utils/main'
 
   interface SelectOption<T> {
     label: string
@@ -28,6 +28,7 @@
    */
   const canViewAdmin = computed(() => auth.isAdmin)
   const searchName = ref('')
+  const mobileFiltersOpen = ref(false)
   const searchClub = ref('')
   const sortBy = ref<PlayerSortField>('ranking')
   const sortOrder = ref<SortOrder>('asc')
@@ -158,10 +159,10 @@
       <span class="summary-copy">Una community, infinite sfide.</span>
     </section>
 
-    <section class="filters-panel" aria-label="Filtri giocatori">
-      <div class="filter-title"><i class="pi pi-sliders-h" /><span>Cerca e ordina</span></div>
+    <section class="filters-panel" :class="{ 'mobile-open': mobileFiltersOpen }" aria-label="Filtri giocatori">
+      <button class="filter-title" type="button" :aria-expanded="mobileFiltersOpen" @click="mobileFiltersOpen = !mobileFiltersOpen"><i class="pi pi-sliders-h" /><span>Cerca e ordina</span><span class="mobile-filter-count"><i class="pi pi-chevron-down" /></span></button>
       <div class="filters-grid">
-        <div class="filter-field">
+        <div class="filter-field search-name-field">
         <label for="player-name-filter" class="text-sm font-medium">Cerca per nome</label>
           <span class="input-wrap"><i class="pi pi-search" /><InputText id="player-name-filter" v-model="searchName" placeholder="Es. Mario Rossi" fluid /></span>
         </div>
@@ -226,23 +227,20 @@
         v-for="player in store.players"
         :key="player.id"
         class="player-card"
-        :class="{ 'top-player': player.ranking && player.ranking <= 3 }"
         tabindex="0"
         @click="openDetail(player)"
         @keydown.enter="openDetail(player)"
       >
         <div class="card-topline">
-          <span v-if="player.ranking" class="ranking-pill"><i class="pi pi-bolt" /> RANKING #{{ player.ranking }}</span>
-          <span v-else class="ranking-pill unranked">NON CLASSIFICATO</span>
+          <span v-if="player.ranking" class="ranking-value">#{{ player.ranking }}</span>
           <span class="card-arrow"><i class="pi pi-arrow-up-right" /></span>
         </div>
 
         <div class="player-identity">
           <div class="avatar-wrap">
             <Avatar :label="getPlayerInitials(player)" :image="player.photo_url ?? undefined" shape="circle" size="xlarge" />
-            <span v-if="player.ranking && player.ranking <= 3" class="top-badge"><i class="pi pi-star-fill" /></span>
           </div>
-          <div><h3>{{ player.name }}</h3><span><i class="pi pi-user" />{{ formatAge(player.birth_date) }}</span></div>
+          <div><h3>{{ player.name }}</h3></div>
         </div>
 
         <div class="player-details">
@@ -284,8 +282,9 @@
   .summary-strip div span { margin-top: 0.25rem; color: #78847f; font-size: 0.68rem; }
   .summary-copy { margin-left: auto; color: #7b8782; font-size: 0.76rem; font-style: italic; }
   .filters-panel { padding: 1rem; border: 1px solid #dfe7e3; border-radius: 18px; background: rgb(255 255 255 / 88%); box-shadow: 0 8px 30px rgb(26 54 43 / 5%); }
-  .filter-title { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; color: #3f4c46; font-size: 0.75rem; font-weight: 800; }
+  .filter-title { display: flex; width: 100%; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; padding: 0; border: 0; background: transparent; color: #3f4c46; font-size: 0.75rem; font-weight: 800; text-align: left; }
   .filter-title i { color: var(--green); }
+  .mobile-filter-count { display: none; }
   .filters-grid { display: grid; grid-template-columns: 1.15fr 1.15fr 0.9fr 0.9fr auto; gap: 0.75rem; }
   .filter-field { display: flex; min-width: 0; flex-direction: column; gap: 0.4rem; }
   .filter-field label { color: #69756f; font-size: 0.68rem; font-weight: 700; }
@@ -304,17 +303,14 @@
   .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(310px, 100%), 1fr)); gap: 1rem; }
   .player-card { position: relative; overflow: hidden; padding: 1.2rem; border: 1px solid #e1e8e5; border-radius: 18px; background: #fff; box-shadow: 0 8px 24px rgb(30 60 48 / 6%); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
   .player-card::before { position: absolute; inset: 0 0 auto; height: 3px; background: #cbd5d1; content: ''; }
-  .player-card.top-player::before { background: linear-gradient(90deg, #a8e83e, #10b981); }
   .player-card:hover, .player-card:focus-visible { transform: translateY(-3px); border-color: #b9d8cc; box-shadow: 0 16px 36px rgb(18 73 51 / 11%); outline: none; }
   .card-topline { display: flex; align-items: center; justify-content: space-between; }
-  .ranking-pill { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.55rem; border-radius: 99px; background: #e9fbd4; color: #39720d; font-size: 0.58rem; font-weight: 850; letter-spacing: 0.06em; }
-  .ranking-pill.unranked { background: #f1f5f3; color: #81908a; }
+  .ranking-value { color: #65726c; font-size: 0.82rem; font-weight: 800; font-variant-numeric: tabular-nums; }
   .card-arrow { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: #f0f7f4; color: var(--green); font-size: 0.72rem; transition: 180ms; }
   .player-card:hover .card-arrow { background: var(--green); color: #fff; }
   .player-identity { display: flex; align-items: center; gap: 1rem; padding: 1.35rem 0 1.15rem; }
   .avatar-wrap { position: relative; }
   .avatar-wrap :deep(.p-avatar) { width: 4.4rem; height: 4.4rem; border: 3px solid white; background: #dfe9e5; color: #345047; font-size: 1.35rem; box-shadow: 0 5px 16px rgb(30 66 52 / 13%); }
-  .top-badge { position: absolute; right: -0.2rem; bottom: 0; display: grid; place-items: center; width: 1.35rem; height: 1.35rem; border: 2px solid white; border-radius: 50%; background: var(--lime); color: #38640f; font-size: 0.55rem; }
   .player-identity > div:last-child { min-width: 0; }
   .player-identity h3 { overflow: hidden; margin: 0; font-size: 1.08rem; letter-spacing: -0.025em; text-overflow: ellipsis; white-space: nowrap; }
   .player-identity > div:last-child span { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.35rem; color: #87948e; font-size: 0.68rem; }
@@ -337,11 +333,40 @@
   @media (max-width: 1050px) { .filters-grid { grid-template-columns: 1fr 1fr; } .filter-action { align-items: flex-end; } }
   @media (max-width: 800px) { .page-header { align-items: flex-start; } .page-subtitle, .summary-copy, .view-label { display: none; } }
   @media (max-width: 520px) {
-    .players-page { gap: 1.1rem; }
-    .page-header { flex-direction: column; gap: 1rem; }
-    .create-button { width: 100%; }
+    .players-page { gap: 0.8rem; }
+    .page-header { align-items: center; flex-direction: row; gap: 0.75rem; padding-top: 0; }
+    .page-header > div { min-width: 0; flex: 1; }
+    .eyebrow { display: none; }
+    .page-header h1 { overflow: hidden; font-size: 1.7rem; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+    .create-button { width: 2.75rem; min-width: 2.75rem; padding: 0; border-radius: 50%; }
+    .create-button :deep(.p-button-label) { display: none; }
     .summary-strip { display: none; }
+    .filters-panel { padding: 0.65rem; border-radius: 13px; box-shadow: none; }
+    .filter-title { min-height: 2rem; margin: 0; padding-inline: 0.2rem; font-size: 0.875rem; }
+    .mobile-filter-count { display: inline-flex; margin-left: auto; }
+    .mobile-filter-count i { transition: transform 160ms; }
+    .mobile-open .mobile-filter-count i { transform: rotate(180deg); }
     .filters-grid { grid-template-columns: 1fr; }
+    .filters-grid { margin-top: 0.55rem; }
+    .filters-grid > :not(.search-name-field) { display: none; }
+    .mobile-open .filters-grid > * { display: flex; }
     .filter-action :deep(.p-button) { width: 100%; }
+    .section-heading h2 { font-size: 1.05rem; }
+    .section-heading span { font-size: 0.75rem; }
+    .players-grid { display: flex; flex-direction: column; gap: 0.55rem; }
+    .player-card { display: grid; min-height: 4rem; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; padding: 0.45rem 0.65rem; border-radius: 12px; box-shadow: 0 2px 8px rgb(30 60 48 / 5%); }
+    .player-card:hover { transform: none; }
+    .card-topline { display: contents; }
+    .ranking-value { grid-column: 3; grid-row: 1; padding-left: 0.6rem; color: #526059; font-size: 0.875rem; }
+    .card-arrow { grid-column: 4; grid-row: 1; width: 2rem; height: 2rem; background: transparent; }
+    .player-identity { display: contents; }
+    .avatar-wrap { grid-column: 1; grid-row: 1; margin-right: 0.65rem; }
+    .avatar-wrap :deep(.p-avatar) { width: 2.75rem; height: 2.75rem; border-width: 2px; font-size: 0.9rem; box-shadow: none; }
+    .player-identity > div:last-child { grid-column: 2; grid-row: 1; }
+    .player-identity h3 { font-size: 1rem; }
+    .player-details, .card-footer { display: none; }
+    .skeleton-card { display: flex; min-height: 78px; }
+    .load-more-area { width: 100%; }
+    .load-more-area :deep(.p-button) { width: 100%; }
   }
 </style>

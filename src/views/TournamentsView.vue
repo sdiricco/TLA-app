@@ -32,6 +32,7 @@
   const categoryFilter = ref<'all' | TournamentCategory>('all')
   const statusFilter = ref<'all' | TournamentStatus>('all')
   const filtersTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+  const mobileFiltersOpen = ref(false)
   const skeletonItems = Array.from({ length: 6 }, (_, index) => index)
 
   /**
@@ -164,11 +165,12 @@
       <span class="summary-copy">Tutto il tuo tennis, in un solo colpo d'occhio.</span>
     </section>
 
-    <section class="filters-panel" aria-label="Filtri tornei">
-      <div class="filter-title">
+    <section class="filters-panel" :class="{ 'mobile-open': mobileFiltersOpen }" aria-label="Filtri tornei">
+      <button class="filter-title" type="button" :aria-expanded="mobileFiltersOpen" @click="mobileFiltersOpen = !mobileFiltersOpen">
         <i class="pi pi-sliders-h" />
         <span>Filtra tornei</span>
-      </div>
+        <span class="mobile-filter-count">{{ [categoryFilter, statusFilter].filter(value => value !== 'all').length || '' }}<i class="pi pi-chevron-down" /></span>
+      </button>
       <div class="filters-grid">
         <div class="filter-field search-field">
         <label for="tournament-name-filter" class="text-sm font-medium">Cerca per nome</label>
@@ -299,8 +301,9 @@
   .summary-strip div span { margin-top: 0.25rem; color: #78847f; font-size: 0.68rem; }
   .summary-copy { margin-left: auto; color: #7b8782; font-size: 0.76rem; font-style: italic; }
   .filters-panel { padding: 1rem; border: 1px solid #dfe7e3; border-radius: 18px; background: rgb(255 255 255 / 88%); box-shadow: 0 8px 30px rgb(26 54 43 / 5%); }
-  .filter-title { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; color: #3f4c46; font-size: 0.75rem; font-weight: 800; }
+  .filter-title { display: flex; width: 100%; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; padding: 0; border: 0; background: transparent; color: #3f4c46; font-size: 0.75rem; font-weight: 800; text-align: left; }
   .filter-title i { color: var(--green); }
+  .mobile-filter-count { display: none; }
   .filters-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr auto; gap: 0.75rem; }
   .filter-field { display: flex; flex-direction: column; gap: 0.4rem; }
   .filter-field label { color: #69756f; font-size: 0.68rem; font-weight: 700; }
@@ -364,14 +367,52 @@
   }
 
   @media (max-width: 520px) {
-    .tournaments-page { gap: 1.1rem; }
-    .page-header { flex-direction: column; gap: 1rem; }
-    .create-button { width: 100%; }
+    .tournaments-page { gap: 0.8rem; }
+    .page-header { align-items: center; flex-direction: row; gap: 0.75rem; padding-top: 0; }
+    .page-header > div { min-width: 0; flex: 1; }
+    .eyebrow { display: none; }
+    .page-header h1 { overflow: hidden; font-size: 1.7rem; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+    .create-button { width: 2.75rem; min-width: 2.75rem; padding: 0; border-radius: 50%; }
+    .create-button :deep(.p-button-label) { display: none; }
     .summary-strip { display: none; }
+    .filters-panel { padding: 0.65rem; border-radius: 13px; box-shadow: none; }
+    .filter-title { min-height: 2rem; margin: 0; padding-inline: 0.2rem; font-size: 0.875rem; }
+    .mobile-filter-count { display: inline-flex; align-items: center; gap: 0.45rem; margin-left: auto; color: var(--green); }
+    .mobile-filter-count > i { transition: transform 160ms; }
+    .mobile-open .mobile-filter-count > i { transform: rotate(180deg); }
     .filters-grid { grid-template-columns: 1fr; }
     .search-field { grid-column: auto; }
+    .filters-grid > :not(.search-field) { display: none; }
+    .mobile-open .filters-grid > * { display: flex; }
+    .filters-grid { margin-top: 0.55rem; }
     .filter-action :deep(.p-button) { width: 100%; }
-    .card-meta { grid-template-columns: 1fr; gap: 0.75rem; }
-    .card-footer { align-items: flex-start; }
+    .section-heading { margin-top: 0.2rem; }
+    .section-heading h2 { font-size: 1.05rem; }
+    .section-heading span { font-size: 0.75rem; }
+    .tournaments-grid { display: flex; flex-direction: column; gap: 0.65rem; }
+    .tournament-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.35rem 0.65rem; padding: 0.55rem 0.65rem; border-radius: 12px; box-shadow: 0 2px 8px rgb(30 60 48 / 5%); }
+    .tournament-card::before { width: 3px; height: auto; inset: 0 auto 0 0; }
+    .tournament-card:hover { transform: none; }
+    .card-topline { grid-column: 2; grid-row: 1; min-height: auto; }
+    .status-pill { padding: 0.2rem 0.4rem; background: transparent; font-size: 0.75rem; }
+    .status-upcoming .status-pill, .status-completed .status-pill { background: transparent; }
+    .status-pill i { box-shadow: none; }
+    .draft-pill { display: none; }
+    .card-title-row { grid-column: 1; grid-row: 1; min-width: 0; margin: 0; }
+    .card-title-row > div { min-width: 0; }
+    .card-title-row h3 { overflow: hidden; font-size: 0.98rem; text-overflow: ellipsis; white-space: nowrap; }
+    .location { display: none; }
+    .card-arrow { display: none; }
+    .date-panel { grid-column: 1 / -1; grid-row: 2; gap: 0.35rem; padding: 0; background: transparent; }
+    .date-icon { display: inline-grid; width: 1rem; height: 1rem; background: transparent; box-shadow: none; font-size: 0.75rem; }
+    .date-panel div { display: block; }
+    .date-panel small, .card-meta small { display: none; }
+    .date-panel strong { color: #65726c; font-size: 0.8125rem; font-weight: 600; }
+    .card-meta { grid-column: 1 / -1; grid-row: 3; display: flex; gap: 0.8rem; padding: 0; }
+    .card-meta > div { gap: 0.35rem; font-size: 0.8125rem; }
+    .card-meta span { display: block; }
+    .card-footer { display: none; }
+    .skeleton-card { display: flex; min-height: 96px; }
+    .load-more-area :deep(.p-button) { width: 100%; }
   }
 </style>

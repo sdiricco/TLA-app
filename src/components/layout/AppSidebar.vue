@@ -88,13 +88,13 @@ async function handleLogout(): Promise<void> {
 .sidebar-brand { display: flex; align-items: center; gap: 0.75rem; padding: 1.6rem 1.35rem 1.4rem; border-bottom: 1px solid rgb(255 255 255 / 9%); }
 .sidebar-brand > div { display: grid; }
 .sidebar-brand strong { font-size: 1.25rem; line-height: 1; letter-spacing: -0.04em; }
-.sidebar-brand small { margin-top: 0.3rem; color: rgb(255 255 255 / 43%); font-size: 0.5rem; font-weight: 800; letter-spacing: 0.15em; }
+.sidebar-brand small { margin-top: 0.3rem; color: rgb(255 255 255 / 55%); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.1em; }
 .brand-ball { position: relative; width: 2rem; height: 2rem; overflow: hidden; flex: 0 0 auto; border-radius: 50%; background: #b7f34a; box-shadow: 0 5px 15px rgb(0 0 0 / 18%); }
 .brand-ball::before, .brand-ball::after { position: absolute; width: 1.5rem; height: 2.25rem; border: 1.5px solid rgb(5 94 70 / 65%); border-radius: 50%; content: ''; }
 .brand-ball::before { left: -1rem; top: -0.15rem; }
 .brand-ball::after { right: -1rem; bottom: -0.15rem; }
 .sidebar-nav { flex: 1; overflow-y: auto; padding: 1.4rem 0.85rem; }
-.sidebar-nav > p { margin: 0 0.7rem 0.65rem; color: rgb(255 255 255 / 34%); font-size: 0.56rem; font-weight: 800; letter-spacing: 0.16em; }
+.sidebar-nav > p { margin: 0 0.7rem 0.65rem; color: rgb(255 255 255 / 50%); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; }
 .sidebar-nav ul { display: flex; flex-direction: column; gap: 0.35rem; margin: 0; padding: 0; list-style: none; }
 .nav-link { display: flex; align-items: center; gap: 0.8rem; min-height: 3rem; padding: 0.45rem 0.7rem; border-radius: 11px; color: rgb(255 255 255 / 67%); font-size: 0.86rem; font-weight: 550; text-decoration: none; transition: 160ms ease; }
 .nav-link:hover { background: rgb(255 255 255 / 6%); color: white; }
@@ -106,8 +106,8 @@ async function handleLogout(): Promise<void> {
 .profile-row { display: flex; align-items: center; gap: 0.7rem; min-width: 0; }
 .profile-avatar { display: grid; place-items: center; width: 2.35rem; height: 2.35rem; flex: 0 0 auto; border: 1px solid rgb(183 243 74 / 28%); border-radius: 50%; background: rgb(183 243 74 / 12%); color: #cfff76; font-size: 0.8rem; }
 .profile-copy { display: grid; min-width: 0; }
-.profile-copy span { overflow: hidden; color: rgb(255 255 255 / 88%); font-size: 0.72rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.profile-copy small { margin-top: 0.15rem; color: rgb(255 255 255 / 38%); font-size: 0.6rem; }
-.logout-button { justify-content: flex-start; height: 2.5rem; color: rgb(255 255 255 / 52%); font-size: 0.72rem; }
+.profile-copy span { overflow: hidden; color: rgb(255 255 255 / 88%); font-size: 0.875rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.profile-copy small { margin-top: 0.15rem; color: rgb(255 255 255 / 55%); font-size: 0.75rem; }
+.logout-button { justify-content: flex-start; height: 2.75rem; color: rgb(255 255 255 / 65%); font-size: 0.8125rem; }
 .logout-button:hover { background: rgb(255 255 255 / 6%) !important; color: white !important; }
 </style>

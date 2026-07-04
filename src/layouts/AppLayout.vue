@@ -3,6 +3,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
 import AppSidebar from '../components/layout/AppSidebar.vue'
 import AppTopbar from '../components/layout/AppTopbar.vue'
+import AppBottomNav from '../components/layout/AppBottomNav.vue'
 import { useLayoutStore } from '../stores/layout'
 
 const layout = useLayoutStore()
@@ -22,7 +23,7 @@ const layout = useLayoutStore()
       </Transition>
 
       <div
-        class="shrink-0 h-full max-md:fixed max-md:top-14 max-md:left-0 max-md:bottom-0 max-md:z-[100] max-md:transition-transform max-md:duration-[250ms] max-md:ease-in-out"
+        class="shrink-0 h-full max-md:h-auto max-md:fixed max-md:top-14 max-md:left-0 max-md:bottom-0 max-md:z-[100] max-md:transition-transform max-md:duration-[250ms] max-md:ease-in-out"
         :class="{ 'max-md:translate-x-0': layout.sidebarOpen, 'max-md:-translate-x-full': !layout.sidebarOpen }"
       >
         <AppSidebar />
@@ -32,6 +33,8 @@ const layout = useLayoutStore()
         <RouterView />
       </main>
     </div>
+
+    <AppBottomNav />
 
     <Toast position="bottom-right" />
     <ConfirmDialog />
@@ -51,6 +54,6 @@ const layout = useLayoutStore()
 </style>
 
 <style scoped>
-.app-content { padding: clamp(1.25rem, 2.5vw, 2.5rem); background: radial-gradient(circle at 100% 0, rgb(16 185 129 / 5%), transparent 30rem), #f5f8f7; }
-@media (max-width: 767px) { .app-content { padding: 1.25rem 1rem 2rem; } }
+.app-content { padding: var(--app-page-padding); background: radial-gradient(circle at 100% 0, rgb(16 185 129 / 5%), transparent 30rem), #f5f8f7; }
+@media (max-width: 767px) { .app-content { padding-bottom: calc(5.25rem + env(safe-area-inset-bottom)); } }
 </style>

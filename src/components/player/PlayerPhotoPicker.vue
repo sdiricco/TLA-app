@@ -293,6 +293,11 @@
 .crop-stage { overflow: hidden; border: 1px solid #dce5e1; border-radius: 14px; background: #f1f5f3; }
 .cropper-host { width: 100%; height: 320px; }
 .crop-meta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: #8a9690; font-size: 0.58rem; }
+
+@media (max-width: 620px) {
+  .empty-preview span, .photo-hint, .crop-header p, .crop-meta { font-size: 0.75rem; }
+  .photo-copy > p, .photo-actions :deep(.p-button) { font-size: 0.8125rem; }
+}
 .crop-actions { display: flex; justify-content: flex-end; gap: 0.55rem; }
 .crop-actions :deep(.p-button) { border-radius: 9px; }
 

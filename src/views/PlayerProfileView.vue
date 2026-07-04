@@ -247,15 +247,32 @@ const fullName = computed(() => player.value?.name ?? '')
   .system-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 620px) {
-  .profile-page { gap: 1.1rem; }
-  .page-header { align-items: stretch; flex-direction: column; gap: 1rem; }
-  .header-actions { display: grid; }
-  .hero-card { grid-template-columns: 1fr; justify-items: center; text-align: center; }
-  .player-avatar-wrap { margin: 0 0 1.2rem; }
+  .profile-page { gap: 0.8rem; }
+  .page-header { align-items: center; flex-direction: row; gap: 0.7rem; }
+  .page-header > div { min-width: 0; flex: 1; }
+  .back-link { margin-bottom: 0.65rem; }
+  .eyebrow, .page-subtitle { display: none; }
+  .page-header h1 { font-size: 1.65rem; }
+  .header-actions { display: flex; }
+  .edit-button { width: 2.75rem; min-width: 2.75rem; padding: 0; border-radius: 50%; }
+  .edit-button :deep(.p-button-label) { display: none; }
+  .hero-card { grid-template-columns: auto 1fr; min-height: auto; justify-items: start; padding: 0.9rem; border-radius: 14px; text-align: left; }
+  .player-avatar-wrap { margin: 0 0.8rem 0 0; }
+  .player-avatar-wrap :deep(.p-avatar) { width: 4.5rem; height: 4.5rem; border-width: 3px; font-size: 1.25rem; box-shadow: none; }
   .hero-tags, .hero-copy > p { justify-content: center; }
-  .hero-copy h2 { white-space: normal; }
+  .hero-tags, .hero-copy > p { justify-content: flex-start; }
+  .ranking-tag, .profile-tag, .hero-copy > p { font-size: 0.75rem; }
+  .hero-copy h2 { margin: 0.55rem 0 0.3rem; font-size: 1.45rem; white-space: normal; }
   .hero-stats { width: 100%; }
-  .hero-stats > div { padding-inline: 0.5rem; }
+  .hero-stats { margin-top: 0.8rem; padding-top: 0.75rem; }
+  .hero-stats > div { padding-inline: 0.45rem; }
+  .hero-stats strong { font-size: 1rem; }
+  .hero-stats small, .hero-stats span { font-size: 0.75rem; }
+  .details-card, .system-card { padding: 0.85rem; border-radius: 14px; box-shadow: none; }
+  .detail-row { padding: 0.55rem; }
+  .card-heading p, .danger-card p, .detail-row small { font-size: 0.75rem; }
+  .detail-row strong { font-size: 0.875rem; }
+  .system-card { display: none; }
   .danger-card { align-items: stretch; flex-direction: column; }
   .danger-action { width: 100%; }
 }

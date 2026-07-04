@@ -195,3 +195,16 @@ function toggleCategory(category: TournamentCategory, enabled: boolean): void {
     </div>
   </div>
 </template>
+
+<style scoped>
+@media (max-width: 640px) {
+  h2 { font-size: 1.65rem; }
+  :deep(.p-card-body), :deep(.p-card-content) { padding: 0.75rem; }
+  :deep(.p-card) { border-radius: 13px; box-shadow: none; }
+  :deep(.p-card-content > div) { gap: 0.7rem; }
+  :deep(.p-card-content .h-12) { width: 2.5rem; height: 2.5rem; border-radius: 10px; }
+  :deep(.p-card-content p) { display: none; }
+  :deep(.p-card-content .mt-5) { margin-top: 0.65rem; }
+  :deep(.p-card-content .mt-5 > span:first-child) { display: none; }
+}
+</style>
