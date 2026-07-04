@@ -170,7 +170,6 @@
         <h1>{{ isEditing ? 'Aggiorna il profilo.' : 'Aggiungi un giocatore.' }}</h1>
         <p class="page-subtitle">{{ isEditing ? 'Mantieni aggiornati dati personali e informazioni sportive.' : 'Crea una nuova identità sportiva nel roster del circolo.' }}</p>
       </div>
-      <Button class="cancel-top" label="Annulla" severity="secondary" outlined @click="cancel" />
     </header>
 
     <div v-if="loadingPlayer" class="form-layout">
@@ -269,23 +268,21 @@
 .eyebrow { margin: 0 0 0.5rem; color: var(--green); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; }
 .page-header h1 { margin: 0; font-size: clamp(2rem, 3vw, 3rem); line-height: 1; letter-spacing: -0.055em; }
 .page-subtitle { margin: 0.75rem 0 0; color: #68756f; font-size: 0.95rem; }
-.cancel-top { height: 3rem; border-color: #dce5e1; border-radius: 12px; color: #56645e; }
 .form-layout { display: grid; grid-template-columns: minmax(240px, 0.32fr) minmax(0, 1fr); align-items: start; gap: 1rem; }
 .preview-card, .form-card { border: 1px solid #e0e8e4; border-radius: 20px; background: #fff; box-shadow: 0 8px 26px rgb(29 63 49 / 6%); }
-.preview-card { position: sticky; top: 1rem; isolation: isolate; display: flex; min-height: 430px; flex-direction: column; align-items: center; overflow: hidden; padding: 2rem 1.35rem 1.3rem; background: linear-gradient(155deg, #073d31, #07634c); color: white; text-align: center; }
-.preview-card::before { position: absolute; z-index: -1; inset: 0; opacity: 0.15; background-image: radial-gradient(rgb(255 255 255 / 45%) 0.7px, transparent 0.7px); background-size: 14px 14px; content: ''; mask-image: linear-gradient(to bottom, black, transparent 75%); }
-.preview-card::after { position: absolute; z-index: -1; width: 250px; height: 250px; right: -150px; bottom: -150px; border: 1px solid rgb(255 255 255 / 11%); border-radius: 50%; box-shadow: 0 0 0 35px rgb(255 255 255 / 3%), 0 0 0 70px rgb(255 255 255 / 2%); content: ''; }
-.preview-label { align-self: stretch; margin: 0 0 1.8rem; color: rgb(255 255 255 / 42%); font-size: 0.54rem; font-weight: 850; letter-spacing: 0.15em; text-align: left; }
+.preview-card { position: sticky; top: 1rem; isolation: isolate; display: flex; min-height: 430px; flex-direction: column; align-items: center; overflow: hidden; padding: 2rem 1.35rem 1.3rem; background: #075846; color: white; text-align: center; }
+.preview-card::before { position: absolute; z-index: -1; inset: 0; opacity: 0.1; background-image: radial-gradient(#fff 0.8px, transparent 0.8px); background-size: 14px 14px; content: ''; }
+.preview-label { align-self: stretch; margin: 0 0 1.8rem; color: #a7cfc3; font-size: 0.7rem; font-weight: 850; letter-spacing: 0.1em; text-align: left; }
 .avatar-wrap { position: relative; }
-.avatar-wrap :deep(.p-avatar) { width: 8rem; height: 8rem; border: 5px solid rgb(255 255 255 / 16%); background: #e6efeb; color: #25483b; font-size: 2rem; box-shadow: 0 16px 32px rgb(0 0 0 / 20%); }
+.avatar-wrap :deep(.p-avatar) { width: 8rem; height: 8rem; border: 5px solid #0b6d56; background: #e6efeb; color: #25483b; font-size: 2rem; box-shadow: none; }
 .active-dot { position: absolute; right: 0.4rem; bottom: 0.45rem; width: 0.95rem; height: 0.95rem; border: 3px solid #075846; border-radius: 50%; background: var(--lime); }
 .preview-card h2 { overflow: hidden; max-width: 100%; margin: 1.15rem 0 0.4rem; font-size: 1.35rem; letter-spacing: -0.035em; text-overflow: ellipsis; white-space: nowrap; }
-.preview-card > p:not(.preview-label) { display: flex; align-items: center; gap: 0.4rem; margin: 0; color: rgb(255 255 255 / 58%); font-size: 0.68rem; }
-.preview-ranking { display: grid; width: 100%; margin-top: 1.5rem; padding: 1rem; border: 1px solid rgb(255 255 255 / 10%); border-radius: 13px; background: rgb(255 255 255 / 7%); }
+.preview-card > p:not(.preview-label) { display: flex; align-items: center; gap: 0.4rem; margin: 0; color: #c6ddd6; font-size: 0.8125rem; }
+.preview-ranking { display: grid; width: 100%; margin-top: 1.5rem; padding: 1rem 0 0; border-top: 1px solid #2a7764; background: transparent; }
 .preview-ranking small { color: #cfff79; font-size: 0.52rem; font-weight: 850; letter-spacing: 0.12em; }
 .preview-ranking strong { margin-top: 0.25rem; font-size: 1.5rem; }
-.preview-ranking span { color: rgb(255 255 255 / 38%); font-size: 0.56rem; }
-.preview-note { display: flex; align-items: center; gap: 0.5rem; margin-top: auto; padding-top: 1.5rem; color: rgb(255 255 255 / 38%); font-size: 0.58rem; line-height: 1.4; text-align: left; }
+.preview-ranking span { color: #9ac4b8; font-size: 0.75rem; }
+.preview-note { display: flex; align-items: center; gap: 0.5rem; margin-top: auto; padding-top: 1.5rem; color: #9ac4b8; font-size: 0.75rem; line-height: 1.4; text-align: left; }
 .form-card { --form-padding: clamp(1.25rem, 3vw, 2rem); padding: var(--form-padding); }
 .form-section { display: flex; flex-direction: column; gap: 1.15rem; }
 .section-heading { display: flex; align-items: center; gap: 0.75rem; }
@@ -319,7 +316,6 @@
   .back-link { margin-bottom: 0.65rem; }
   .eyebrow, .page-subtitle { display: none; }
   .page-header h1 { font-size: 1.65rem; }
-  .cancel-top { display: none; }
   .preview-card { display: grid; grid-template-columns: auto 1fr; justify-items: start; min-height: auto; padding: 0.75rem; border-radius: 14px; text-align: left; }
   .preview-label, .preview-ranking, .preview-note { display: none; }
   .avatar-wrap { grid-row: 1 / 3; margin-right: 0.75rem; }
@@ -329,7 +325,7 @@
   .form-card { --form-padding: 0.85rem; border-radius: 14px; box-shadow: none; }
   .fields-grid, .identity-grid { grid-template-columns: 1fr; }
   .phone-field { grid-column: auto; }
-  .form-actions { position: sticky; z-index: 4; bottom: calc(4.7rem + env(safe-area-inset-bottom)); align-items: stretch; flex-direction: column; }
+  .form-actions { align-items: stretch; flex-direction: column; }
   .form-actions > span { display: none; }
   .form-actions > div { display: grid; grid-template-columns: 1fr 1.3fr; }
 }

@@ -107,15 +107,6 @@ const fullName = computed(() => player.value?.name ?? '')
         <h1>Profilo giocatore</h1>
         <p class="page-subtitle">Identità, contatti e informazioni sportive.</p>
       </div>
-      <div class="header-actions">
-        <Button
-          v-if="auth.isAdmin && player"
-          class="edit-button"
-          label="Modifica"
-          icon="pi pi-pencil"
-          @click="router.push({ name: 'player-edit', params: { id: player.id } })"
-        />
-      </div>
     </header>
 
     <div v-if="loading" class="profile-grid">
@@ -138,12 +129,11 @@ const fullName = computed(() => player.value?.name ?? '')
         </div>
 
         <div class="hero-copy">
-          <div class="hero-tags">
-            <span class="ranking-tag"><i class="pi pi-bolt" /> RANKING #{{ player.ranking || '—' }}</span>
-            <span class="profile-tag">PROFILO GIOCATORE</span>
-          </div>
           <h2>{{ fullName }}</h2>
-          <p><i class="pi pi-building-columns" /> {{ player.club ?? 'Club non specificato' }}</p>
+          <div class="hero-meta">
+            <span><i class="pi pi-building-columns" /> {{ player.club ?? 'Club non specificato' }}</span>
+            <strong>#{{ player.ranking || '—' }}</strong>
+          </div>
         </div>
 
         <div class="hero-stats">
@@ -154,7 +144,18 @@ const fullName = computed(() => player.value?.name ?? '')
       </section>
 
       <section class="details-card">
-        <header class="card-heading"><span class="heading-icon"><i class="pi pi-id-card" /></span><div><h2>Informazioni personali</h2><p>Dati anagrafici e contatti</p></div></header>
+        <header class="card-heading">
+          <div class="card-heading-copy"><span class="heading-icon"><i class="pi pi-id-card" /></span><div><h2>Informazioni personali</h2><p>Dati anagrafici e contatti</p></div></div>
+          <Button
+            v-if="auth.isAdmin"
+            class="edit-profile-button"
+            label="Modifica profilo"
+            icon="pi pi-pencil"
+            severity="secondary"
+            outlined
+            @click="router.push({ name: 'player-edit', params: { id: player.id } })"
+          />
+        </header>
         <div class="details-list">
           <div class="detail-row"><span class="detail-icon"><i class="pi pi-calendar" /></span><div><small>DATA DI NASCITA</small><strong>{{ formatDate(player.birth_date) }}</strong></div></div>
           <div class="detail-row"><span class="detail-icon"><i class="pi pi-clock" /></span><div><small>ETÀ</small><strong>{{ formatAge(player.birth_date) }}</strong></div></div>
@@ -188,22 +189,18 @@ const fullName = computed(() => player.value?.name ?? '')
 .eyebrow { margin: 0 0 0.5rem; color: var(--green); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; }
 .page-header h1 { margin: 0; font-size: clamp(2rem, 3vw, 3rem); line-height: 1; letter-spacing: -0.055em; }
 .page-subtitle { margin: 0.75rem 0 0; color: #68756f; font-size: 0.95rem; }
-.header-actions { display: flex; gap: 0.65rem; }
-.edit-button { height: 3rem; border-color: var(--green); border-radius: 12px; background: var(--green); box-shadow: 0 10px 22px rgb(4 120 87 / 18%); font-weight: 700; }
 .profile-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr); gap: 1rem; }
 .hero-card, .details-card, .system-card, .danger-card { border: 1px solid #e0e8e4; border-radius: 20px; background: #fff; box-shadow: 0 8px 26px rgb(29 63 49 / 6%); }
-.hero-card { position: relative; isolation: isolate; display: grid; grid-template-columns: auto 1fr; align-items: center; min-height: 330px; overflow: hidden; padding: clamp(1.5rem, 4vw, 2.5rem); background: linear-gradient(140deg, #073d31 0%, #075e49 100%); color: white; }
-.hero-pattern { position: absolute; z-index: -1; inset: 0; opacity: 0.17; background-image: radial-gradient(rgb(255 255 255 / 50%) 0.7px, transparent 0.7px); background-size: 14px 14px; mask-image: linear-gradient(100deg, transparent, black); }
-.hero-card::after { position: absolute; z-index: -1; width: 330px; height: 330px; right: -180px; bottom: -200px; border: 1px solid rgb(255 255 255 / 12%); border-radius: 50%; box-shadow: 0 0 0 45px rgb(255 255 255 / 3%), 0 0 0 90px rgb(255 255 255 / 2%); content: ''; }
+.hero-card { position: relative; isolation: isolate; display: grid; grid-template-columns: auto 1fr; align-items: center; min-height: 330px; overflow: hidden; padding: clamp(1.5rem, 4vw, 2.5rem); background: #075846; color: white; }
+.hero-pattern { position: absolute; z-index: -1; inset: 0; opacity: 0.1; background-image: radial-gradient(#fff 0.8px, transparent 0.8px); background-size: 14px 14px; }
 .player-avatar-wrap { position: relative; margin-right: clamp(1.4rem, 3vw, 2.3rem); }
 .player-avatar-wrap :deep(.p-avatar) { width: clamp(7rem, 12vw, 9rem); height: clamp(7rem, 12vw, 9rem); border: 5px solid rgb(255 255 255 / 18%); background: #e6efeb; color: #25483b; font-size: 2.2rem; box-shadow: 0 18px 35px rgb(0 0 0 / 20%); }
 .online-dot { position: absolute; right: 0.45rem; bottom: 0.55rem; width: 1rem; height: 1rem; border: 3px solid #075846; border-radius: 50%; background: var(--lime); }
 .hero-copy { min-width: 0; }
-.hero-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.ranking-tag, .profile-tag { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.38rem 0.6rem; border-radius: 99px; background: var(--lime); color: #315d0b; font-size: 0.59rem; font-weight: 850; letter-spacing: 0.07em; }
-.profile-tag { background: rgb(255 255 255 / 10%); color: rgb(255 255 255 / 68%); }
-.hero-copy h2 { overflow: hidden; margin: 1rem 0 0.45rem; font-size: clamp(2rem, 4vw, 3rem); line-height: 1; letter-spacing: -0.055em; text-overflow: ellipsis; }
-.hero-copy > p { display: flex; align-items: center; gap: 0.5rem; margin: 0; color: rgb(255 255 255 / 62%); font-size: 0.78rem; }
+.hero-copy h2 { overflow: hidden; margin: 0 0 0.55rem; font-size: clamp(2rem, 4vw, 3rem); line-height: 1; letter-spacing: -0.055em; text-overflow: ellipsis; }
+.hero-meta { display: flex; align-items: center; gap: 1rem; color: rgb(255 255 255 / 68%); font-size: 0.875rem; }
+.hero-meta span { display: flex; min-width: 0; align-items: center; gap: 0.45rem; }
+.hero-meta strong { color: var(--lime); font-size: 1rem; font-variant-numeric: tabular-nums; }
 .hero-stats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 2.2rem; padding-top: 1.35rem; border-top: 1px solid rgb(255 255 255 / 12%); }
 .hero-stats > div { display: grid; gap: 0.25rem; padding-inline: 1rem; border-right: 1px solid rgb(255 255 255 / 10%); }
 .hero-stats > div:first-child { padding-left: 0; }
@@ -214,7 +211,9 @@ const fullName = computed(() => player.value?.name ?? '')
 .status-value { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem !important; }
 .status-value i { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 0 4px rgb(183 243 74 / 12%); }
 .details-card, .system-card { padding: 1.35rem; }
-.card-heading { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.15rem; }
+.card-heading { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1.15rem; }
+.card-heading-copy { display: flex; min-width: 0; align-items: center; gap: 0.75rem; }
+.edit-profile-button { flex: 0 0 auto; font-size: 0.8125rem; }
 .heading-icon { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; flex: 0 0 auto; border-radius: 10px; background: #d1fae5; color: var(--green); }
 .heading-icon.secondary { background: #f0f4f2; color: #65766f; }
 .card-heading h2, .danger-card h3 { margin: 0; font-size: 0.95rem; letter-spacing: -0.02em; }
@@ -253,26 +252,28 @@ const fullName = computed(() => player.value?.name ?? '')
   .back-link { margin-bottom: 0.65rem; }
   .eyebrow, .page-subtitle { display: none; }
   .page-header h1 { font-size: 1.65rem; }
-  .header-actions { display: flex; }
-  .edit-button { width: 2.75rem; min-width: 2.75rem; padding: 0; border-radius: 50%; }
-  .edit-button :deep(.p-button-label) { display: none; }
   .hero-card { grid-template-columns: auto 1fr; min-height: auto; justify-items: start; padding: 0.9rem; border-radius: 14px; text-align: left; }
   .player-avatar-wrap { margin: 0 0.8rem 0 0; }
   .player-avatar-wrap :deep(.p-avatar) { width: 4.5rem; height: 4.5rem; border-width: 3px; font-size: 1.25rem; box-shadow: none; }
-  .hero-tags, .hero-copy > p { justify-content: center; }
-  .hero-tags, .hero-copy > p { justify-content: flex-start; }
-  .ranking-tag, .profile-tag, .hero-copy > p { font-size: 0.75rem; }
-  .hero-copy h2 { margin: 0.55rem 0 0.3rem; font-size: 1.45rem; white-space: normal; }
+  .hero-copy h2 { margin: 0 0 0.35rem; font-size: 1.45rem; white-space: normal; }
+  .hero-meta { align-items: flex-start; flex-direction: column; gap: 0.25rem; font-size: 0.8125rem; }
+  .hero-meta strong { font-size: 0.875rem; }
   .hero-stats { width: 100%; }
   .hero-stats { margin-top: 0.8rem; padding-top: 0.75rem; }
   .hero-stats > div { padding-inline: 0.45rem; }
   .hero-stats strong { font-size: 1rem; }
   .hero-stats small, .hero-stats span { font-size: 0.75rem; }
   .details-card, .system-card { padding: 0.85rem; border-radius: 14px; box-shadow: none; }
+  .card-heading { align-items: stretch; flex-direction: column; }
+  .edit-profile-button { width: 100%; }
   .detail-row { padding: 0.55rem; }
   .card-heading p, .danger-card p, .detail-row small { font-size: 0.75rem; }
   .detail-row strong { font-size: 0.875rem; }
   .system-card { display: none; }
+  .loading-card { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0.8rem; min-height: 7rem; padding: 0.9rem; }
+  .loading-card > :deep(.p-skeleton) { width: 4.5rem !important; height: 4.5rem !important; }
+  .loading-card > div { min-width: 0; gap: 0.6rem; }
+  .loading-card > div :deep(.p-skeleton) { max-width: 100%; }
   .danger-card { align-items: stretch; flex-direction: column; }
   .danger-action { width: 100%; }
 }

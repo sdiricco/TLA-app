@@ -214,10 +214,10 @@
 
     <div v-if="store.loading" class="tournaments-grid">
       <div v-for="item in skeletonItems" :key="item" class="tournament-card skeleton-card">
-        <Skeleton width="6.5rem" height="1.5rem" borderRadius="999px" />
-        <Skeleton width="75%" height="1.8rem" />
-        <Skeleton width="45%" height="1rem" />
-        <Skeleton width="100%" height="5.5rem" borderRadius="12px" />
+        <Skeleton class="skeleton-title" width="60%" height="1rem" />
+        <Skeleton class="skeleton-status" width="4.5rem" height="0.8rem" />
+        <div class="skeleton-date"><Skeleton width="1rem" height="1rem" /><Skeleton width="11rem" height="0.8rem" /></div>
+        <div class="skeleton-meta"><Skeleton width="7rem" height="0.8rem" /><Skeleton width="5rem" height="0.8rem" /></div>
       </div>
     </div>
 
@@ -348,7 +348,9 @@
   .card-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 0.8rem; border-top: 1px solid #edf1ef; color: #87928d; font-size: 0.65rem; }
   .card-footer span { display: flex; align-items: center; gap: 0.35rem; }
   .card-footer span:last-child { color: var(--green); font-weight: 750; }
-  .skeleton-card { display: flex; min-height: 300px; flex-direction: column; gap: 1.2rem; cursor: default; }
+  .skeleton-card { display: flex; min-height: 300px; flex-direction: column; gap: 1rem; cursor: default; }
+  .skeleton-status { align-self: flex-start; }
+  .skeleton-date, .skeleton-meta { display: flex; align-items: center; gap: 0.65rem; }
   .empty-state { display: flex; min-height: 280px; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed #cbdad4; border-radius: 18px; background: #f9fcfb; text-align: center; }
   .empty-state > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; background: #d1fae5; color: var(--green); font-size: 1.3rem; }
   .empty-state h3 { margin: 1rem 0 0.3rem; }
@@ -412,7 +414,11 @@
     .card-meta > div { gap: 0.35rem; font-size: 0.8125rem; }
     .card-meta span { display: block; }
     .card-footer { display: none; }
-    .skeleton-card { display: flex; min-height: 96px; }
+    .skeleton-card { display: grid; min-height: 6rem; }
+    .skeleton-title { grid-column: 1; grid-row: 1; width: min(11rem, 70%) !important; }
+    .skeleton-status { grid-column: 2; grid-row: 1; justify-self: end; align-self: center; }
+    .skeleton-date { grid-column: 1 / -1; grid-row: 2; gap: 0.35rem; }
+    .skeleton-meta { grid-column: 1 / -1; grid-row: 3; gap: 0.8rem; }
     .load-more-area :deep(.p-button) { width: 100%; }
   }
 </style>

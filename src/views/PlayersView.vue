@@ -209,10 +209,12 @@
 
     <div v-if="store.loading" class="players-grid">
       <div v-for="item in 8" :key="item" class="player-card skeleton-card">
-        <Skeleton shape="circle" size="4.5rem" />
-        <Skeleton width="70%" height="1.4rem" />
-        <Skeleton width="45%" height="0.85rem" />
-        <Skeleton width="100%" height="4.5rem" borderRadius="12px" />
+        <div class="skeleton-topline"><Skeleton width="2rem" height="1rem" /><Skeleton width="2rem" height="2rem" /></div>
+        <div class="skeleton-identity">
+          <Skeleton class="skeleton-avatar" shape="circle" size="4.4rem" />
+          <Skeleton class="skeleton-name" width="65%" height="1.15rem" />
+        </div>
+        <div class="skeleton-details"><Skeleton height="3.2rem" /><Skeleton height="3.2rem" /></div>
       </div>
     </div>
 
@@ -321,7 +323,10 @@
   .player-details small { margin-bottom: 0.17rem; color: #9aa49f; font-size: 0.51rem; font-weight: 800; letter-spacing: 0.08em; }
   .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid #edf1ef; color: #929d98; font-size: 0.62rem; }
   .card-footer span:last-child { display: flex; align-items: center; gap: 0.35rem; color: var(--green); font-weight: 750; }
-  .skeleton-card { display: flex; min-height: 290px; flex-direction: column; gap: 1rem; cursor: default; }
+  .skeleton-card { min-height: 290px; cursor: default; }
+  .skeleton-topline { display: flex; align-items: center; justify-content: space-between; }
+  .skeleton-identity { display: flex; align-items: center; gap: 1rem; padding: 1.35rem 0 1.15rem; }
+  .skeleton-details { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
   .empty-state { display: flex; min-height: 280px; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed #cbdad4; border-radius: 18px; background: #f9fcfb; text-align: center; }
   .empty-state > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; background: #d1fae5; color: var(--green); font-size: 1.3rem; }
   .empty-state h3 { margin: 1rem 0 0.3rem; }
@@ -365,7 +370,13 @@
     .player-identity > div:last-child { grid-column: 2; grid-row: 1; }
     .player-identity h3 { font-size: 1rem; }
     .player-details, .card-footer { display: none; }
-    .skeleton-card { display: flex; min-height: 78px; }
+    .skeleton-card { display: grid; min-height: 4rem; }
+    .skeleton-topline, .skeleton-identity { display: contents; }
+    .skeleton-avatar { grid-column: 1; grid-row: 1; width: 2.75rem !important; height: 2.75rem !important; margin-right: 0.65rem; }
+    .skeleton-name { grid-column: 2; grid-row: 1; width: min(10rem, 72%) !important; }
+    .skeleton-topline > :deep(.p-skeleton:first-child) { grid-column: 3; grid-row: 1; width: 1.6rem !important; margin-left: 0.6rem; }
+    .skeleton-topline > :deep(.p-skeleton:last-child) { grid-column: 4; grid-row: 1; width: 2rem !important; height: 2rem !important; }
+    .skeleton-details { display: none; }
     .load-more-area { width: 100%; }
     .load-more-area :deep(.p-button) { width: 100%; }
   }
