@@ -3,7 +3,6 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
 import AppSidebar from '../components/layout/AppSidebar.vue'
 import AppTopbar from '../components/layout/AppTopbar.vue'
-import AppBottomNav from '../components/layout/AppBottomNav.vue'
 import { useLayoutStore } from '../stores/layout'
 
 const layout = useLayoutStore()
@@ -34,8 +33,6 @@ const layout = useLayoutStore()
       </main>
     </div>
 
-    <AppBottomNav />
-
     <Toast position="bottom-right" />
     <ConfirmDialog />
   </div>
@@ -55,5 +52,5 @@ const layout = useLayoutStore()
 
 <style scoped>
 .app-content { padding: var(--app-page-padding); background: radial-gradient(circle at 100% 0, rgb(16 185 129 / 5%), transparent 30rem), #f5f8f7; }
-@media (max-width: 767px) { .app-content { padding-bottom: calc(5.25rem + env(safe-area-inset-bottom)); } }
+@media (max-width: 767px) { .app-content { padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); } }
 </style>
