@@ -51,6 +51,6 @@ const layout = useLayoutStore()
 </style>
 
 <style scoped>
-.app-content { padding: var(--app-page-padding); background: radial-gradient(circle at 100% 0, rgb(16 185 129 / 5%), transparent 30rem), #f5f8f7; }
+.app-content { padding: var(--app-page-padding); background: radial-gradient(circle at 100% 0, rgb(var(--color-primary-500-rgb) / 5%), transparent 30rem), var(--color-surface-ground); }
 @media (max-width: 767px) { .app-content { padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); } }
 </style>

@@ -409,14 +409,14 @@ onMounted(() => {
 
 <style scoped>
 .tournament-form-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
-.back-link { display: inline-flex; min-height: 2.5rem; align-items: center; gap: 0.45rem; margin: 0 0 0.65rem; padding: 0; border: 0; background: transparent; color: #63716b; font-size: 0.8125rem; font-weight: 700; cursor: pointer; }
+.back-link { display: inline-flex; min-height: 2.5rem; align-items: center; gap: 0.45rem; margin: 0 0 0.65rem; padding: 0; border: 0; background: transparent; color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 700; cursor: pointer; }
 .back-link:hover { color: var(--app-green); }
 
 @media (max-width: 640px) {
   h2 { font-size: 1.65rem; line-height: 1.1; }
   form { gap: 0.9rem; }
   :deep(.p-card-body), :deep(.p-card-content) { padding: 0.75rem; }
-  .tournament-form-actions { margin: 0 -0.75rem -0.75rem; padding: 0.75rem !important; border-top: 1px solid #e5ece9; background: #fff; }
+  .tournament-form-actions { margin: 0 -0.75rem -0.75rem; padding: 0.75rem !important; border-top: 1px solid var(--color-border); background: var(--color-white); }
   .tournament-form-actions :deep(.p-button) { flex: 1; }
 }
 </style>

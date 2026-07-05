@@ -34,9 +34,9 @@ const title = computed(() => {
 </template>
 
 <style scoped>
-.mobile-topbar { border-bottom: 1px solid rgb(255 255 255 / 10%); background: #064e3b; color: white; box-shadow: 0 5px 18px rgb(15 50 38 / 15%); }
-.mobile-topbar :deep(.p-button) { color: rgb(255 255 255 / 82%); }
+.mobile-topbar { border-bottom: 1px solid rgb(var(--color-white-rgb) / 10%); background: var(--color-primary-900); color: var(--color-white); box-shadow: 0 5px 18px rgb(var(--color-shadow-rgb) / 15%); }
+.mobile-topbar :deep(.p-button) { color: rgb(var(--color-white-rgb) / 82%); }
 .menu-button { width: 2.75rem; min-width: 2.75rem; margin-left: -0.6rem; }
-.mobile-ball { width: 1.15rem; height: 1.15rem; border-radius: 50%; background: #b7f34a; }
-.topbar-title { margin-left: auto; color: rgb(255 255 255 / 75%); font-size: 0.75rem; font-weight: 750; letter-spacing: 0.07em; text-transform: uppercase; }
+.mobile-ball { width: 1.15rem; height: 1.15rem; border-radius: 50%; background: var(--color-accent); }
+.topbar-title { margin-left: auto; color: rgb(var(--color-white-rgb) / 75%); font-size: 0.75rem; font-weight: 750; letter-spacing: 0.07em; text-transform: uppercase; }
 </style>

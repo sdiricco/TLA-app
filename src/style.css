@@ -2,16 +2,122 @@
 @import "tailwindcss-primeui";
 
 :root {
-  --app-green: #047857;
-  --app-green-dark: #064e3b;
-  --app-lime: #b7f34a;
-  --app-bg: #f5f8f7;
-  --app-text: #17211d;
-  --app-muted: #68756f;
-  --app-border: #dfe7e3;
+  color-scheme: light;
+  --color-white: #fff;
+  --color-black: #000;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fee2e2;
+  --color-info: #2563eb;
+  --color-info-accent: #38bdf8;
+  --color-info-soft: #e0f2fe;
+  --color-warning: #d97706;
+  --color-white-rgb: 255 255 255;
+  --color-white-translucent: rgb(255 255 255 / 35%);
+  --color-black-rgb: 0 0 0;
+  --color-shadow-rgb: 23 52 41;
+  --color-theme-grass: #16845b;
+  --color-theme-hard: #2563a7;
+  --color-theme-clay: #b54b32;
+  --color-surface-ground: #f5f8f7;
+  --color-surface-card: #fff;
+  --color-surface-soft: #f7faf9;
+  --color-surface-muted: #edf1ef;
+  --color-border: #dfe7e3;
+  --color-border-strong: #cbd5d1;
+  --color-text: #17211d;
+  --color-text-muted: #68756f;
+  --color-text-subtle: #8a9690;
+  --color-on-primary: #fff;
+  --color-primary-50: #ecfdf5;
+  --color-primary-100: #d1fae5;
+  --color-primary-200: #a7f3d0;
+  --color-primary-300: #6ee7b7;
+  --color-primary-400: #34d399;
+  --color-primary-500: #10b981;
+  --color-primary-600: #059669;
+  --color-primary-700: #047857;
+  --color-primary-800: #065f46;
+  --color-primary-900: #064e3b;
+  --color-primary-950: #022c22;
+  --color-primary-rgb: 4 120 87;
+  --color-primary-500-rgb: 16 185 129;
+  --color-accent: #b7f34a;
+  --color-accent-rgb: 183 243 74;
+  --color-accent-soft: #d9ff7a;
+  --color-sidebar-start: #063b30;
+  --color-sidebar-end: #075b46;
+  --color-sidebar-on-accent: #075b46;
+  --color-sidebar-on-accent-rgb: 7 91 70;
+  --app-green: var(--color-primary-700);
+  --app-green-dark: var(--color-primary-900);
+  --app-lime: var(--color-accent);
+  --app-bg: var(--color-surface-ground);
+  --app-text: var(--color-text);
+  --app-muted: var(--color-text-muted);
+  --app-border: var(--color-border);
   --app-radius: 0;
   --app-page-padding: clamp(1.25rem, 2.5vw, 2.5rem);
   --app-card-padding: 1.25rem;
+}
+
+:root[data-court-theme="hard"] {
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  --color-primary-950: #172554;
+  --color-primary-rgb: 29 78 216;
+  --color-primary-500-rgb: 59 130 246;
+  --color-accent: #67e8f9;
+  --color-accent-rgb: 103 232 249;
+  --color-accent-soft: #a5f3fc;
+  --color-sidebar-start: #172554;
+  --color-sidebar-end: #1e40af;
+  --color-sidebar-on-accent: #172554;
+  --color-sidebar-on-accent-rgb: 23 37 84;
+}
+
+:root[data-court-theme="clay"] {
+  --color-primary-50: #fff7ed;
+  --color-primary-100: #ffedd5;
+  --color-primary-200: #fed7aa;
+  --color-primary-300: #fdba74;
+  --color-primary-400: #fb923c;
+  --color-primary-500: #e96d45;
+  --color-primary-600: #c95736;
+  --color-primary-700: #b54b32;
+  --color-primary-800: #923d2d;
+  --color-primary-900: #783426;
+  --color-primary-950: #431407;
+  --color-primary-rgb: 181 75 50;
+  --color-primary-500-rgb: 233 109 69;
+  --color-accent: #f7c948;
+  --color-accent-rgb: 247 201 72;
+  --color-accent-soft: #fde68a;
+  --color-sidebar-start: #59261d;
+  --color-sidebar-end: #923d2d;
+  --color-sidebar-on-accent: #59261d;
+  --color-sidebar-on-accent-rgb: 89 38 29;
+}
+
+:root {
+  --p-primary-50: var(--color-primary-50);
+  --p-primary-100: var(--color-primary-100);
+  --p-primary-200: var(--color-primary-200);
+  --p-primary-300: var(--color-primary-300);
+  --p-primary-400: var(--color-primary-400);
+  --p-primary-500: var(--color-primary-500);
+  --p-primary-600: var(--color-primary-600);
+  --p-primary-700: var(--color-primary-700);
+  --p-primary-800: var(--color-primary-800);
+  --p-primary-900: var(--color-primary-900);
+  --p-primary-950: var(--color-primary-950);
 }
 
 *, *::before, *::after {

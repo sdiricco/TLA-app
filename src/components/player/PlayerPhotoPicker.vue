@@ -22,7 +22,7 @@
     '<cropper-selection initial-coverage="0.8" aspect-ratio="1" movable resizable>' +
     '<cropper-grid role="grid" bordered covered></cropper-grid>' +
     '<cropper-crosshair centered></cropper-crosshair>' +
-    '<cropper-handle action="move" theme-color="rgba(255, 255, 255, 0.35)"></cropper-handle>' +
+    '<cropper-handle action="move" theme-color="var(--color-white-translucent)"></cropper-handle>' +
     '<cropper-handle action="n-resize"></cropper-handle>' +
     '<cropper-handle action="e-resize"></cropper-handle>' +
     '<cropper-handle action="s-resize"></cropper-handle>' +
@@ -157,7 +157,7 @@
       width: 512,
       height: 512,
       beforeDraw(context, outputCanvas) {
-        context.fillStyle = '#ffffff';
+        context.fillStyle = 'var(--color-white)';
         context.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
       },
     });
@@ -274,25 +274,25 @@
 </template>
 
 <style scoped>
-.photo-picker { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1rem; padding: 1rem; border: 1px dashed #cbdad4; border-radius: 14px; background: #f9fcfb; }
-.photo-preview { position: relative; display: grid; place-items: center; width: 6.5rem; height: 6.5rem; overflow: hidden; border: 3px solid white; border-radius: 50%; background: #e7efec; box-shadow: 0 5px 16px rgb(31 66 52 / 12%); }
+.photo-picker { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1rem; padding: 1rem; border: 1px dashed var(--color-border); border-radius: 14px; background: var(--color-surface-soft); }
+.photo-preview { position: relative; display: grid; place-items: center; width: 6.5rem; height: 6.5rem; overflow: hidden; border: 3px solid white; border-radius: 50%; background: var(--color-border); box-shadow: 0 5px 16px rgb(var(--color-shadow-rgb) / 12%); }
 .preview-image { width: 100%; height: 100%; object-fit: cover; }
-.empty-preview { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; color: #8c9a94; text-align: center; }
+.empty-preview { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; color: var(--color-text-subtle); text-align: center; }
 .empty-preview i { font-size: 1.25rem; }
 .empty-preview span { font-size: 0.58rem; }
 .photo-copy { min-width: 0; }
-.photo-copy > p { max-width: 540px; margin: 0; color: #63716b; font-size: 0.72rem; line-height: 1.55; }
-.photo-hint { display: block; margin-top: 0.3rem; color: #9aa49f; font-size: 0.55rem; font-weight: 700; letter-spacing: 0.05em; }
+.photo-copy > p { max-width: 540px; margin: 0; color: var(--color-text-muted); font-size: 0.72rem; line-height: 1.55; }
+.photo-hint { display: block; margin-top: 0.3rem; color: var(--color-text-subtle); font-size: 0.55rem; font-weight: 700; letter-spacing: 0.05em; }
 .photo-actions { display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 0.8rem; }
 .photo-actions :deep(.p-button) { height: 2.45rem; border-radius: 9px; font-size: 0.68rem; }
-.upload-button { border-color: #047857; background: #047857; }
-.crop-editor { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; padding: 1rem; border: 1px solid #dce5e1; border-radius: 14px; background: white; box-shadow: 0 8px 24px rgb(29 63 49 / 7%); }
+.upload-button { border-color: var(--color-primary-700); background: var(--color-primary-700); }
+.crop-editor { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface-card); box-shadow: 0 8px 24px rgb(var(--color-shadow-rgb) / 7%); }
 .crop-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .crop-header > div > div { font-size: 0.82rem; font-weight: 750; }
-.crop-header p { margin: 0.25rem 0 0; color: #85918c; font-size: 0.62rem; }
-.crop-stage { overflow: hidden; border: 1px solid #dce5e1; border-radius: 14px; background: #f1f5f3; }
+.crop-header p { margin: 0.25rem 0 0; color: var(--color-text-muted); font-size: 0.62rem; }
+.crop-stage { overflow: hidden; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface-muted); }
 .cropper-host { width: 100%; height: 320px; }
-.crop-meta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: #8a9690; font-size: 0.58rem; }
+.crop-meta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: var(--color-text-subtle); font-size: 0.58rem; }
 
 @media (max-width: 620px) {
   .empty-preview span, .photo-hint, .crop-header p, .crop-meta { font-size: 0.75rem; }
