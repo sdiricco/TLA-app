@@ -87,6 +87,8 @@ export interface TournamentListQuery {
   name?: string
   category?: TournamentCategory
   status?: TournamentStatus
+  dateFrom?: string
+  dateTo?: string
   page?: number
   perPage?: number
 }
@@ -120,6 +122,29 @@ export interface Match {
   status: MatchStatus
   created_at?: string
   updated_at?: string
+}
+
+export interface PlayerRecentMatch {
+  id: string
+  tournament_id: string
+  tournament_name: string
+  opponent_id: string
+  opponent_name: string
+  opponent_photo_url: string | null
+  result: string
+  outcome: 'win' | 'loss'
+  played_at: string
+}
+
+export interface PlayerMatchHistory {
+  stats: {
+    played: number
+    wins: number
+    losses: number
+    win_rate: number
+  }
+  recent_form: Array<'win' | 'loss'>
+  recent_matches: PlayerRecentMatch[]
 }
 
 export interface MatchRound {
@@ -181,6 +206,7 @@ export interface AuthService {
 export interface PlayersService {
   getAll(query?: PlayerListQuery): Promise<PaginatedResponse<Player>>
   getById(id: string): Promise<Player>
+  getMatchHistory(id: string): Promise<PlayerMatchHistory>
   create(data: PlayerCreate): Promise<Player>
   update(id: string, data: PlayerUpdate): Promise<Player>
   remove(id: string): Promise<null>

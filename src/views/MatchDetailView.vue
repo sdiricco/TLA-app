@@ -292,11 +292,11 @@ function getSlotName(playerId: string | null): string {
 .page-subtitle { margin: 0.75rem 0 0; color: var(--color-text-muted); font-size: 0.95rem; }
 .header-status { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.7rem; border-radius: 99px; background: var(--color-surface-muted); color: var(--color-text-muted); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; }
 .header-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--color-text-subtle); }
-.header-status.completed { background: var(--color-primary-100); color: var(--color-primary-700); }
+.header-status.completed { background: var(--color-primary-soft-surface); color: var(--color-primary-700); }
 .header-status.completed i { background: var(--color-primary-500); }
 .match-loading { display: flex; min-height: 360px; flex-direction: column; align-items: center; justify-content: center; gap: 0.8rem; color: var(--color-text-muted); font-size: 0.72rem; }
 .match-loading i { color: var(--color-primary-500); font-size: 2rem; }
-.match-arena { position: relative; isolation: isolate; overflow: hidden; padding: clamp(1.2rem, 3vw, 2rem); border-radius: 22px; background: linear-gradient(140deg, var(--color-primary-900), var(--color-primary-800)); color: var(--color-white); box-shadow: 0 18px 38px rgb(var(--color-shadow-rgb) / 16%); }
+.match-arena { position: relative; isolation: isolate; overflow: hidden; padding: clamp(1.2rem, 3vw, 2rem); border-radius: 0; background: linear-gradient(140deg, var(--color-primary-900), var(--color-primary-800)); color: var(--color-white); box-shadow: 0 18px 38px rgb(var(--color-shadow-rgb) / 16%); }
 .arena-pattern { position: absolute; z-index: -1; inset: 0; opacity: 0.16; background-image: radial-gradient(rgb(var(--color-white-rgb) / 48%) 0.7px, transparent 0.7px); background-size: 14px 14px; mask-image: linear-gradient(90deg, transparent, var(--color-black), transparent); }
 .match-arena::after { position: absolute; z-index: -1; width: 360px; height: 360px; right: -210px; bottom: -250px; border: 1px solid rgb(var(--color-white-rgb) / 12%); border-radius: 50%; box-shadow: 0 0 0 50px rgb(var(--color-white-rgb) / 3%), 0 0 0 100px rgb(var(--color-white-rgb) / 2%); content: ''; }
 .arena-topline { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--color-white-rgb) / 11%); color: rgb(var(--color-white-rgb) / 48%); font-size: 0.61rem; font-weight: 700; }
@@ -310,7 +310,7 @@ function getSlotName(playerId: string | null): string {
 .arena-player h2 { overflow: hidden; max-width: 100%; margin: 1rem 0 0.35rem; font-size: clamp(1.25rem, 2.5vw, 1.9rem); letter-spacing: -0.04em; text-overflow: ellipsis; white-space: nowrap; }
 .arena-player > p { display: flex; align-items: center; gap: 0.35rem; margin: 0; color: rgb(var(--color-white-rgb) / 50%); font-size: 0.65rem; }
 .player-stats { display: grid; width: 100%; grid-template-columns: repeat(3, 1fr); gap: 0.35rem; margin-top: 1.25rem; }
-.player-stats > div { display: grid; gap: 0.15rem; padding: 0.65rem 0.3rem; border-radius: 9px; background: rgb(var(--color-white-rgb) / 7%); }
+.player-stats > div { display: grid; gap: 0.15rem; padding: 0.65rem 0.3rem; border-radius: 0; background: rgb(var(--color-white-rgb) / 7%); }
 .player-stats small { color: rgb(var(--color-white-rgb) / 35%); font-size: 0.43rem; font-weight: 850; letter-spacing: 0.09em; }
 .player-stats strong { overflow: hidden; color: rgb(var(--color-white-rgb) / 78%); font-size: 0.62rem; text-overflow: ellipsis; white-space: nowrap; }
 .versus-center { display: flex; flex-direction: column; align-items: center; gap: 0.7rem; }
@@ -319,31 +319,31 @@ function getSlotName(playerId: string | null): string {
 .arena-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; padding-top: 1.15rem; border-top: 1px solid rgb(var(--color-white-rgb) / 11%); }
 .arena-summary > div { display: flex; align-items: center; gap: 0.65rem; min-width: 0; padding-right: 0.7rem; border-right: 1px solid rgb(var(--color-white-rgb) / 9%); }
 .arena-summary > div:last-child { border-right: 0; }
-.summary-icon { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; flex: 0 0 auto; border-radius: 9px; background: rgb(var(--color-white-rgb) / 9%); color: var(--color-accent); font-size: 0.7rem; }
+.summary-icon { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; flex: 0 0 auto; border-radius: 0; background: rgb(var(--color-white-rgb) / 9%); color: var(--color-accent); font-size: 0.7rem; }
 .arena-summary p { display: grid; min-width: 0; gap: 0.12rem; margin: 0; }
 .arena-summary small { color: rgb(var(--color-white-rgb) / 35%); font-size: 0.45rem; font-weight: 850; letter-spacing: 0.1em; }
 .arena-summary strong { overflow: hidden; color: rgb(var(--color-white-rgb) / 80%); font-size: 0.67rem; text-overflow: ellipsis; white-space: nowrap; }
 .management-section { display: flex; flex-direction: column; gap: 1rem; }
 .management-heading { display: flex; align-items: center; gap: 0.7rem; }
-.management-heading > span { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 10px; background: var(--color-primary-100); color: var(--green); }
+.management-heading > span { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 0; background: var(--color-primary-soft-surface); color: var(--green); }
 .management-heading p { margin: 0; color: var(--green); font-size: 0.5rem; font-weight: 850; letter-spacing: 0.12em; }
 .management-heading h2 { margin: 0.15rem 0 0; font-size: 1rem; letter-spacing: -0.025em; }
 .management-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.management-card { display: flex; flex-direction: column; gap: 1rem; padding: 1.25rem; border: 1px solid var(--color-border); border-radius: 18px; background: var(--color-surface-card); box-shadow: 0 8px 26px rgb(var(--color-shadow-rgb) / 6%); }
+.management-card { display: flex; flex-direction: column; gap: 1rem; padding: 1.25rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); box-shadow: 0 8px 26px rgb(var(--color-shadow-rgb) / 6%); }
 .management-card > header { display: flex; align-items: center; gap: 0.7rem; padding-bottom: 0.9rem; border-bottom: 1px solid var(--color-surface-muted); }
-.management-card > header > span { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 9px; background: var(--color-surface-muted); color: var(--green); }
+.management-card > header > span { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 0; background: var(--color-surface-muted); color: var(--green); }
 .management-card h3 { margin: 0; font-size: 0.88rem; }
 .management-card header p { margin: 0.18rem 0 0; color: var(--color-text-subtle); font-size: 0.59rem; }
 .form-field { display: flex; flex-direction: column; gap: 0.4rem; }
 .form-field label { color: var(--color-text-muted); font-size: 0.66rem; font-weight: 750; }
-.form-field :deep(.p-inputtext), .form-field :deep(.p-select) { height: 3rem; border-color: var(--color-border); border-radius: 11px; background: var(--color-surface-soft); font-size: 0.78rem; }
+.form-field :deep(.p-inputtext), .form-field :deep(.p-select) { height: 3rem; border-color: var(--color-border); border-radius: 0; background: var(--color-surface-soft); font-size: 0.78rem; }
 .form-field :deep(.p-inputtext:focus), .form-field :deep(.p-select.p-focus) { border-color: var(--color-primary-500); box-shadow: 0 0 0 3px rgb(var(--color-primary-500-rgb) / 10%); }
 .input-wrap { position: relative; }
 .input-wrap > i { position: absolute; z-index: 2; top: 50%; left: 0.9rem; transform: translateY(-50%); color: var(--color-text-subtle); font-size: 0.72rem; }
 .input-wrap :deep(.p-inputtext) { padding-left: 2.4rem; }
-.management-card footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: auto -1.25rem -1.25rem; padding: 0.85rem 1.25rem; border-top: 1px solid var(--color-surface-muted); border-radius: 0 0 18px 18px; background: var(--color-surface-soft); }
+.management-card footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: auto -1.25rem -1.25rem; padding: 0.85rem 1.25rem; border-top: 1px solid var(--color-surface-muted); border-radius: 0; background: var(--color-surface-soft); }
 .management-card footer > span { color: var(--color-text-subtle); font-size: 0.55rem; }
-.management-card footer :deep(.p-button) { height: 2.7rem; border-color: var(--green); border-radius: 10px; background: var(--green); font-size: 0.66rem; font-weight: 750; }
+.management-card footer :deep(.p-button) { height: 2.7rem; border-color: var(--green); border-radius: 0; background: var(--green); font-size: 0.66rem; font-weight: 750; }
 
 @media (max-width: 900px) { .management-grid { grid-template-columns: 1fr; } }
 @media (max-width: 680px) {
@@ -354,7 +354,7 @@ function getSlotName(playerId: string | null): string {
   .page-header h1 { font-size: 1.65rem; }
   .header-status { padding: 0.4rem 0.55rem; }
   .header-status, .arena-topline, .arena-topline strong, .winner-badge, .arena-player > p { font-size: 0.75rem; }
-  .match-arena { padding: 0.85rem; border-radius: 14px; box-shadow: 0 8px 24px rgb(var(--color-shadow-rgb) / 12%); }
+  .match-arena { padding: 0.85rem; border-radius: 0; box-shadow: 0 8px 24px rgb(var(--color-shadow-rgb) / 12%); }
   .arena-topline { padding-bottom: 0.65rem; }
   .players-versus { grid-template-columns: 1fr; gap: 0.7rem; padding: 1rem 0 0.8rem; }
   .versus-center { flex-direction: row; }
@@ -370,7 +370,7 @@ function getSlotName(playerId: string | null): string {
   .arena-summary > div { display: grid; justify-items: center; gap: 0.35rem; padding: 0 0.25rem; border-right: 1px solid rgb(var(--color-white-rgb) / 8%); text-align: center; }
   .summary-icon { width: 1.8rem; height: 1.8rem; }
   .management-section { gap: 0.7rem; }
-  .management-card { padding: 0.85rem; border-radius: 14px; box-shadow: none; }
+  .management-card { padding: 0.85rem; border-radius: 0; box-shadow: none; }
   .management-heading p, .management-card header p, .form-field label, .management-card footer > span { font-size: 0.75rem; }
   .management-card :deep(.p-inputtext), .management-card :deep(.p-select), .management-card footer :deep(.p-button) { font-size: 0.875rem; }
   .management-card footer { align-items: stretch; flex-direction: column; }

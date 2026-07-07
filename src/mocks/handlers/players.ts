@@ -1,9 +1,16 @@
 import { http, HttpResponse } from 'msw'
 import { mockPlayers } from '../data/players'
-import type { PaginatedResponse, Player, PlayerSortField, SortOrder } from '../../types'
+import type { PaginatedResponse, Player, PlayerMatchHistory, PlayerSortField, SortOrder } from '../../types'
 
 const players: Player[] = [...mockPlayers]
 const GUEST_TOKEN = 'tla_guest_token'
+const completedMatches = [
+  { id: 'm-1', tournamentId: 't-1', tournamentName: 'Torneo Primaverile 2025', player1Id: 'p-1', player2Id: 'p-2', winnerId: 'p-1', result: '6-4 6-3', playedAt: '2025-05-18T16:00:00.000Z' },
+  { id: 'm-2', tournamentId: 't-2', tournamentName: 'Open Estivo 2025', player1Id: 'p-3', player2Id: 'p-1', winnerId: 'p-3', result: '7-5 4-6 10-7', playedAt: '2025-07-12T18:00:00.000Z' },
+  { id: 'm-3', tournamentId: 't-2', tournamentName: 'Open Estivo 2025', player1Id: 'p-1', player2Id: 'p-5', winnerId: 'p-1', result: '6-2 6-4', playedAt: '2025-07-10T17:00:00.000Z' },
+  { id: 'm-4', tournamentId: 't-1', tournamentName: 'Torneo Primaverile 2025', player1Id: 'p-4', player2Id: 'p-2', winnerId: 'p-2', result: '3-6 6-3 8-10', playedAt: '2025-05-16T15:30:00.000Z' },
+  { id: 'm-5', tournamentId: 't-1', tournamentName: 'Torneo Primaverile 2025', player1Id: 'p-3', player2Id: 'p-5', winnerId: 'p-5', result: '4-6 5-7', playedAt: '2025-05-14T14:00:00.000Z' },
+]
 
 function matchesFilter(value: string | null | undefined, filter: string | null): boolean {
   if (!filter) return true
@@ -75,6 +82,37 @@ export const playerHandlers = [
     if (!playerId) return HttpResponse.json(null)
     const player = players.find((p) => p.id === playerId)
     return player ? HttpResponse.json(player) : HttpResponse.json(null)
+  }),
+  http.get('/api/players/:id/matches', ({ params }) => {
+    const playerId = String(params['id'])
+    if (!players.some((player) => player.id === playerId)) {
+      return HttpResponse.json({ message: 'Giocatore non trovato' }, { status: 404 })
+    }
+    const matches = completedMatches
+      .filter((match) => match.player1Id === playerId || match.player2Id === playerId)
+      .sort((left, right) => right.playedAt.localeCompare(left.playedAt))
+      .slice(0, 5)
+    const wins = matches.filter((match) => match.winnerId === playerId).length
+    const response: PlayerMatchHistory = {
+      stats: { played: matches.length, wins, losses: matches.length - wins, win_rate: matches.length ? Math.round((wins / matches.length) * 100) : 0 },
+      recent_form: matches.map((match) => match.winnerId === playerId ? 'win' : 'loss'),
+      recent_matches: matches.map((match) => {
+        const opponentId = match.player1Id === playerId ? match.player2Id : match.player1Id
+        const opponent = players.find((player) => player.id === opponentId)!
+        return {
+          id: match.id,
+          tournament_id: match.tournamentId,
+          tournament_name: match.tournamentName,
+          opponent_id: opponent.id,
+          opponent_name: opponent.name,
+          opponent_photo_url: opponent.photo_url,
+          result: match.result,
+          outcome: match.winnerId === playerId ? 'win' : 'loss',
+          played_at: match.playedAt,
+        }
+      }),
+    }
+    return HttpResponse.json(response)
   }),
   http.get('/api/players/:id', ({ params }) => {
     const player = players.find((p) => p.id === params['id'])

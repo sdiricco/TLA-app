@@ -7,6 +7,8 @@
   --color-black: #000;
   --color-danger: #dc2626;
   --color-danger-soft: #fee2e2;
+  --color-success: #15803d;
+  --color-success-soft: #dcfce7;
   --color-info: #2563eb;
   --color-info-accent: #38bdf8;
   --color-info-soft: #e0f2fe;
@@ -18,6 +20,15 @@
   --color-theme-grass: #16845b;
   --color-theme-hard: #2563a7;
   --color-theme-clay: #b54b32;
+  --color-showcase-grass: #065f46;
+  --color-showcase-grass-deep: #064e3b;
+  --color-showcase-grass-accent: #b7f34a;
+  --color-showcase-hard: #1e40af;
+  --color-showcase-hard-deep: #1e3a8a;
+  --color-showcase-hard-accent: #67e8f9;
+  --color-showcase-clay: #923d2d;
+  --color-showcase-clay-deep: #783426;
+  --color-showcase-clay-accent: #f7c948;
   --color-surface-ground: #f5f8f7;
   --color-surface-card: #fff;
   --color-surface-soft: #f7faf9;
@@ -41,6 +52,7 @@
   --color-primary-950: #022c22;
   --color-primary-rgb: 4 120 87;
   --color-primary-500-rgb: 16 185 129;
+  --color-primary-soft-surface: var(--color-primary-100);
   --color-accent: #b7f34a;
   --color-accent-rgb: 183 243 74;
   --color-accent-soft: #d9ff7a;
@@ -106,6 +118,47 @@
   --color-sidebar-on-accent-rgb: 89 38 29;
 }
 
+:root.app-dark {
+  color-scheme: dark;
+  --color-danger: #f87171;
+  --color-danger-soft: #3b1f22;
+  --color-success: #4ade80;
+  --color-success-soft: #183825;
+  --color-info: #60a5fa;
+  --color-info-accent: #7dd3fc;
+  --color-info-soft: #172c3d;
+  --color-warning: #fbbf24;
+  --color-shadow-rgb: 0 0 0;
+  --color-surface-ground: #171e1b;
+  --color-surface-card: #202824;
+  --color-surface-soft: #252f2a;
+  --color-surface-muted: #2b3731;
+  --color-border: #3d4b44;
+  --color-border-strong: #506159;
+  --color-text: #f3f7f5;
+  --color-text-muted: #bac7c1;
+  --color-text-subtle: #899990;
+  --color-primary-soft-surface: color-mix(in srgb, var(--color-primary-500) 18%, var(--color-surface-card));
+}
+
+:root.app-dark[data-court-theme="hard"] {
+  --color-surface-ground: #161b24;
+  --color-surface-card: #1d2531;
+  --color-surface-soft: #222c39;
+  --color-surface-muted: #293543;
+  --color-border: #3a495b;
+  --color-border-strong: #506176;
+}
+
+:root.app-dark[data-court-theme="clay"] {
+  --color-surface-ground: #211817;
+  --color-surface-card: #2a201e;
+  --color-surface-soft: #312522;
+  --color-surface-muted: #3a2c28;
+  --color-border: #51403a;
+  --color-border-strong: #68534b;
+}
+
 :root {
   --p-primary-50: var(--color-primary-50);
   --p-primary-100: var(--color-primary-100);
@@ -119,6 +172,15 @@
   --p-primary-900: var(--color-primary-900);
   --p-primary-950: var(--color-primary-950);
 }
+
+.app-dark .bg-surface-0 { background-color: var(--color-surface-card) !important; }
+.app-dark .bg-surface-50 { background-color: var(--color-surface-soft) !important; }
+.app-dark .bg-surface-100 { background-color: var(--color-surface-muted) !important; }
+.app-dark .bg-primary-50,
+.app-dark .bg-primary-100 { background-color: var(--color-primary-soft-surface) !important; }
+.app-dark .text-primary-600 { color: var(--color-primary-300) !important; }
+.app-dark .border-surface-100,
+.app-dark .border-surface-200 { border-color: var(--color-border) !important; }
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -148,11 +210,4 @@ button, input, select, textarea { font: inherit; }
   .p-inputtext, .p-select, .p-datepicker-input, .p-inputnumber-input { min-height: 2.75rem; font-size: 0.875rem; }
   .p-dialog { width: calc(100vw - 1.5rem) !important; max-height: calc(100svh - 1.5rem); }
   .p-toast { right: 0.75rem !important; bottom: calc(0.75rem + env(safe-area-inset-bottom)) !important; left: 0.75rem !important; width: auto !important; }
-}
-
-/* Sharp visual language: application and teleported PrimeVue overlays. */
-html body *:not(#app),
-html body *:not(#app)::before,
-html body *:not(#app)::after {
-  border-radius: 0 !important;
 }

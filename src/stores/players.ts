@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { playersService } from '../services/playersApi'
-import type { PaginatedResponse, Player, PlayerCreate, PlayerListQuery, PlayerUpdate } from '../types'
+import type { PaginatedResponse, Player, PlayerCreate, PlayerListQuery, PlayerMatchHistory, PlayerUpdate } from '../types'
 
 export const usePlayersStore = defineStore('players', () => {
   const players = ref<Player[]>([])
@@ -40,6 +40,10 @@ export const usePlayersStore = defineStore('players', () => {
     return playersService.getById(id)
   }
 
+  async function getMatchHistory(id: string): Promise<PlayerMatchHistory> {
+    return playersService.getMatchHistory(id)
+  }
+
   async function create(data: PlayerCreate): Promise<Player> {
     const newPlayer = await playersService.create(data)
     players.value.push(newPlayer)
@@ -70,6 +74,7 @@ export const usePlayersStore = defineStore('players', () => {
     error,
     fetchAll,
     getById,
+    getMatchHistory,
     create,
     update,
     remove,

@@ -324,7 +324,7 @@ onMounted(() => {
                     <div class="flex items-start justify-between gap-3">
                       <div class="flex items-center gap-3">
                         <div
-                          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+                          class="flex h-11 w-11 shrink-0 items-center justify-center"
                           :class="item.selected ? 'bg-primary-100 text-primary-600' : 'bg-surface-100 text-muted-color'"
                         >
                           <i :class="[item.icon, 'text-lg']" />
@@ -383,7 +383,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <div v-if="requiresGroupConfig" class="rounded-lg border border-surface-200 bg-surface-50 p-3">
+          <div v-if="requiresGroupConfig" class="border border-surface-200 bg-surface-50 p-3">
             <div class="mb-3 text-sm font-semibold text-color">Configurazione gironi</div>
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div class="flex flex-col gap-[0.375rem]">
@@ -416,7 +416,7 @@ onMounted(() => {
   h2 { font-size: 1.65rem; line-height: 1.1; }
   form { gap: 0.9rem; }
   :deep(.p-card-body), :deep(.p-card-content) { padding: 0.75rem; }
-  .tournament-form-actions { margin: 0 -0.75rem -0.75rem; padding: 0.75rem !important; border-top: 1px solid var(--color-border); background: var(--color-white); }
+  .tournament-form-actions { margin: 0 -0.75rem -0.75rem; padding: 0.75rem !important; border-top: 1px solid var(--color-border); background: var(--color-surface-card); }
   .tournament-form-actions :deep(.p-button) { flex: 1; }
 }
 </style>

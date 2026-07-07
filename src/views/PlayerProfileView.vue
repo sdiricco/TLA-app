@@ -8,7 +8,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '../stores/auth'
 import { usePlayersStore } from '../stores/players'
-import type { Player } from '../types'
+import type { Player, PlayerMatchHistory } from '../types'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,6 +18,11 @@ const confirm = useConfirm()
 const toast = useToast()
 
 const player = ref<Player | null>(null)
+const matchHistory = ref<PlayerMatchHistory>({
+  stats: { played: 0, wins: 0, losses: 0, win_rate: 0 },
+  recent_form: [],
+  recent_matches: [],
+})
 const loading = ref(true)
 
 function formatDate(value: string | null | undefined): string {
@@ -47,10 +52,20 @@ function getInitials(name: string): string {
     .join('')
 }
 
+function openMatch(tournamentId: string, matchId: string): void {
+  void router.push({ name: 'match-detail', params: { id: tournamentId, matchId } })
+}
+
 async function loadPlayer(): Promise<void> {
   loading.value = true
   try {
-    player.value = await store.getById(route.params['id'] as string)
+    const playerId = route.params['id'] as string
+    const [loadedPlayer, loadedHistory] = await Promise.all([
+      store.getById(playerId),
+      store.getMatchHistory(playerId),
+    ])
+    player.value = loadedPlayer
+    matchHistory.value = loadedHistory
   } catch {
     toast.add({ severity: 'error', summary: 'Errore', detail: 'Giocatore non trovato', life: 3000 })
     await router.push({ name: 'players' })
@@ -112,6 +127,7 @@ const fullName = computed(() => player.value?.name ?? '')
     <div v-if="loading" class="profile-grid">
       <div class="hero-card loading-card"><Skeleton shape="circle" size="8rem" /><div><Skeleton width="7rem" height="1.5rem" /><Skeleton width="15rem" height="2.5rem" /><Skeleton width="10rem" height="1rem" /></div></div>
       <div class="details-card loading-details"><Skeleton width="8rem" height="1.5rem" /><Skeleton v-for="item in 4" :key="item" width="100%" height="3.5rem" borderRadius="12px" /></div>
+      <div class="activity-card loading-activity"><Skeleton width="11rem" height="1.5rem" /><Skeleton v-for="item in 3" :key="item" width="100%" height="3.5rem" /></div>
     </div>
 
     <div v-else-if="!player" class="empty-state">
@@ -162,6 +178,40 @@ const fullName = computed(() => player.value?.name ?? '')
         </div>
       </section>
 
+      <section class="activity-card">
+        <header class="card-heading activity-heading">
+          <div class="card-heading-copy"><span class="heading-icon"><i class="pi pi-chart-line" /></span><div><h2>Risultati e statistiche</h2><p>Andamento nelle partite completate</p></div></div>
+          <div v-if="matchHistory.recent_form.length" class="recent-form" aria-label="Forma recente">
+            <span v-for="(outcome, index) in matchHistory.recent_form" :key="index" :class="outcome">{{ outcome === 'win' ? 'V' : 'S' }}</span>
+          </div>
+        </header>
+
+        <div class="stats-grid">
+          <div><small>GIOCATE</small><strong>{{ matchHistory.stats.played }}</strong></div>
+          <div><small>VITTORIE</small><strong>{{ matchHistory.stats.wins }}</strong></div>
+          <div><small>SCONFITTE</small><strong>{{ matchHistory.stats.losses }}</strong></div>
+          <div><small>VITTORIE %</small><strong>{{ matchHistory.stats.win_rate }}%</strong></div>
+        </div>
+
+        <div v-if="matchHistory.recent_matches.length" class="recent-matches">
+          <button
+            v-for="match in matchHistory.recent_matches"
+            :key="match.id"
+            class="recent-match"
+            type="button"
+            @click="openMatch(match.tournament_id, match.id)"
+          >
+            <span class="outcome-mark" :class="match.outcome">{{ match.outcome === 'win' ? 'V' : 'S' }}</span>
+            <Avatar :label="getInitials(match.opponent_name)" :image="match.opponent_photo_url ?? undefined" shape="circle" />
+            <span class="match-copy"><small>{{ match.tournament_name }}</small><strong>vs {{ match.opponent_name }}</strong></span>
+            <span class="match-result"><strong>{{ match.result }}</strong><small>{{ formatDate(match.played_at) }}</small></span>
+            <i class="pi pi-chevron-right" />
+          </button>
+        </div>
+
+        <div v-else class="no-matches"><i class="pi pi-chart-line" /><span><strong>Nessuna partita completata</strong><small>Le statistiche appariranno dopo il primo risultato.</small></span></div>
+      </section>
+
       <section class="system-card">
         <header class="card-heading"><span class="heading-icon secondary"><i class="pi pi-database" /></span><div><h2>Dati di sistema</h2><p>Collegamenti tecnici del profilo</p></div></header>
         <div class="system-grid">
@@ -188,7 +238,7 @@ const fullName = computed(() => player.value?.name ?? '')
 .page-header h1 { margin: 0; font-size: clamp(2rem, 3vw, 3rem); line-height: 1; letter-spacing: -0.055em; }
 .page-subtitle { margin: 0.75rem 0 0; color: var(--color-text-muted); font-size: 0.95rem; }
 .profile-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr); gap: 1rem; }
-.hero-card, .details-card, .system-card, .danger-card { border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-white); box-shadow: 0 8px 26px rgb(var(--color-shadow-rgb) / 6%); }
+.hero-card, .details-card, .activity-card, .system-card, .danger-card { border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); box-shadow: 0 8px 26px rgb(var(--color-shadow-rgb) / 6%); }
 .hero-card { position: relative; display: grid; grid-template-columns: auto 1fr; align-items: center; min-height: 330px; overflow: hidden; padding: clamp(1.5rem, 4vw, 2.5rem); background: var(--color-primary-800); color: var(--color-white); }
 .player-avatar-wrap { position: relative; margin-right: clamp(1.4rem, 3vw, 2.3rem); }
 .player-avatar-wrap :deep(.p-avatar) { width: clamp(7rem, 12vw, 9rem); height: clamp(7rem, 12vw, 9rem); border: 5px solid rgb(var(--color-white-rgb) / 18%); background: var(--color-surface-muted); color: var(--color-text-muted); font-size: 2.2rem; box-shadow: 0 18px 35px rgb(var(--color-black-rgb) / 20%); }
@@ -210,35 +260,61 @@ const fullName = computed(() => player.value?.name ?? '')
 .card-heading { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1.15rem; }
 .card-heading-copy { display: flex; min-width: 0; align-items: center; gap: 0.75rem; }
 .edit-profile-button { flex: 0 0 auto; font-size: 0.8125rem; }
-.heading-icon { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; flex: 0 0 auto; border-radius: 10px; background: var(--color-primary-100); color: var(--green); }
+.heading-icon { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; flex: 0 0 auto; border-radius: 0; background: var(--color-primary-soft-surface); color: var(--green); }
 .heading-icon.secondary { background: var(--color-surface-muted); color: var(--color-text-muted); }
 .card-heading h2, .danger-card h3 { margin: 0; font-size: 0.95rem; letter-spacing: -0.02em; }
 .card-heading p, .danger-card p { margin: 0.2rem 0 0; color: var(--color-text-subtle); font-size: 0.64rem; }
 .details-list { display: flex; flex-direction: column; gap: 0.55rem; }
-.detail-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.72rem; border-radius: 12px; background: var(--color-surface-soft); }
-.detail-icon { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border-radius: 8px; background: var(--color-surface-card); color: var(--color-primary-300); font-size: 0.72rem; box-shadow: 0 2px 7px rgb(var(--color-shadow-rgb) / 7%); }
+.detail-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.72rem; border-radius: 0; background: var(--color-surface-soft); }
+.detail-icon { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border-radius: 0; background: var(--color-surface-card); color: var(--color-primary-300); font-size: 0.72rem; box-shadow: 0 2px 7px rgb(var(--color-shadow-rgb) / 7%); }
 .detail-row > div { display: grid; min-width: 0; gap: 0.16rem; }
 .detail-row small, .system-grid small { color: var(--color-text-subtle); font-size: 0.51rem; font-weight: 800; letter-spacing: 0.09em; }
 .detail-row strong { overflow: hidden; color: var(--color-text-muted); font-size: 0.72rem; text-overflow: ellipsis; white-space: nowrap; }
+.activity-card { grid-column: 1 / -1; padding: 1.35rem; }
+.activity-heading { align-items: center; }
+.recent-form { display: flex; gap: 0.35rem; }
+.recent-form span, .outcome-mark { display: grid; place-items: center; width: 1.65rem; height: 1.65rem; flex: 0 0 auto; background: var(--color-surface-muted); color: var(--color-text-muted); font-size: 0.65rem; font-weight: 850; }
+.recent-form .win, .outcome-mark.win { background: var(--color-success-soft); color: var(--color-success); }
+.recent-form .loss, .outcome-mark.loss { background: var(--color-danger-soft); color: var(--color-danger); }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.65rem; margin-bottom: 1rem; }
+.stats-grid > div { display: grid; gap: 0.25rem; padding: 0.8rem; border: 1px solid var(--color-border); background: var(--color-surface-soft); }
+.stats-grid small { color: var(--color-text-subtle); font-size: 0.55rem; font-weight: 850; letter-spacing: 0.09em; }
+.stats-grid strong { color: var(--color-text); font-size: 1.35rem; }
+.recent-matches { display: grid; border-top: 1px solid var(--color-border); }
+.recent-match { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto auto; align-items: center; gap: 0.75rem; min-height: 4.25rem; padding: 0.55rem 0.3rem; border: 0; border-bottom: 1px solid var(--color-border); background: transparent; color: var(--color-text); cursor: pointer; text-align: left; }
+.recent-match:hover { background: var(--color-surface-soft); }
+.recent-match :deep(.p-avatar) { width: 2.35rem; height: 2.35rem; background: var(--color-surface-muted); color: var(--color-text-muted); font-size: 0.7rem; }
+.match-copy, .match-result { display: grid; min-width: 0; gap: 0.18rem; }
+.match-copy small, .match-result small { overflow: hidden; color: var(--color-text-subtle); font-size: 0.65rem; text-overflow: ellipsis; white-space: nowrap; }
+.match-copy strong { overflow: hidden; font-size: 0.82rem; text-overflow: ellipsis; white-space: nowrap; }
+.match-result { min-width: 7rem; text-align: right; }
+.match-result strong { font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.recent-match > .pi-chevron-right { color: var(--color-text-subtle); font-size: 0.65rem; }
+.no-matches { display: flex; min-height: 6rem; align-items: center; justify-content: center; gap: 0.75rem; background: var(--color-surface-soft); color: var(--color-text-subtle); }
+.no-matches > i { font-size: 1.25rem; }
+.no-matches > span { display: grid; gap: 0.2rem; }
+.no-matches strong { color: var(--color-text-muted); font-size: 0.8rem; }
+.no-matches small { font-size: 0.7rem; }
 .system-card { grid-column: 1 / -1; }
 .system-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.7rem; }
-.system-grid > div { display: grid; min-width: 0; gap: 0.35rem; padding: 0.85rem; border: 1px solid var(--color-surface-muted); border-radius: 11px; background: var(--color-surface-soft); }
+.system-grid > div { display: grid; min-width: 0; gap: 0.35rem; padding: 0.85rem; border: 1px solid var(--color-surface-muted); border-radius: 0; background: var(--color-surface-soft); }
 .system-grid code, .system-grid span { overflow: hidden; color: var(--color-text-muted); font: inherit; font-size: 0.68rem; text-overflow: ellipsis; white-space: nowrap; }
 .danger-card { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.2rem; border-color: var(--color-danger-soft); background: var(--color-surface-muted); box-shadow: none; }
 .danger-card > div { display: flex; align-items: center; gap: 0.75rem; }
-.danger-card > div > span { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; flex: 0 0 auto; border-radius: 10px; background: var(--color-danger-soft); color: var(--color-danger); }
+.danger-card > div > span { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; flex: 0 0 auto; border-radius: 0; background: var(--color-danger-soft); color: var(--color-danger); }
 .danger-action { color: var(--color-danger); white-space: nowrap; }
-.loading-card { display: flex; gap: 2rem; background: var(--color-white); }
+.loading-card { display: flex; gap: 2rem; background: var(--color-surface-card); }
 .loading-card > div { display: flex; flex-direction: column; gap: 1rem; }
 .loading-details { display: flex; flex-direction: column; gap: 0.8rem; }
-.empty-state { display: flex; min-height: 300px; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed var(--color-border); border-radius: 18px; background: var(--color-surface-soft); text-align: center; }
-.empty-state > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; background: var(--color-primary-100); color: var(--green); font-size: 1.3rem; }
+.loading-activity { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.8rem; padding: 1.35rem; }
+.empty-state { display: flex; min-height: 300px; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed var(--color-border); border-radius: 0; background: var(--color-surface-soft); text-align: center; }
+.empty-state > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; background: var(--color-primary-soft-surface); color: var(--green); font-size: 1.3rem; }
 .empty-state h3 { margin: 1rem 0 0.3rem; }
 .empty-state p { margin: 0; color: var(--color-text-muted); font-size: 0.8rem; }
 
 @media (max-width: 900px) {
   .profile-grid { grid-template-columns: 1fr; }
-  .system-card, .danger-card { grid-column: auto; }
+  .activity-card, .system-card, .danger-card { grid-column: auto; }
   .system-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 620px) {
@@ -248,7 +324,7 @@ const fullName = computed(() => player.value?.name ?? '')
   .back-link { margin-bottom: 0.65rem; }
   .eyebrow, .page-subtitle { display: none; }
   .page-header h1 { font-size: 1.65rem; }
-  .hero-card { grid-template-columns: auto 1fr; min-height: auto; justify-items: start; padding: 0.9rem; border-radius: 14px; text-align: left; }
+  .hero-card { grid-template-columns: auto 1fr; min-height: auto; justify-items: start; padding: 0.9rem; border-radius: 0; text-align: left; }
   .player-avatar-wrap { margin: 0 0.8rem 0 0; }
   .player-avatar-wrap :deep(.p-avatar) { width: 4.5rem; height: 4.5rem; border-width: 3px; font-size: 1.25rem; box-shadow: none; }
   .hero-copy h2 { margin: 0 0 0.35rem; font-size: 1.45rem; white-space: normal; }
@@ -259,12 +335,19 @@ const fullName = computed(() => player.value?.name ?? '')
   .hero-stats > div { padding-inline: 0.45rem; }
   .hero-stats strong { font-size: 1rem; }
   .hero-stats small, .hero-stats span { font-size: 0.75rem; }
-  .details-card, .system-card { padding: 0.85rem; border-radius: 14px; box-shadow: none; }
+  .details-card, .activity-card, .system-card { padding: 0.85rem; border-radius: 0; box-shadow: none; }
   .card-heading { align-items: stretch; flex-direction: column; }
   .edit-profile-button { width: 100%; }
   .detail-row { padding: 0.55rem; }
   .card-heading p, .danger-card p, .detail-row small { font-size: 0.75rem; }
   .detail-row strong { font-size: 0.875rem; }
+  .activity-heading { align-items: flex-start; }
+  .recent-form { width: 100%; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .stats-grid strong { font-size: 1.1rem; }
+  .recent-match { grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 0.55rem; }
+  .match-result { grid-column: 3; min-width: 0; text-align: left; }
+  .recent-match > .pi-chevron-right { grid-column: 4; grid-row: 1 / 3; }
   .system-card { display: none; }
   .loading-card { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0.8rem; min-height: 7rem; padding: 0.9rem; }
   .loading-card > :deep(.p-skeleton) { width: 4.5rem !important; height: 4.5rem !important; }

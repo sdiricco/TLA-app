@@ -3,6 +3,7 @@ import type {
   Player,
   PlayerCreate,
   PlayerListQuery,
+  PlayerMatchHistory,
   PlayerUpdate,
   PlayersService,
 } from '../types'
@@ -17,6 +18,7 @@ export const playersService: PlayersService = {
       params: query,
     }),
   getById: (id) => apiRequest<Player>(apiClient, { url: `/players/${id}`, method: 'GET' }),
+  getMatchHistory: (id) => apiRequest<PlayerMatchHistory>(apiClient, { url: `/players/${id}/matches`, method: 'GET' }),
   create: (data: PlayerCreate) => apiRequest<Player>(apiClient, { url: '/players', method: 'POST', data }),
   update: (id: string, data: PlayerUpdate) =>
     apiRequest<Player>(apiClient, { url: `/players/${id}`, method: 'PUT', data }),

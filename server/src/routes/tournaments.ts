@@ -104,17 +104,26 @@ async function assertCanAddParticipant(tournamentId: string, playerId: string): 
 
 tournamentsRouter.get('/', async (req, res) => {
   try {
-    const { name, category, status, page: pageParam, perPage: perPageParam } = req.query as {
+    const { name, category, status, dateFrom, dateTo, page: pageParam, perPage: perPageParam } = req.query as {
       name?: string
       category?: string
       status?: string
+      dateFrom?: string
+      dateTo?: string
       page?: string
       perPage?: string
     }
 
     const page = parseNonNegativeInt(pageParam, 0)
     const perPage = Math.min(parsePositiveInt(perPageParam, 12), 100)
-    const where = {
+    const fromDate = parseDate(dateFrom)
+    const toDate = parseDate(dateTo)
+    if (dateFrom && !fromDate) throw new Error('Invalid start date')
+    if (dateTo && !toDate) throw new Error('Invalid end date')
+    if (toDate) toDate.setUTCHours(23, 59, 59, 999)
+    if (fromDate && toDate && fromDate > toDate) throw new Error('Invalid date range')
+
+    const where: Prisma.TournamentWhereInput = {
       ...(name
         ? {
             name: {
@@ -125,6 +134,15 @@ tournamentsRouter.get('/', async (req, res) => {
         : {}),
       ...(category ? { category } : {}),
       ...(status ? { status } : {}),
+      ...(fromDate
+        ? {
+            OR: [
+              { endDate: { gte: fromDate } },
+              { endDate: null, startDate: { gte: fromDate } },
+            ],
+          }
+        : {}),
+      ...(toDate ? { startDate: { lte: toDate } } : {}),
     }
 
     const [total, tournaments] = await prisma.$transaction([

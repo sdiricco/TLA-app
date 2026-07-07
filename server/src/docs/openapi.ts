@@ -89,6 +89,42 @@ const matchSchema = {
   },
 }
 
+const playerMatchHistorySchema = {
+  type: 'object',
+  required: ['stats', 'recent_form', 'recent_matches'],
+  properties: {
+    stats: {
+      type: 'object',
+      required: ['played', 'wins', 'losses', 'win_rate'],
+      properties: {
+        played: { type: 'integer' },
+        wins: { type: 'integer' },
+        losses: { type: 'integer' },
+        win_rate: { type: 'integer', minimum: 0, maximum: 100 },
+      },
+    },
+    recent_form: { type: 'array', items: { type: 'string', enum: ['win', 'loss'] } },
+    recent_matches: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'tournament_id', 'tournament_name', 'opponent_id', 'opponent_name', 'result', 'outcome', 'played_at'],
+        properties: {
+          id: { type: 'string' },
+          tournament_id: { type: 'string' },
+          tournament_name: { type: 'string' },
+          opponent_id: { type: 'string' },
+          opponent_name: { type: 'string' },
+          opponent_photo_url: { type: 'string', nullable: true },
+          result: { type: 'string' },
+          outcome: { type: 'string', enum: ['win', 'loss'] },
+          played_at: { type: 'string', format: 'date-time' },
+        },
+      },
+    },
+  },
+}
+
 export const openApiSpec = {
   openapi: '3.0.3',
   info: {
@@ -140,6 +176,7 @@ export const openApiSpec = {
         },
       },
       Match: matchSchema,
+      PlayerMatchHistory: playerMatchHistorySchema,
       TournamentMatchesResponse: {
         type: 'object',
         required: ['tournament', 'draw', 'rounds', 'matches'],
@@ -381,6 +418,20 @@ export const openApiSpec = {
           200: {
             description: 'Giocatore',
             content: { 'application/json': { schema: { $ref: '#/components/schemas/Player' } } },
+          },
+          404: { description: 'Giocatore non trovato' },
+        },
+      },
+    },
+    '/players/{id}/matches': {
+      get: {
+        summary: 'Statistiche e ultime partite del giocatore',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: {
+            description: 'Statistiche e ultime cinque partite completate',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/PlayerMatchHistory' } } },
           },
           404: { description: 'Giocatore non trovato' },
         },

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import { useAuthStore } from '../../stores/auth'
@@ -11,6 +11,7 @@ const router = useRouter()
 const auth = useAuthStore()
 const layout = useLayoutStore()
 const theme = useThemeStore()
+const appearanceOpen = ref(false)
 
 const courtThemes: { value: CourtTheme; label: string }[] = [
   { value: 'grass', label: 'Erba' },
@@ -37,6 +38,7 @@ const navItems = computed(() => {
 })
 
 const displayName = computed(() => auth.user?.name || auth.user?.email || 'Utente')
+const activeThemeLabel = computed(() => courtThemes.find(item => item.value === theme.courtTheme)?.label ?? 'Erba')
 
 async function handleLogout(): Promise<void> {
   await auth.logout()
@@ -70,21 +72,35 @@ async function handleLogout(): Promise<void> {
     </nav>
 
     <div class="sidebar-footer">
-      <div class="theme-picker">
-        <span>SUPERFICIE</span>
-        <div class="theme-options" role="radiogroup" aria-label="Tema superficie">
-          <button
-            v-for="item in courtThemes"
-            :key="item.value"
-            type="button"
-            :title="item.label"
-            :aria-label="item.label"
-            :aria-checked="theme.courtTheme === item.value"
-            :class="{ active: theme.courtTheme === item.value }"
-            role="radio"
-            @click="theme.applyTheme(item.value)"
-          >
-            <i :class="`theme-swatch-${item.value}`" />
+      <div class="appearance-menu">
+        <button class="appearance-trigger" type="button" :aria-expanded="appearanceOpen" aria-controls="appearance-options" @click="appearanceOpen = !appearanceOpen">
+          <span><i class="pi pi-palette" /><span>Aspetto<small>{{ activeThemeLabel }} · {{ theme.isDark ? 'Scuro' : 'Chiaro' }}</small></span></span>
+          <i class="pi pi-chevron-down" :class="{ open: appearanceOpen }" />
+        </button>
+
+        <div v-show="appearanceOpen" id="appearance-options" class="appearance-options">
+          <div class="theme-picker">
+            <span>SUPERFICIE</span>
+            <div class="theme-options" role="radiogroup" aria-label="Tema superficie">
+              <button
+                v-for="item in courtThemes"
+                :key="item.value"
+                type="button"
+                :title="item.label"
+                :aria-label="item.label"
+                :aria-checked="theme.courtTheme === item.value"
+                :class="{ active: theme.courtTheme === item.value }"
+                role="radio"
+                @click="theme.applyTheme(item.value)"
+              >
+                <i :class="`theme-swatch-${item.value}`" />
+              </button>
+            </div>
+          </div>
+
+          <button class="dark-mode-toggle" type="button" role="switch" :aria-checked="theme.isDark" @click="theme.toggleDarkMode()">
+            <span><i :class="theme.isDark ? 'pi pi-moon' : 'pi pi-sun'" /> Tema scuro</span>
+            <i class="toggle-track"><i /></i>
           </button>
         </div>
       </div>
@@ -123,13 +139,22 @@ async function handleLogout(): Promise<void> {
 .sidebar-nav { flex: 1; overflow-y: auto; padding: 1.4rem 0.85rem; }
 .sidebar-nav > p { margin: 0 0.7rem 0.65rem; color: rgb(var(--color-white-rgb) / 50%); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; }
 .sidebar-nav ul { display: flex; flex-direction: column; gap: 0.35rem; margin: 0; padding: 0; list-style: none; }
-.nav-link { display: flex; align-items: center; gap: 0.8rem; min-height: 3rem; padding: 0.45rem 0.7rem; border-radius: 11px; color: rgb(var(--color-white-rgb) / 67%); font-size: 0.86rem; font-weight: 550; text-decoration: none; transition: 160ms ease; }
+.nav-link { display: flex; align-items: center; gap: 0.8rem; min-height: 3rem; padding: 0.45rem 0.7rem; border-radius: 0; color: rgb(var(--color-white-rgb) / 67%); font-size: 0.86rem; font-weight: 550; text-decoration: none; transition: 160ms ease; }
 .nav-link:hover { background: rgb(var(--color-white-rgb) / 6%); color: var(--color-white); }
 .nav-link.active { background: rgb(var(--color-accent-rgb) / 13%); color: var(--color-accent-soft); font-weight: 750; }
-.nav-icon { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border-radius: 8px; background: rgb(var(--color-white-rgb) / 7%); font-size: 0.88rem; }
+.nav-icon { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border-radius: 0; background: rgb(var(--color-white-rgb) / 7%); font-size: 0.88rem; }
 .active .nav-icon { background: var(--color-accent); color: var(--color-primary-800); }
 .nav-arrow { margin-left: auto; font-size: 0.6rem; }
 .sidebar-footer { display: flex; flex-direction: column; gap: 0.8rem; padding: 1rem; border-top: 1px solid rgb(var(--color-white-rgb) / 9%); background: rgb(var(--color-black-rgb) / 6%); }
+.appearance-menu { padding-bottom: 0.7rem; border-bottom: 1px solid rgb(var(--color-white-rgb) / 9%); }
+.appearance-trigger { display: flex; width: 100%; min-height: 2.75rem; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0; border: 0; background: transparent; color: rgb(var(--color-white-rgb) / 78%); cursor: pointer; text-align: left; }
+.appearance-trigger > span { display: flex; align-items: center; gap: 0.65rem; }
+.appearance-trigger > span > i { width: 1.5rem; color: var(--color-accent); text-align: center; }
+.appearance-trigger > span > span { display: grid; gap: 0.15rem; font-size: 0.8rem; font-weight: 700; }
+.appearance-trigger small { color: rgb(var(--color-white-rgb) / 50%); font-size: 0.65rem; font-weight: 500; }
+.appearance-trigger > .pi-chevron-down { font-size: 0.65rem; transition: transform 160ms ease; }
+.appearance-trigger > .pi-chevron-down.open { transform: rotate(180deg); }
+.appearance-options { display: grid; gap: 0.55rem; padding: 0.6rem 0 0.1rem 2.15rem; }
 .theme-picker { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
 .theme-picker > span { color: rgb(var(--color-white-rgb) / 50%); font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; }
 .theme-options { display: flex; gap: 0.35rem; }
@@ -139,6 +164,12 @@ async function handleLogout(): Promise<void> {
 .theme-swatch-grass { background: var(--color-theme-grass); }
 .theme-swatch-hard { background: var(--color-theme-hard); }
 .theme-swatch-clay { background: var(--color-theme-clay); }
+.dark-mode-toggle { display: flex; min-height: 2.5rem; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0; border: 0; background: transparent; color: rgb(var(--color-white-rgb) / 72%); cursor: pointer; }
+.dark-mode-toggle > span { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 650; }
+.toggle-track { position: relative; display: block; width: 2.25rem; height: 1.25rem; flex: 0 0 auto; background: rgb(var(--color-white-rgb) / 16%); }
+.toggle-track > i { position: absolute; width: 0.85rem; height: 0.85rem; left: 0.2rem; top: 0.2rem; background: rgb(var(--color-white-rgb) / 72%); transition: transform 160ms ease, background 160ms ease; }
+.dark-mode-toggle[aria-checked="true"] .toggle-track { background: var(--color-accent); }
+.dark-mode-toggle[aria-checked="true"] .toggle-track > i { background: var(--color-sidebar-on-accent); transform: translateX(1rem); }
 .profile-row { display: flex; align-items: center; gap: 0.7rem; min-width: 0; }
 .profile-avatar { display: grid; place-items: center; width: 2.35rem; height: 2.35rem; flex: 0 0 auto; border: 1px solid rgb(var(--color-accent-rgb) / 28%); border-radius: 50%; background: rgb(var(--color-accent-rgb) / 12%); color: var(--color-accent); font-size: 0.8rem; }
 .profile-copy { display: grid; min-width: 0; }

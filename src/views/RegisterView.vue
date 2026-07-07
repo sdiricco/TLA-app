@@ -5,6 +5,7 @@
   import InputText from 'primevue/inputtext';
   import Message from 'primevue/message';
   import Password from 'primevue/password';
+  import AuthShowcase from '../components/auth/AuthShowcase.vue';
   import { useAuthStore } from '../stores/auth';
 
   /**
@@ -38,99 +39,96 @@
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center bg-surface-100">
-    <!-- ------------------------------------------------ -->
-    <!-- Header -->
-    <!-- ------------------------------------------------ -->
+  <main class="register-page">
+    <section class="register-shell" aria-label="Registrazione a TLA App">
+      <AuthShowcase />
 
-    <div class="flex flex-col items-center gap-1 px-6 pt-8 pb-4 text-center">
-      <i class="pi pi-circle-fill text-[2.5rem] text-primary-500" />
-      <h1 class="mt-2 mb-0 text-[1.75rem] font-bold">TLA App</h1>
-      <p class="m-0 text-muted-color text-sm">Crea il tuo account</p>
-    </div>
+      <section class="register-panel">
+        <div class="mobile-brand" aria-hidden="true"><span class="brand-ball" /><span>TLA</span></div>
 
-    <!-- ------------------------------------------------ -->
-    <!-- Form Registration -->
-    <!-- ------------------------------------------------ -->
-    <form class="flex flex-col gap-5" @submit.prevent="handleSubmit">
-      <Message v-if="auth.error" severity="error" :closable="false">
-        {{ auth.error }}
-      </Message>
+        <div class="register-content">
+          <header class="register-header">
+            <p class="kicker">UNISCITI AL CLUB</p>
+            <h1>Crea il tuo account</h1>
+            <p>Inserisci i tuoi dati per iniziare a utilizzare TLA.</p>
+          </header>
 
-      <!-- Name -->
-      <div class="flex flex-col gap-1.5">
-        <label for="name" class="text-sm font-medium">Nome</label>
-        <InputText
-          id="name"
-          v-model="name"
-          placeholder="Mario Rossi"
-          autocomplete="name"
-          fluid
-          required
-        />
-      </div>
+          <form class="register-form" @submit.prevent="handleSubmit">
+            <Message v-if="auth.error" severity="error" :closable="false">{{ auth.error }}</Message>
 
-      <!-- Email -->
-      <div class="flex flex-col gap-1.5">
-        <label for="email" class="text-sm font-medium">Email</label>
-        <InputText
-          id="email"
-          v-model="email"
-          type="email"
-          placeholder="nome@esempio.it"
-          autocomplete="email"
-          fluid
-          required
-        />
-      </div>
+            <div class="field">
+              <label for="name">Nome e cognome</label>
+              <span class="input-wrap"><i class="pi pi-user" /><InputText id="name" v-model="name" placeholder="Mario Rossi" autocomplete="name" fluid required /></span>
+            </div>
 
-      <!-- Password -->
-      <div class="flex flex-col gap-1.5">
-        <label for="password" class="text-sm font-medium">Password</label>
-        <Password
-          id="password"
-          v-model="password"
-          placeholder="••••••••"
-          :feedback="true"
-          autocomplete="new-password"
-          fluid
-          toggle-mask
-        />
-      </div>
+            <div class="field">
+              <label for="email">Email</label>
+              <span class="input-wrap"><i class="pi pi-envelope" /><InputText id="email" v-model="email" type="email" placeholder="nome@esempio.it" autocomplete="email" fluid required /></span>
+            </div>
 
-      <!-- Confirm Password -->
-      <div class="flex flex-col gap-1.5">
-        <label for="confirmPassword" class="text-sm font-medium">Conferma password</label>
-        <Password
-          id="confirmPassword"
-          v-model="confirmPassword"
-          placeholder="••••••••"
-          autocomplete="new-password"
-          fluid
-          toggle-mask
-        />
-      </div>
+            <div class="field">
+              <label for="password">Password</label>
+              <span class="input-wrap password-wrap"><i class="pi pi-lock" /><Password id="password" v-model="password" placeholder="Crea una password" :feedback="true" autocomplete="new-password" fluid toggle-mask required /></span>
+            </div>
 
-      <!-- Button: Register -->
-      <Button
-        type="submit"
-        label="Registrati"
-        icon="pi pi-user-plus"
-        :loading="auth.loading"
-        fluid
-      />
+            <div class="field">
+              <label for="confirmPassword">Conferma password</label>
+              <span class="input-wrap password-wrap"><i class="pi pi-shield" /><Password id="confirmPassword" v-model="confirmPassword" placeholder="Ripeti la password" :feedback="false" autocomplete="new-password" fluid toggle-mask required /></span>
+            </div>
 
-      <!-- Button: Go to Login page -->
-      <div class="flex items-center justify-center gap-1 text-sm text-muted-color">
-        <span>Hai già un account?</span>
-        <Button
-          type="button"
-          label="Accedi"
-          variant="link"
-          size="small"
-          @click="router.push({ name: 'login' })"
-        />
-      </div>
-    </form>
-  </div>
+            <Button class="register-button" type="submit" label="Crea account" icon="pi pi-arrow-right" icon-pos="right" :loading="auth.loading" fluid />
+
+            <div class="login-row">
+              <span>Hai già un account?</span>
+              <Button type="button" label="Accedi" variant="link" size="small" @click="router.push({ name: 'login' })" />
+            </div>
+          </form>
+        </div>
+
+        <p class="register-footer">© 2026 TLA · Tennis League Administration</p>
+      </section>
+    </section>
+  </main>
 </template>
+
+<style scoped>
+.register-page { min-height: 100svh; display: grid; place-items: center; padding: clamp(1rem, 3vw, 2.5rem); background: var(--color-surface-soft); color: var(--color-text); }
+.register-shell { width: min(1120px, 100%); min-height: min(760px, calc(100svh - 5rem)); display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(390px, 0.95fr); overflow: hidden; border: 1px solid var(--color-border); background: var(--color-surface-card); box-shadow: 0 28px 70px rgb(var(--color-shadow-rgb) / 14%); }
+.register-panel { position: relative; display: flex; flex-direction: column; justify-content: center; padding: clamp(2rem, 5vw, 4rem); }
+.register-content { width: min(390px, 100%); margin: auto; }
+.register-header { margin-bottom: 1.5rem; }
+.kicker { margin: 0 0 0.65rem; color: var(--color-primary-700); font-size: 0.75rem; font-weight: 800; letter-spacing: 0.16em; }
+.register-header h1 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.3rem); line-height: 1.15; letter-spacing: -0.045em; }
+.register-header > p:last-child { margin: 0.7rem 0 0; color: var(--color-text-muted); font-size: 0.9rem; }
+.register-form { display: flex; flex-direction: column; gap: 1rem; }
+.field { display: flex; flex-direction: column; gap: 0.45rem; }
+.field label { color: var(--color-text-muted); font-size: 0.82rem; font-weight: 700; }
+.input-wrap { position: relative; display: block; }
+.input-wrap > i { position: absolute; z-index: 2; top: 50%; left: 1rem; transform: translateY(-50%); color: var(--color-text-subtle); font-size: 0.9rem; pointer-events: none; }
+.input-wrap :deep(.p-inputtext) { height: 3.1rem; padding-left: 2.75rem; border-color: var(--color-border); background: var(--color-surface-soft); color: var(--color-text); font-size: 0.9rem; transition: 160ms; }
+.input-wrap :deep(.p-inputtext:focus) { border-color: var(--color-primary-500); background: var(--color-surface-card); box-shadow: 0 0 0 4px rgb(var(--color-primary-500-rgb) / 10%); }
+.password-wrap :deep(.p-password), .password-wrap :deep(.p-password-input) { width: 100%; }
+.password-wrap :deep(.p-password-input) { padding-right: 3rem; }
+.password-wrap :deep(.p-password-toggle-mask-icon) { color: var(--color-text-subtle); }
+.register-button { height: 3.2rem; margin-top: 0.2rem; border-color: var(--color-primary-700); background: var(--color-primary-700); box-shadow: 0 10px 24px rgb(var(--color-primary-rgb) / 20%); font-weight: 700; }
+.register-button:hover { border-color: var(--color-primary-800) !important; background: var(--color-primary-800) !important; }
+.register-button :deep(.p-button-icon) { margin-left: auto; font-size: 0.85rem; }
+.login-row { display: flex; align-items: center; justify-content: center; gap: 0.15rem; color: var(--color-text-muted); font-size: 0.82rem; }
+.login-row :deep(.p-button) { padding-inline: 0.35rem; color: var(--color-primary-700); }
+.register-footer { margin: auto auto 0; padding-top: 1.5rem; color: var(--color-text-subtle); font-size: 0.65rem; text-align: center; }
+.mobile-brand { display: none; align-items: center; gap: 0.7rem; color: var(--color-primary-900); font-size: 1.35rem; font-weight: 800; }
+.brand-ball { position: relative; width: 2rem; height: 2rem; overflow: hidden; border-radius: 50%; background: var(--color-accent); box-shadow: 0 5px 15px rgb(var(--color-black-rgb) / 16%); }
+.brand-ball::before, .brand-ball::after { position: absolute; width: 1.5rem; height: 2.25rem; border: 1.5px solid rgb(var(--color-primary-rgb) / 65%); border-radius: 50%; content: ''; }
+.brand-ball::before { left: -1rem; top: -0.15rem; }
+.brand-ball::after { right: -1rem; bottom: -0.15rem; }
+@media (max-width: 820px) {
+  .register-page { padding: 0; background: var(--color-surface-card); }
+  .register-shell { min-height: 100svh; grid-template-columns: 1fr; border: 0; box-shadow: none; }
+  .auth-showcase { display: none; }
+  .register-panel { justify-content: flex-start; padding: max(1.5rem, env(safe-area-inset-top)) clamp(1.25rem, 7vw, 3rem) max(1.5rem, env(safe-area-inset-bottom)); }
+  .mobile-brand { display: flex; margin-bottom: clamp(2rem, 7vh, 3.5rem); }
+  .register-content { margin: 0 auto; }
+  .register-footer { margin-top: auto; }
+}
+@media (max-width: 420px) { .register-form { gap: 0.85rem; } .login-row { flex-wrap: wrap; } }
+</style>

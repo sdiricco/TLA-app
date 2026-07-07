@@ -5,6 +5,7 @@
   import InputText from 'primevue/inputtext';
   import Message from 'primevue/message';
   import Password from 'primevue/password';
+  import AuthShowcase from '../components/auth/AuthShowcase.vue';
   import { useAuthStore } from '../stores/auth';
 
   const router = useRouter();
@@ -26,24 +27,7 @@
 <template>
   <main class="login-page">
     <section class="login-shell" aria-label="Accesso a TLA App">
-      <aside class="showcase" aria-hidden="true">
-        <div class="brand"><span class="brand-ball" /> <span>TLA</span></div>
-
-        <div class="showcase-copy">
-          <p class="kicker">IL TUO CIRCOLO, SEMPRE IN GIOCO</p>
-          <h1>Ogni match.<br />Un'unica <span>visione.</span></h1>
-          <p>Organizza tornei, gestisci i giocatori e segui ogni risultato da un solo posto.</p>
-        </div>
-
-        <div class="court-card">
-          <div class="court"><i class="net" /><i class="ball" /></div>
-          <div class="court-info">
-            <div><strong>Torneo sociale</strong><small>Tabellone in corso</small></div>
-            <span class="live"><i /> LIVE</span>
-          </div>
-        </div>
-        <p class="showcase-footer">Tennis League Administration</p>
-      </aside>
+      <AuthShowcase />
 
       <section class="login-panel">
         <div class="brand mobile-brand" aria-hidden="true"><span class="brand-ball" /> <span>TLA</span></div>
@@ -111,8 +95,8 @@
     grid-template-columns: minmax(0, 1.05fr) minmax(390px, 0.95fr);
     overflow: hidden;
     border: 1px solid rgb(var(--color-shadow-rgb) / 6%);
-    border-radius: 28px;
-    background: var(--color-white);
+    border-radius: 0;
+    background: var(--color-surface-card);
     box-shadow: 0 28px 70px rgb(var(--color-shadow-rgb) / 14%);
   }
 
@@ -138,7 +122,7 @@
   .showcase-copy h1 span { color: var(--color-accent); }
   .showcase-copy > p:last-child { max-width: 430px; margin: 1.5rem 0 0; color: rgb(var(--color-white-rgb) / 72%); line-height: 1.65; }
 
-  .court-card { width: min(390px, 100%); padding: 0.7rem; border: 1px solid rgb(var(--color-white-rgb) / 16%); border-radius: 18px; background: rgb(var(--color-white-rgb) / 9%); box-shadow: 0 20px 40px rgb(var(--color-black-rgb) / 16%); backdrop-filter: blur(12px); }
+  .court-card { width: min(390px, 100%); padding: 0.7rem; border: 1px solid rgb(var(--color-white-rgb) / 16%); border-radius: 0; background: rgb(var(--color-white-rgb) / 9%); box-shadow: 0 20px 40px rgb(var(--color-black-rgb) / 16%); backdrop-filter: blur(12px); }
   .court { position: relative; height: 105px; overflow: hidden; border: 1px solid rgb(var(--color-white-rgb) / 55%); background: var(--color-primary-700); }
   .court::before { position: absolute; inset: 18px 0; border-block: 1px solid rgb(var(--color-white-rgb) / 55%); content: ''; }
   .court::after { position: absolute; top: 18px; bottom: 18px; left: 50%; border-left: 1px solid rgb(var(--color-white-rgb) / 55%); content: ''; }
@@ -164,26 +148,26 @@
   .field label { color: var(--color-text-muted); font-size: 0.82rem; font-weight: 700; }
   .input-wrap { position: relative; display: block; }
   .input-wrap > i { position: absolute; z-index: 2; top: 50%; left: 1rem; transform: translateY(-50%); color: var(--color-text-subtle); font-size: 0.9rem; pointer-events: none; }
-  .input-wrap :deep(.p-inputtext) { height: 3.25rem; padding-left: 2.75rem; border-color: var(--color-border); border-radius: 12px; background: var(--color-surface-soft); font-size: 0.9rem; transition: 160ms; }
+  .input-wrap :deep(.p-inputtext) { height: 3.25rem; padding-left: 2.75rem; border-color: var(--color-border); border-radius: 0; background: var(--color-surface-soft); font-size: 0.9rem; transition: 160ms; }
   .input-wrap :deep(.p-inputtext:focus) { border-color: var(--brand); background: var(--color-surface-card); box-shadow: 0 0 0 4px rgb(var(--color-primary-500-rgb) / 10%); }
   .password-wrap :deep(.p-password), .password-wrap :deep(.p-password-input) { width: 100%; }
   .password-wrap :deep(.p-password-input) { padding-right: 3rem; }
   .password-wrap :deep(.p-password-toggle-mask-icon) { color: var(--color-text-subtle); }
-  .login-button { height: 3.25rem; margin-top: 0.25rem; border-color: var(--brand-dark); border-radius: 12px; background: var(--brand-dark); box-shadow: 0 10px 24px rgb(var(--color-primary-rgb) / 20%); font-weight: 700; }
+  .login-button { height: 3.25rem; margin-top: 0.25rem; border-color: var(--brand-dark); border-radius: 0; background: var(--brand-dark); box-shadow: 0 10px 24px rgb(var(--color-primary-rgb) / 20%); font-weight: 700; }
   .login-button:hover { border-color: var(--color-primary-800) !important; background: var(--color-primary-800) !important; }
   .login-button :deep(.p-button-icon) { margin-left: auto; font-size: 0.85rem; }
   .register-row { display: flex; align-items: center; justify-content: center; gap: 0.15rem; color: var(--color-text-muted); font-size: 0.82rem; }
   .register-row :deep(.p-button) { padding-inline: 0.35rem; color: var(--brand-dark); }
   .divider { display: flex; align-items: center; gap: 0.8rem; color: var(--color-text-subtle); font-size: 0.72rem; }
   .divider::before, .divider::after { flex: 1; height: 1px; background: var(--color-border); content: ''; }
-  .guest-button { height: 3.15rem; border-color: var(--color-border); border-radius: 12px; color: var(--color-text-muted); font-weight: 650; }
+  .guest-button { height: 3.15rem; border-color: var(--color-border); border-radius: 0; color: var(--color-text-muted); font-weight: 650; }
   .guest-button:hover { border-color: var(--color-primary-300) !important; background: var(--color-surface-soft) !important; }
   .login-footer { margin: auto auto 0; padding-top: 2rem; color: var(--color-text-subtle); font-size: 0.65rem; text-align: center; }
 
   @media (max-width: 820px) {
     .login-page { padding: 0; background: var(--color-surface-card); }
     .login-shell { min-height: 100svh; grid-template-columns: 1fr; border: 0; border-radius: 0; box-shadow: none; }
-    .showcase { display: none; }
+    .auth-showcase { display: none; }
     .login-panel { justify-content: flex-start; padding: max(2rem, env(safe-area-inset-top)) clamp(1.25rem, 7vw, 3rem) max(1.5rem, env(safe-area-inset-bottom)); background: radial-gradient(circle at 100% 0, rgb(var(--color-primary-500-rgb) / 10%), transparent 16rem), var(--color-surface-card); }
     .mobile-brand { display: flex; margin-bottom: clamp(3.5rem, 11vh, 6rem); }
     .login-content { margin: 0 auto; }

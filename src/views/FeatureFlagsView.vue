@@ -89,7 +89,7 @@ function toggleCategory(category: TournamentCategory, enabled: boolean): void {
           <template #content>
             <div class="flex items-start gap-4">
               <div
-                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+                class="flex h-12 w-12 shrink-0 items-center justify-center"
                 :class="item.enabled ? 'bg-primary-100 text-primary-600' : 'bg-surface-100 text-muted-color'"
               >
                 <i :class="[item.icon, 'text-xl']" />
@@ -155,7 +155,7 @@ function toggleCategory(category: TournamentCategory, enabled: boolean): void {
           <template #content>
             <div class="flex items-start gap-4">
               <div
-                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+                class="flex h-12 w-12 shrink-0 items-center justify-center"
                 :class="item.enabled ? 'bg-primary-100 text-primary-600' : 'bg-surface-100 text-muted-color'"
               >
                 <i :class="[item.icon, 'text-xl']" />
@@ -200,9 +200,9 @@ function toggleCategory(category: TournamentCategory, enabled: boolean): void {
 @media (max-width: 640px) {
   h2 { font-size: 1.65rem; }
   :deep(.p-card-body), :deep(.p-card-content) { padding: 0.75rem; }
-  :deep(.p-card) { border-radius: 13px; box-shadow: none; }
+  :deep(.p-card) { border-radius: 0; box-shadow: none; }
   :deep(.p-card-content > div) { gap: 0.7rem; }
-  :deep(.p-card-content .h-12) { width: 2.5rem; height: 2.5rem; border-radius: 10px; }
+  :deep(.p-card-content .h-12) { width: 2.5rem; height: 2.5rem; border-radius: 0; }
   :deep(.p-card-content p) { display: none; }
   :deep(.p-card-content .mt-5) { margin-top: 0.65rem; }
   :deep(.p-card-content .mt-5 > span:first-child) { display: none; }

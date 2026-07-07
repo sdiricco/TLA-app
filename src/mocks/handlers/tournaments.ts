@@ -33,10 +33,21 @@ export const tournamentHandlers = [
     const name = url.searchParams.get('name')
     const category = url.searchParams.get('category')
     const status = url.searchParams.get('status')
+    const dateFrom = url.searchParams.get('dateFrom')
+    const dateTo = url.searchParams.get('dateTo')
+    const fromTime = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null
+    const toTime = dateTo ? new Date(`${dateTo}T23:59:59.999`).getTime() : null
     const filtered = tournaments
       .filter((tournament) => matchesFilter(tournament.name, name))
       .filter((tournament) => (category ? tournament.category === category : true))
       .filter((tournament) => (status ? tournament.status === status : true))
+      .filter((tournament) => {
+        if (fromTime === null && toTime === null) return true
+        const startTime = tournament.start_date ? new Date(tournament.start_date).getTime() : null
+        if (startTime === null) return false
+        const endTime = tournament.end_date ? new Date(tournament.end_date).getTime() : startTime
+        return (fromTime === null || endTime >= fromTime) && (toTime === null || startTime <= toTime)
+      })
       .sort((a, b) => new Date(b.start_date ?? 0).getTime() - new Date(a.start_date ?? 0).getTime())
     return HttpResponse.json(toPaginatedResponse(filtered, page, perPage))
   }),

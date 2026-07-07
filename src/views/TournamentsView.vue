@@ -2,6 +2,7 @@
   import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
   import { useRouter } from 'vue-router'
   import Button from 'primevue/button'
+  import DatePicker from 'primevue/datepicker'
   import InputText from 'primevue/inputtext'
   import Select from 'primevue/select'
   import Skeleton from 'primevue/skeleton'
@@ -31,6 +32,7 @@
   const searchName = ref('')
   const categoryFilter = ref<'all' | TournamentCategory>('all')
   const statusFilter = ref<'all' | TournamentStatus>('all')
+  const dateRangeFilter = ref<Date[] | null>(null)
   const filtersTimer = ref<ReturnType<typeof setTimeout> | null>(null)
   const mobileFiltersOpen = ref(false)
   const skeletonItems = Array.from({ length: 6 }, (_, index) => index)
@@ -60,6 +62,15 @@
 
   const canViewAdmin = computed(() => auth.isAdmin)
   const hasMoreTournaments = computed(() => store.tournaments.length < store.total)
+  const completedDateRange = computed(() => {
+    const [from, to] = dateRangeFilter.value ?? []
+    return from && to ? [from, to] as const : null
+  })
+  const activeFiltersCount = computed(() => [
+    categoryFilter.value !== 'all',
+    statusFilter.value !== 'all',
+    completedDateRange.value !== null,
+  ].filter(Boolean).length)
 
   /**
    * Function: Map status to label
@@ -80,6 +91,31 @@
     })
   }
 
+  function toDateQuery(date: Date | null | undefined): string | undefined {
+    if (!date) return undefined
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  function currentFilters() {
+    return {
+      name: searchName.value.trim() || undefined,
+      category: categoryFilter.value === 'all' ? undefined : categoryFilter.value,
+      status: statusFilter.value === 'all' ? undefined : statusFilter.value,
+      dateFrom: toDateQuery(completedDateRange.value?.[0]),
+      dateTo: toDateQuery(completedDateRange.value?.[1]),
+    }
+  }
+
+  function scheduleFiltersLoad(): void {
+    if (filtersTimer.value) clearTimeout(filtersTimer.value)
+    filtersTimer.value = setTimeout(() => {
+      void loadTournaments(0, store.perPage)
+    }, 300)
+  }
+
   /**
    * Function: Open create form
    */
@@ -93,9 +129,7 @@
    */
   async function loadTournaments(page = 0, perPage = store.perPage): Promise<void> {
     await store.fetchAll({
-      name: searchName.value.trim() || undefined,
-      category: categoryFilter.value === 'all' ? undefined : categoryFilter.value,
-      status: statusFilter.value === 'all' ? undefined : statusFilter.value,
+      ...currentFilters(),
       page,
       perPage,
     })
@@ -109,9 +143,7 @@
 
     await store.fetchAll(
       {
-        name: searchName.value.trim() || undefined,
-        category: categoryFilter.value === 'all' ? undefined : categoryFilter.value,
-        status: statusFilter.value === 'all' ? undefined : statusFilter.value,
+        ...currentFilters(),
         page: store.page + 1,
         perPage: store.perPage,
       },
@@ -126,6 +158,7 @@
     searchName.value = ''
     categoryFilter.value = 'all'
     statusFilter.value = 'all'
+    dateRangeFilter.value = null
     void loadTournaments(0, store.perPage)
   }
 
@@ -136,11 +169,12 @@
     void loadTournaments()
   })
 
-  watch([searchName, categoryFilter, statusFilter], () => {
-    if (filtersTimer.value) clearTimeout(filtersTimer.value)
-    filtersTimer.value = setTimeout(() => {
-      void loadTournaments(0, store.perPage)
-    }, 300)
+  watch([searchName, categoryFilter, statusFilter], scheduleFiltersLoad)
+
+  watch(dateRangeFilter, (range, previousRange) => {
+    const isComplete = Boolean(range?.[0] && range?.[1])
+    const wasSelected = Boolean(previousRange?.length)
+    if (isComplete || (!range?.length && wasSelected)) scheduleFiltersLoad()
   })
 
   onBeforeUnmount(() => {
@@ -169,7 +203,7 @@
       <button class="filter-title" type="button" :aria-expanded="mobileFiltersOpen" @click="mobileFiltersOpen = !mobileFiltersOpen">
         <i class="pi pi-sliders-h" />
         <span>Filtra tornei</span>
-        <span class="mobile-filter-count">{{ [categoryFilter, statusFilter].filter(value => value !== 'all').length || '' }}<i class="pi pi-chevron-down" /></span>
+        <span class="mobile-filter-count">{{ activeFiltersCount || '' }}<i class="pi pi-chevron-down" /></span>
       </button>
       <div class="filters-grid">
         <div class="filter-field search-field">
@@ -187,6 +221,20 @@
           option-value="value"
           fluid
         />
+        </div>
+
+        <div class="filter-field date-filter">
+          <label for="tournament-date-range-filter">Periodo</label>
+          <DatePicker
+            id="tournament-date-range-filter"
+            v-model="dateRangeFilter"
+            selection-mode="range"
+            date-format="dd/mm/yy"
+            placeholder="Dal — Al"
+            show-icon
+            show-button-bar
+            fluid
+          />
         </div>
 
         <div class="filter-field">
@@ -293,24 +341,27 @@
   .eyebrow { margin: 0 0 0.5rem; color: var(--green); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; }
   .page-header h1 { margin: 0; font-size: clamp(2rem, 3vw, 3rem); line-height: 1; letter-spacing: -0.055em; }
   .page-subtitle { margin: 0.75rem 0 0; color: var(--color-text-muted); font-size: 0.95rem; }
-  .create-button { height: 3rem; border-color: var(--green); border-radius: 12px; background: var(--green); box-shadow: 0 10px 22px rgb(var(--color-primary-rgb) / 18%); font-weight: 700; }
-  .summary-strip { display: flex; align-items: center; gap: 0.9rem; padding: 0.85rem 1rem; border: 1px solid var(--color-border); border-radius: 16px; background: linear-gradient(90deg, var(--color-white), var(--color-surface-soft)); }
-  .summary-icon { display: grid; place-items: center; width: 2.65rem; height: 2.65rem; border-radius: 11px; background: var(--color-primary-100); color: var(--green); }
+  .create-button { height: 3rem; border-color: var(--green); border-radius: 0; background: var(--green); box-shadow: 0 10px 22px rgb(var(--color-primary-rgb) / 18%); font-weight: 700; }
+  .summary-strip { display: flex; align-items: center; gap: 0.9rem; padding: 0.85rem 1rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); }
+  .summary-icon { display: grid; place-items: center; width: 2.65rem; height: 2.65rem; border-radius: 0; background: var(--color-primary-soft-surface); color: var(--green); }
   .summary-strip div:nth-child(2) { display: grid; min-width: 100px; }
   .summary-strip strong { font-size: 1.15rem; line-height: 1; }
   .summary-strip div span { margin-top: 0.25rem; color: var(--color-text-muted); font-size: 0.68rem; }
   .summary-copy { margin-left: auto; color: var(--color-text-muted); font-size: 0.76rem; font-style: italic; }
-  .filters-panel { padding: 1rem; border: 1px solid var(--color-border); border-radius: 18px; background: rgb(var(--color-white-rgb) / 88%); box-shadow: 0 8px 30px rgb(var(--color-shadow-rgb) / 5%); }
+  .filters-panel { padding: 1rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); box-shadow: 0 8px 30px rgb(var(--color-shadow-rgb) / 5%); }
   .filter-title { display: flex; width: 100%; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; padding: 0; border: 0; background: transparent; color: var(--color-text-muted); font-size: 0.75rem; font-weight: 800; text-align: left; }
   .filter-title i { color: var(--green); }
   .mobile-filter-count { display: none; }
-  .filters-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr auto; gap: 0.75rem; }
+  .filters-grid { display: grid; grid-template-columns: minmax(12rem, 1.2fr) repeat(3, minmax(10rem, 1fr)) auto; gap: 0.75rem; }
   .filter-field { display: flex; flex-direction: column; gap: 0.4rem; }
   .filter-field label { color: var(--color-text-muted); font-size: 0.68rem; font-weight: 700; }
   .search-wrap { position: relative; }
   .search-wrap > i { position: absolute; z-index: 2; top: 50%; left: 0.9rem; transform: translateY(-50%); color: var(--color-text-subtle); font-size: 0.8rem; }
   .search-wrap :deep(.p-inputtext) { padding-left: 2.4rem; }
-  .filter-field :deep(.p-inputtext), .filter-field :deep(.p-select) { height: 2.75rem; border-color: var(--color-border); border-radius: 10px; background: var(--color-surface-soft); font-size: 0.82rem; }
+  .filter-field :deep(.p-inputtext), .filter-field :deep(.p-select) { height: 2.75rem; border-color: var(--color-border); border-radius: 0; background: var(--color-surface-soft); color: var(--color-text); font-size: 0.82rem; }
+  .date-filter :deep(.p-datepicker) { width: 100%; }
+  .date-filter :deep(.p-datepicker-dropdown) { border-color: var(--color-border); background: var(--color-surface-soft); color: var(--color-text-muted); }
+  .filter-field :deep(.p-inputtext::placeholder), .filter-field :deep(.p-select-label.p-placeholder), .filter-field :deep(.p-select-dropdown) { color: var(--color-text-subtle); }
   .filter-field :deep(.p-inputtext:focus), .filter-field :deep(.p-select.p-focus) { border-color: var(--color-primary-500); box-shadow: 0 0 0 3px rgb(var(--color-primary-500-rgb) / 10%); }
   .filter-action { display: flex; align-items: flex-end; }
   .filter-action :deep(.p-button) { height: 2.75rem; color: var(--color-text-muted); font-size: 0.78rem; }
@@ -320,24 +371,28 @@
   .section-heading span { color: var(--color-text-subtle); font-size: 0.72rem; }
   .view-label { display: flex; align-items: center; gap: 0.4rem; }
   .tournaments-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(350px, 100%), 1fr)); gap: 1rem; }
-  .tournament-card { position: relative; overflow: hidden; padding: 1.25rem; border: 1px solid var(--color-border); border-radius: 18px; background: var(--color-white); box-shadow: 0 8px 24px rgb(var(--color-shadow-rgb) / 6%); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
+  .tournament-card { position: relative; overflow: hidden; padding: 1.25rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); box-shadow: 0 8px 24px rgb(var(--color-shadow-rgb) / 6%); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
   .tournament-card::before { position: absolute; inset: 0 0 auto; height: 3px; background: var(--color-primary-500); content: ''; }
-  .tournament-card.status-upcoming::before { background: var(--color-info-accent); }
-  .tournament-card.status-completed::before { background: var(--color-text-subtle); }
   .tournament-card:hover, .tournament-card:focus-visible { transform: translateY(-3px); border-color: var(--color-primary-300); box-shadow: 0 16px 36px rgb(var(--color-shadow-rgb) / 11%); outline: none; }
   .card-topline { display: flex; align-items: center; justify-content: space-between; min-height: 1.6rem; }
-  .status-pill, .draft-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.55rem; border-radius: 99px; background: var(--color-primary-100); color: var(--color-primary-700); font-size: 0.65rem; font-weight: 800; }
-  .status-pill i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px rgb(var(--color-primary-500-rgb) / 12%); }
-  .status-upcoming .status-pill { background: var(--color-info-soft); color: var(--color-info); }
-  .status-completed .status-pill { background: var(--color-surface-muted); color: var(--color-text-muted); }
+  .status-pill, .draft-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.55rem; border-radius: 99px; background: var(--color-surface-muted); color: var(--color-text-muted); font-size: 0.65rem; font-weight: 800; }
+  .status-pill i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .status-ongoing .status-pill i { background: var(--color-primary-500); box-shadow: 0 0 0 0 rgb(var(--color-primary-500-rgb) / 30%); animation: live-pulse 1.8s ease-out infinite; }
   .draft-pill { background: var(--color-surface-muted); color: var(--color-text-muted); }
+  @keyframes live-pulse {
+    0% { box-shadow: 0 0 0 0 rgb(var(--color-primary-500-rgb) / 30%); }
+    70%, 100% { box-shadow: 0 0 0 5px rgb(var(--color-primary-500-rgb) / 0%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .status-ongoing .status-pill i { animation: none; }
+  }
   .card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin: 1.15rem 0; }
   .card-title-row h3 { margin: 0; font-size: 1.2rem; letter-spacing: -0.03em; }
   .location { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.4rem; color: var(--color-text-muted); font-size: 0.7rem; }
   .card-arrow { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border-radius: 50%; background: var(--color-surface-muted); color: var(--green); font-size: 0.75rem; transition: 180ms; }
   .tournament-card:hover .card-arrow { background: var(--green); color: var(--color-white); }
-  .date-panel { display: flex; align-items: center; gap: 0.75rem; padding: 0.8rem; border-radius: 12px; background: var(--color-surface-soft); }
-  .date-icon { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; flex: 0 0 auto; border-radius: 9px; background: var(--color-surface-card); color: var(--green); box-shadow: 0 3px 9px rgb(var(--color-shadow-rgb) / 8%); }
+  .date-panel { display: flex; align-items: center; gap: 0.75rem; padding: 0.8rem; border-radius: 0; background: var(--color-surface-soft); }
+  .date-icon { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; flex: 0 0 auto; border-radius: 0; background: var(--color-surface-card); color: var(--green); box-shadow: 0 3px 9px rgb(var(--color-shadow-rgb) / 8%); }
   .date-panel div { display: grid; gap: 0.2rem; }
   .date-panel small, .card-meta small { color: var(--color-text-subtle); font-size: 0.56rem; font-weight: 800; letter-spacing: 0.1em; }
   .date-panel strong { font-size: 0.75rem; }
@@ -351,14 +406,19 @@
   .skeleton-card { display: flex; min-height: 300px; flex-direction: column; gap: 1rem; cursor: default; }
   .skeleton-status { align-self: flex-start; }
   .skeleton-date, .skeleton-meta { display: flex; align-items: center; gap: 0.65rem; }
-  .empty-state { display: flex; min-height: 280px; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed var(--color-border); border-radius: 18px; background: var(--color-surface-soft); text-align: center; }
-  .empty-state > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; background: var(--color-primary-100); color: var(--green); font-size: 1.3rem; }
+  .empty-state { display: flex; min-height: 280px; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed var(--color-border); border-radius: 0; background: var(--color-surface-soft); text-align: center; }
+  .empty-state > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; background: var(--color-primary-soft-surface); color: var(--green); font-size: 1.3rem; }
   .empty-state h3 { margin: 1rem 0 0.3rem; }
   .empty-state p { margin: 0; color: var(--color-text-muted); font-size: 0.8rem; }
   .load-more-area { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
   .loading-more-grid { width: 100%; }
   .all-loaded { display: flex; align-items: center; gap: 0.4rem; margin: 0; color: var(--color-text-subtle); font-size: 0.72rem; }
   .all-loaded i { color: var(--color-primary-500); }
+
+  @media (max-width: 1100px) {
+    .filters-grid { grid-template-columns: repeat(3, 1fr); }
+    .search-field { grid-column: span 2; }
+  }
 
   @media (max-width: 800px) {
     .page-header { align-items: flex-start; }
@@ -377,7 +437,7 @@
     .create-button { width: 2.75rem; min-width: 2.75rem; padding: 0; border-radius: 50%; }
     .create-button :deep(.p-button-label) { display: none; }
     .summary-strip { display: none; }
-    .filters-panel { padding: 0.65rem; border-radius: 13px; box-shadow: none; }
+    .filters-panel { padding: 0.65rem; border-radius: 0; box-shadow: none; }
     .filter-title { min-height: 2rem; margin: 0; padding-inline: 0.2rem; font-size: 0.875rem; }
     .mobile-filter-count { display: inline-flex; align-items: center; gap: 0.45rem; margin-left: auto; color: var(--green); }
     .mobile-filter-count > i { transition: transform 160ms; }
@@ -392,7 +452,7 @@
     .section-heading h2 { font-size: 1.05rem; }
     .section-heading span { font-size: 0.75rem; }
     .tournaments-grid { display: flex; flex-direction: column; gap: 0.65rem; }
-    .tournament-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.35rem 0.65rem; padding: 0.55rem 0.65rem; border-radius: 12px; box-shadow: 0 2px 8px rgb(var(--color-shadow-rgb) / 5%); }
+    .tournament-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.35rem 0.65rem; padding: 0.55rem 0.65rem; border-radius: 0; box-shadow: 0 2px 8px rgb(var(--color-shadow-rgb) / 5%); }
     .tournament-card::before { width: 3px; height: auto; inset: 0 auto 0 0; }
     .tournament-card:hover { transform: none; }
     .card-topline { grid-column: 2; grid-row: 1; min-height: auto; }

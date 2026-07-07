@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { Prisma } from '@prisma/client'
-import type { PlayerCreate, PlayerUpdate } from '../../../src/types'
+import type { PlayerCreate, PlayerMatchHistory, PlayerUpdate } from '../../../src/types'
 import { prisma } from '../db/prisma'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
 import { requireAdmin } from '../middleware/requireAdmin'
@@ -126,6 +126,65 @@ playersRouter.get('/', async (req, res) => {
   } catch (error) {
     res.status(400).json({ message: error instanceof Error ? error.message : 'Invalid query params' })
   }
+})
+
+playersRouter.get('/:id/matches', async (req, res) => {
+  const playerId = req.params['id'] as string
+  const playerExists = await prisma.player.count({ where: { id: playerId } })
+  if (!playerExists) {
+    res.status(404).json({ message: 'Giocatore non trovato' })
+    return
+  }
+
+  const playedMatchWhere: Prisma.MatchWhereInput = {
+    status: 'completed',
+    player1Id: { not: null },
+    player2Id: { not: null },
+    result: { not: null },
+    NOT: { result: 'BYE' },
+    OR: [{ player1Id: playerId }, { player2Id: playerId }],
+  }
+
+  const [played, wins, recentMatches] = await prisma.$transaction([
+    prisma.match.count({ where: playedMatchWhere }),
+    prisma.match.count({ where: { ...playedMatchWhere, winnerId: playerId } }),
+    prisma.match.findMany({
+      where: playedMatchWhere,
+      orderBy: { updatedAt: 'desc' },
+      take: 5,
+      include: {
+        tournament: { select: { id: true, name: true } },
+        player1: { select: { id: true, name: true, photoUrl: true } },
+        player2: { select: { id: true, name: true, photoUrl: true } },
+      },
+    }),
+  ])
+
+  const response: PlayerMatchHistory = {
+    stats: {
+      played,
+      wins,
+      losses: played - wins,
+      win_rate: played > 0 ? Math.round((wins / played) * 100) : 0,
+    },
+    recent_form: recentMatches.map((match) => match.winnerId === playerId ? 'win' : 'loss'),
+    recent_matches: recentMatches.map((match) => {
+      const opponent = match.player1Id === playerId ? match.player2 : match.player1
+      return {
+        id: match.id,
+        tournament_id: match.tournament.id,
+        tournament_name: match.tournament.name,
+        opponent_id: opponent!.id,
+        opponent_name: opponent!.name,
+        opponent_photo_url: opponent!.photoUrl,
+        result: match.result!,
+        outcome: match.winnerId === playerId ? 'win' : 'loss',
+        played_at: match.updatedAt.toISOString(),
+      }
+    }),
+  }
+
+  res.json(response)
 })
 
 playersRouter.get('/:id', async (req, res) => {
