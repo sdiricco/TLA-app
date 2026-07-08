@@ -2,13 +2,15 @@ import { Router } from 'express'
 import { Prisma } from '@prisma/client'
 import type { PlayerCreate, PlayerMatchHistory, PlayerUpdate } from '../../../src/types'
 import { prisma } from '../db/prisma'
-import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
+import { requireAuth } from '../middleware/requireAuth'
 import { requireAdmin } from '../middleware/requireAdmin'
+import { requireOrganization, type OrganizationRequest } from '../middleware/requireOrganization'
 import { serializePlayer } from '../lib/serializers'
 
 export const playersRouter = Router()
 
 playersRouter.use(requireAuth)
+playersRouter.use(requireOrganization)
 
 function parseNullableDate(value: unknown): Date | null | undefined {
   if (value === undefined) return undefined
@@ -57,7 +59,7 @@ function parsePlayerSort(
 }
 
 playersRouter.get('/me', async (req, res) => {
-  const authReq = req as AuthenticatedRequest
+  const authReq = req as OrganizationRequest
   const userId = authReq.authUser?.id
   if (!userId) {
     res.status(401).json({ message: 'Not authenticated' })
@@ -70,7 +72,7 @@ playersRouter.get('/me', async (req, res) => {
   }
 
   const player = await prisma.player.findUnique({
-    where: { userId },
+    where: { organizationId_userId: { organizationId: authReq.organization!.id, userId } },
   })
   res.json(player ? serializePlayer(player) : null)
 })
@@ -88,7 +90,9 @@ playersRouter.get('/', async (req, res) => {
     const page = parseNonNegativeInt(pageParam, 0)
     const perPage = Math.min(parsePositiveInt(perPageParam, 20), 100)
     const orderBy = parsePlayerSort(sortBy, sortOrder)
-    const where = {
+    const organizationId = (req as OrganizationRequest).organization!.id
+    const where: Prisma.PlayerWhereInput = {
+      organizationId,
       ...(name
         ? {
             name: {
@@ -130,13 +134,15 @@ playersRouter.get('/', async (req, res) => {
 
 playersRouter.get('/:id/matches', async (req, res) => {
   const playerId = req.params['id'] as string
-  const playerExists = await prisma.player.count({ where: { id: playerId } })
+  const organizationId = (req as OrganizationRequest).organization!.id
+  const playerExists = await prisma.player.count({ where: { id: playerId, organizationId } })
   if (!playerExists) {
     res.status(404).json({ message: 'Giocatore non trovato' })
     return
   }
 
   const playedMatchWhere: Prisma.MatchWhereInput = {
+    tournament: { organizationId },
     status: 'completed',
     player1Id: { not: null },
     player2Id: { not: null },
@@ -189,8 +195,9 @@ playersRouter.get('/:id/matches', async (req, res) => {
 
 playersRouter.get('/:id', async (req, res) => {
   const playerId = req.params['id'] as string
-  const player = await prisma.player.findUnique({
-    where: { id: playerId },
+  const organizationId = (req as OrganizationRequest).organization!.id
+  const player = await prisma.player.findFirst({
+    where: { id: playerId, organizationId },
   })
 
   if (!player) {
@@ -203,8 +210,10 @@ playersRouter.get('/:id', async (req, res) => {
 
 playersRouter.post('/', requireAdmin, async (req, res) => {
   const data = req.body as PlayerCreate
+  const organizationId = (req as OrganizationRequest).organization!.id
   const player = await prisma.player.create({
     data: {
+      organizationId,
       name: data.name,
       ranking: data.ranking ?? 0,
       birthDate: parseNullableDate(data.birth_date) ?? null,
@@ -220,7 +229,10 @@ playersRouter.post('/', requireAdmin, async (req, res) => {
 playersRouter.put('/:id', requireAdmin, async (req, res) => {
   const data = req.body as PlayerUpdate
   const playerId = req.params['id'] as string
+  const organizationId = (req as OrganizationRequest).organization!.id
   try {
+    const existing = await prisma.player.findFirst({ where: { id: playerId, organizationId }, select: { id: true } })
+    if (!existing) throw new Error('NOT_FOUND')
     const player = await prisma.player.update({
       where: { id: playerId },
       data: {
@@ -241,8 +253,10 @@ playersRouter.put('/:id', requireAdmin, async (req, res) => {
 
 playersRouter.delete('/:id', requireAdmin, async (req, res) => {
   const playerId = req.params['id'] as string
+  const organizationId = (req as OrganizationRequest).organization!.id
   try {
-    await prisma.player.delete({ where: { id: playerId } })
+    const deleted = await prisma.player.deleteMany({ where: { id: playerId, organizationId } })
+    if (deleted.count === 0) throw new Error('NOT_FOUND')
     res.status(204).send()
   } catch {
     res.status(404).json({ message: 'Giocatore non trovato' })

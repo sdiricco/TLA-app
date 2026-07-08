@@ -18,10 +18,6 @@
     if (auth.isAuthenticated) await router.push('/');
   }
 
-  async function continueAsGuest(): Promise<void> {
-    await auth.loginAsGuest();
-    await router.push({ name: 'tournaments' });
-  }
 </script>
 
 <template>
@@ -65,8 +61,6 @@
               <Button type="button" label="Registrati" variant="link" size="small" @click="router.push({ name: 'register' })" />
             </div>
 
-            <div class="divider"><span>oppure</span></div>
-            <Button class="guest-button" type="button" label="Continua come ospite" icon="pi pi-compass" severity="secondary" outlined fluid @click="continueAsGuest" />
           </form>
         </div>
 

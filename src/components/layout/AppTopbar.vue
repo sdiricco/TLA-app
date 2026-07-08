@@ -8,6 +8,7 @@ const route = useRoute()
 const layout = useLayoutStore()
 const title = computed(() => {
   if (route.path.startsWith('/players')) return 'Giocatori'
+  if (route.path.startsWith('/profile')) return 'Profilo'
   if (route.path.startsWith('/admin')) return 'Admin'
   if (route.path.includes('/matches/')) return 'Partita'
   return 'Tornei'

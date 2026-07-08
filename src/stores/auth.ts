@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { authService } from '../services/authApi'
 import type { User } from '../types'
+import { useOrganizationsStore } from './organizations'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -9,7 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref<string | null>(null)
 
   const isAuthenticated = computed(() => !!user.value)
-  const isAdmin = computed(() => user.value?.role === 'admin')
+  const isAdmin = computed(() => useOrganizationsStore().isAdmin)
   const isGuest = computed(() => user.value?.id === 'guest')
 
   async function init(): Promise<void> {
@@ -31,6 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout(): Promise<void> {
     await authService.logout()
     user.value = null
+    useOrganizationsStore().clear()
   }
 
   async function register(email: string, password: string, name?: string): Promise<void> {

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
 import { signInWithPassword, signUpWithPassword } from '../lib/supabaseAuth'
 import { getOrCreateProfile, listUnlinkedProfiles } from '../lib/profileRepo'
+import { requireOrganization, type OrganizationRequest } from '../middleware/requireOrganization'
 
 export const authRouter = Router()
 
@@ -143,9 +144,9 @@ authRouter.get('/profile', requireAuth, async (req, res) => {
   }
 })
 
-authRouter.get('/profiles/unlinked', requireAuth, async (_req, res) => {
+authRouter.get('/profiles/unlinked', requireAuth, requireOrganization, async (req, res) => {
   try {
-    res.json(await listUnlinkedProfiles())
+    res.json(await listUnlinkedProfiles((req as OrganizationRequest).organization!.id))
   } catch (error) {
     res.status(500).json({
       message: error instanceof Error ? error.message : 'Unable to load profiles',

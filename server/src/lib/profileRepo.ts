@@ -82,7 +82,7 @@ export async function getProfileByUserId(userId: string): Promise<StoredProfile 
   return profile ? mapProfile(profile) : null
 }
 
-export async function listUnlinkedProfiles(): Promise<StoredProfile[]> {
+export async function listUnlinkedProfiles(organizationId: string): Promise<StoredProfile[]> {
   if (!env.databaseUrl) return []
 
   const profiles = await prisma.profile.findMany({
@@ -94,7 +94,7 @@ export async function listUnlinkedProfiles(): Promise<StoredProfile[]> {
     },
     where: {
       role: 'player',
-      player: null,
+      players: { none: { organizationId } },
     },
     orderBy: {
       createdAt: 'desc',

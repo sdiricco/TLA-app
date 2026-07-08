@@ -26,6 +26,8 @@ apiClient.interceptors.request.use((config) => {
 
   config.headers = AxiosHeaders.from(config.headers);
   config.headers.set('Authorization', `Bearer ${guestToken ? 'tla_guest_token' : token}`);
+  const organizationId = localStorage.getItem('tla_organization_id');
+  if (organizationId) config.headers.set('X-Organization-Id', organizationId);
   return config;
 });
 

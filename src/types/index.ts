@@ -15,6 +15,15 @@ export interface Profile {
   role: UserRole
 }
 
+export type OrganizationRole = 'owner' | 'admin' | 'member'
+
+export interface Organization {
+  id: string
+  name: string
+  join_code: string
+  role: OrganizationRole
+}
+
 export interface Player {
   id: string
   name: string
@@ -201,6 +210,12 @@ export interface AuthService {
   loginAsGuest(): Promise<User>
   logout(): Promise<void>
   getCurrentUser(): Promise<User | null>
+}
+
+export interface OrganizationsService {
+  getAll(): Promise<Organization[]>
+  create(name: string): Promise<Organization>
+  join(joinCode: string): Promise<Organization>
 }
 
 export interface PlayersService {

@@ -8,15 +8,42 @@ datasource db {
 }
 
 model Profile {
-  id        String   @id
-  email     String   @unique
-  name      String?
-  role      String   @default("player")
-  player    Player?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id          String                   @id
+  email       String                   @unique
+  name        String?
+  role        String                   @default("player")
+  players     Player[]
+  memberships OrganizationMembership[]
+  createdAt   DateTime                 @default(now()) @map("created_at")
+  updatedAt   DateTime                 @updatedAt @map("updated_at")
 
   @@map("profiles")
+}
+
+model Organization {
+  id          String                   @id @default(uuid())
+  name        String
+  joinCode    String                   @unique @map("join_code")
+  memberships OrganizationMembership[]
+  players     Player[]
+  tournaments Tournament[]
+  createdAt   DateTime                 @default(now()) @map("created_at")
+  updatedAt   DateTime                 @updatedAt @map("updated_at")
+
+  @@map("organizations")
+}
+
+model OrganizationMembership {
+  organizationId String       @map("organization_id")
+  profileId      String       @map("profile_id")
+  role           String       @default("member")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  profile        Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@id([organizationId, profileId])
+  @@index([profileId])
+  @@map("organization_memberships")
 }
 
 model Player {
@@ -27,7 +54,9 @@ model Player {
   photoUrl         String?            @map("photo_url")
   club             String?
   phone            String?
-  userId           String?            @unique @map("user_id")
+  organizationId   String             @map("organization_id")
+  userId           String?            @map("user_id")
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   profile          Profile?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   entries          TournamentPlayer[]
   matchesAsPlayer1 Match[]            @relation("MatchPlayer1")
@@ -36,7 +65,9 @@ model Player {
   createdAt        DateTime           @default(now()) @map("created_at")
   updatedAt        DateTime           @updatedAt @map("updated_at")
 
+  @@unique([organizationId, userId])
   @@index([ranking])
+  @@index([organizationId])
   @@map("players")
 }
 
@@ -57,6 +88,8 @@ model Tournament {
   participantLimit      Int?               @map("participant_limit")
   groupCount            Int?               @map("group_count")
   qualifiersPerGroup    Int?               @map("qualifiers_per_group")
+  organizationId        String             @map("organization_id")
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   players               TournamentPlayer[]
   matches               Match[]
   createdAt             DateTime           @default(now()) @map("created_at")
@@ -64,6 +97,7 @@ model Tournament {
 
   @@index([startDate])
   @@index([status])
+  @@index([organizationId])
   @@map("tournaments")
 }
 

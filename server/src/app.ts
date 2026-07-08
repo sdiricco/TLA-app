@@ -7,6 +7,7 @@ import { healthRouter } from './routes/health'
 import { matchesRouter } from './routes/matches'
 import { playersRouter } from './routes/players'
 import { tournamentsRouter } from './routes/tournaments'
+import { organizationsRouter } from './routes/organizations'
 
 export function createApp() {
   const app = express()
@@ -35,6 +36,7 @@ export function createApp() {
     res.json(openApiSpec)
   })
   app.use('/api/auth', authRouter)
+  app.use('/api/organizations', organizationsRouter)
   app.use('/api/players', playersRouter)
   app.use('/api/tournaments', tournamentsRouter)
   app.use('/api/matches', matchesRouter)

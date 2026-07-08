@@ -343,9 +343,12 @@
     .page-header > div { min-width: 0; flex: 1; }
     .eyebrow { display: none; }
     .page-header h1 { overflow: hidden; font-size: 1.7rem; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
-    .create-button { width: 2.75rem; min-width: 2.75rem; padding: 0; border-radius: 50%; }
+    .create-button { width: 2.75rem; min-width: 2.75rem; padding: 0; border-radius: 0; }
     .create-button :deep(.p-button-label) { display: none; }
-    .summary-strip { display: none; }
+    .summary-strip { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.8rem; }
+    .summary-icon { width: 2.2rem; height: 2.2rem; }
+    .summary-strip strong { font-size: 1rem; }
+    .summary-strip div:nth-child(2) span { font-size: 0.72rem; }
     .filters-panel { padding: 0.65rem; border-radius: 0; box-shadow: none; }
     .filter-title { min-height: 2rem; margin: 0; padding-inline: 0.2rem; font-size: 0.875rem; }
     .mobile-filter-count { display: inline-flex; margin-left: auto; }

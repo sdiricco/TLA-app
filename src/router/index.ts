@@ -7,6 +7,7 @@ declare module 'vue-router' {
     public?: boolean
     requiresAuth?: boolean
     requiresAdmin?: boolean
+    organizationSetup?: boolean
   }
 }
 
@@ -30,6 +31,12 @@ const router = createRouter({
       component: () => import('../layouts/AppLayout.vue'),
       meta: { requiresAuth: true },
       children: [
+        {
+          path: 'organizations',
+          name: 'organizations',
+          component: () => import('../views/OrganizationsView.vue'),
+          meta: { requiresAuth: true, organizationSetup: true },
+        },
         {
           path: '',
           name: 'home',
@@ -90,9 +97,15 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'profile',
+          name: 'profile',
+          component: () => import('../views/ProfileView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'admin/feature-flags',
           name: 'admin-feature-flags',
-          component: () => import('../views/FeatureFlagsView.vue'),
+          redirect: () => ({ name: 'profile' }),
           meta: { requiresAuth: true, requiresAdmin: true },
         },
       ],
@@ -111,9 +124,18 @@ router.beforeEach(async (to) => {
     return { name: 'login' }
   }
 
+  if (to.meta.requiresAuth && auth.isAuthenticated && !auth.isGuest) {
+    const { useOrganizationsStore } = await import('../stores/organizations')
+    const organizations = useOrganizationsStore()
+    if (!organizations.initialized) await organizations.load()
+    if (!organizations.activeOrganization && !to.meta.organizationSetup) {
+      return { name: 'organizations' }
+    }
+  }
+
   // Authenticated on login page → redirect by role
   if ((to.name === 'login' || to.name === 'register') && auth.isAuthenticated) {
-    return { name: 'tournaments' }
+    return { name: 'home' }
   }
 
   // Player trying to access admin-only route

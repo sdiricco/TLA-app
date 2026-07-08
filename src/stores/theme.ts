@@ -1,23 +1,18 @@
 import { ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 
-export type CourtTheme = 'grass' | 'hard' | 'clay'
+export type CourtTheme = 'grass'
 
 const STORAGE_KEY = 'tla_court_theme'
 const DARK_MODE_STORAGE_KEY = 'tla_dark_mode'
-const themes: CourtTheme[] = ['grass', 'hard', 'clay']
+const themes: CourtTheme[] = ['grass']
 
 function getInitialTheme(): CourtTheme {
-  if (typeof localStorage === 'undefined') return 'grass'
-  const stored = localStorage.getItem(STORAGE_KEY) as CourtTheme | null
-  return stored && themes.includes(stored) ? stored : 'grass'
+  return 'grass'
 }
 
 function getInitialDarkMode(): boolean {
-  if (typeof localStorage === 'undefined') return false
-  const stored = localStorage.getItem(DARK_MODE_STORAGE_KEY)
-  if (stored !== null) return stored === 'true'
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
+  return false
 }
 
 export const useThemeStore = defineStore('theme', () => {
@@ -30,25 +25,25 @@ export const useThemeStore = defineStore('theme', () => {
   }
 
   function applyTheme(theme: CourtTheme): void {
-    courtTheme.value = theme
-    document.documentElement.dataset.courtTheme = theme
+    courtTheme.value = 'grass'
+    document.documentElement.dataset.courtTheme = 'grass'
   }
 
   function toggleDarkMode(): void {
-    isDark.value = !isDark.value
+    isDark.value = false
   }
 
   applyTheme(courtTheme.value)
   syncDarkMode(isDark.value)
 
   watch(courtTheme, (theme) => {
-    document.documentElement.dataset.courtTheme = theme
-    localStorage.setItem(STORAGE_KEY, theme)
+    document.documentElement.dataset.courtTheme = 'grass'
+    if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, 'grass')
   })
 
   watch(isDark, (enabled) => {
-    syncDarkMode(enabled)
-    localStorage.setItem(DARK_MODE_STORAGE_KEY, String(enabled))
+    syncDarkMode(false)
+    if (typeof localStorage !== 'undefined') localStorage.setItem(DARK_MODE_STORAGE_KEY, 'false')
   })
 
   return { courtTheme, isDark, applyTheme, toggleDarkMode }

@@ -1,8 +1,7 @@
 import type { NextFunction, Response } from 'express'
-import { getOrCreateProfile } from '../lib/profileRepo'
-import type { AuthenticatedRequest } from './requireAuth'
+import type { OrganizationRequest } from './requireOrganization'
 
-export async function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+export async function requireAdmin(req: OrganizationRequest, res: Response, next: NextFunction): Promise<void> {
   if (!req.authUser) {
     res.status(401).json({ message: 'Not authenticated' })
     return
@@ -13,17 +12,9 @@ export async function requireAdmin(req: AuthenticatedRequest, res: Response, nex
     return
   }
 
-  try {
-    const profile = await getOrCreateProfile(req.authUser)
-    if (profile.role !== 'admin') {
-      res.status(403).json({ message: 'Forbidden' })
-      return
-    }
-
-    next()
-  } catch (error) {
-    res.status(500).json({
-      message: error instanceof Error ? error.message : 'Unable to resolve permissions',
-    })
+  if (!req.organization || !['owner', 'admin'].includes(req.organization.role)) {
+    res.status(403).json({ message: 'Forbidden' })
+    return
   }
+  next()
 }
