@@ -179,7 +179,7 @@ function openProfile(): void {
 .sidebar-footer { display: flex; flex-direction: column; gap: 0.65rem; padding: 0.85rem; border-top: 1px solid rgb(var(--color-white-rgb) / 9%); background: rgb(var(--color-black-rgb) / 6%); }
 .profile-row { display: flex; align-items: center; gap: 0.6rem; min-width: 0; padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
 .profile-row:hover .profile-copy span { color: var(--color-accent-soft); }
-.profile-avatar { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border: 1px solid rgb(var(--color-accent-rgb) / 28%); border-radius: 50%; background: rgb(var(--color-accent-rgb) / 12%); color: var(--color-accent); font-size: 0.72rem; }
+.profile-avatar { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border: 1px solid rgb(var(--color-accent-rgb) / 28%); border-radius: 0; background: rgb(var(--color-accent-rgb) / 12%); color: var(--color-accent); font-size: 0.72rem; }
 .profile-copy { display: grid; min-width: 0; }
 .profile-copy span { overflow: hidden; color: rgb(var(--color-white-rgb) / 88%); font-size: 0.8rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .profile-copy small { margin-top: 0.12rem; color: rgb(var(--color-white-rgb) / 55%); font-size: 0.68rem; }

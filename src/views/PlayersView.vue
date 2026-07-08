@@ -143,24 +143,32 @@
         <h1>I protagonisti del campo.</h1>
         <p class="page-subtitle">Consulta profili, ranking e informazioni dei tuoi giocatori.</p>
       </div>
-      <Button
-        v-if="canViewAdmin"
-        class="create-button"
-        label="Nuovo giocatore"
-        icon="pi pi-plus"
-        :disabled="auth.isGuest"
-        @click="openCreate"
-      />
     </header>
 
     <section class="summary-strip">
       <div class="summary-icon"><i class="pi pi-users" /></div>
       <div><strong>{{ store.total }}</strong><span>Giocatori registrati</span></div>
-      <span class="summary-copy">Una community, infinite sfide.</span>
+      <Button
+        v-if="canViewAdmin"
+        class="create-button"
+        label="Aggiungi"
+        icon="pi pi-user-plus"
+        text
+        aria-label="Aggiungi giocatore"
+        title="Aggiungi giocatore"
+        :disabled="auth.isGuest"
+        @click="openCreate"
+      />
     </section>
 
     <section class="filters-panel" :class="{ 'mobile-open': mobileFiltersOpen }" aria-label="Filtri giocatori">
-      <button class="filter-title" type="button" :aria-expanded="mobileFiltersOpen" @click="mobileFiltersOpen = !mobileFiltersOpen"><i class="pi pi-sliders-h" /><span>Cerca e ordina</span><span class="mobile-filter-count"><i class="pi pi-chevron-down" /></span></button>
+      <div class="filters-header">
+        <button class="filter-title" type="button" :aria-expanded="mobileFiltersOpen" @click="mobileFiltersOpen = !mobileFiltersOpen"><i class="pi pi-sliders-h" /><span>Cerca e ordina</span><span class="mobile-filter-count"><i class="pi pi-chevron-down" /></span></button>
+        <div class="filter-action">
+          <Button label="Azzera" icon="pi pi-refresh" severity="secondary" text @click="clearFilters" />
+        </div>
+      </div>
+
       <div class="filters-grid">
         <div class="filter-field search-name-field">
         <label for="player-name-filter" class="text-sm font-medium">Cerca per nome</label>
@@ -194,10 +202,6 @@
           option-value="value"
           fluid
           />
-        </div>
-
-        <div class="filter-action">
-          <Button label="Azzera" icon="pi pi-refresh" severity="secondary" text @click="clearFilters" />
         </div>
       </div>
     </section>
@@ -256,10 +260,13 @@
       <div class="load-more-area">
         <Button
           v-if="hasMorePlayers"
+          class="load-more-button"
           label="Carica altro"
           icon="pi pi-chevron-down"
+          aria-label="Carica altri giocatori"
+          title="Carica altri giocatori"
           severity="secondary"
-          outlined
+          text
           :loading="store.loadingMore"
           @click="loadMore"
         />
@@ -276,18 +283,19 @@
   .eyebrow { margin: 0 0 0.5rem; color: var(--green); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; }
   .page-header h1 { margin: 0; font-size: clamp(2rem, 3vw, 3rem); line-height: 1; letter-spacing: -0.055em; }
   .page-subtitle { margin: 0.75rem 0 0; color: var(--color-text-muted); font-size: 0.95rem; }
-  .create-button { height: 3rem; border-color: var(--green); border-radius: 0; background: var(--green); box-shadow: 0 10px 22px rgb(var(--color-primary-rgb) / 18%); font-weight: 700; }
+  .create-button { min-width: auto; height: 2.75rem; margin-left: auto; padding-inline: 0.35rem; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: var(--green); font-weight: 700; }
+  .create-button:hover { background: rgb(var(--color-primary-rgb) / 8%) !important; color: var(--color-primary-800) !important; }
   .summary-strip { display: flex; align-items: center; gap: 0.9rem; padding: 0.85rem 1rem; border: 1px solid var(--color-border); border-radius: 0; background: linear-gradient(90deg, var(--color-white), var(--color-surface-soft)); }
   .summary-icon { display: grid; place-items: center; width: 2.65rem; height: 2.65rem; border-radius: 0; background: var(--color-primary-soft-surface); color: var(--green); }
   .summary-strip div:nth-child(2) { display: grid; min-width: 125px; }
   .summary-strip strong { font-size: 1.15rem; line-height: 1; }
   .summary-strip div span { margin-top: 0.25rem; color: var(--color-text-muted); font-size: 0.68rem; }
-  .summary-copy { margin-left: auto; color: var(--color-text-muted); font-size: 0.76rem; font-style: italic; }
   .filters-panel { padding: 1rem; border: 1px solid var(--color-border); border-radius: 0; background: rgb(var(--color-white-rgb) / 88%); box-shadow: 0 8px 30px rgb(var(--color-shadow-rgb) / 5%); }
-  .filter-title { display: flex; width: 100%; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; padding: 0; border: 0; background: transparent; color: var(--color-text-muted); font-size: 0.75rem; font-weight: 800; text-align: left; }
+  .filters-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.8rem; }
+  .filter-title { display: flex; min-width: 0; flex: 1; align-items: center; gap: 0.5rem; padding: 0; border: 0; background: transparent; color: var(--color-text-muted); font-size: 0.75rem; font-weight: 800; text-align: left; }
   .filter-title i { color: var(--green); }
   .mobile-filter-count { display: none; }
-  .filters-grid { display: grid; grid-template-columns: 1.15fr 1.15fr 0.9fr 0.9fr auto; gap: 0.75rem; }
+  .filters-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
   .filter-field { display: flex; min-width: 0; flex-direction: column; gap: 0.4rem; }
   .filter-field label { color: var(--color-text-muted); font-size: 0.68rem; font-weight: 700; }
   .input-wrap { position: relative; }
@@ -332,33 +340,34 @@
   .empty-state h3 { margin: 1rem 0 0.3rem; }
   .empty-state p { margin: 0; color: var(--color-text-muted); font-size: 0.8rem; }
   .load-more-area { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 1rem; padding-top: 0.35rem; }
+  .load-more-button { min-width: auto; height: 2.75rem; padding-inline: 0.35rem; border-radius: 0; color: var(--color-text-muted); font-size: 0.78rem; }
   .all-loaded { display: flex; align-items: center; gap: 0.4rem; margin: 0; color: var(--color-text-subtle); font-size: 0.72rem; }
   .all-loaded i { color: var(--color-primary-500); }
 
-  @media (max-width: 1050px) { .filters-grid { grid-template-columns: 1fr 1fr; } .filter-action { align-items: flex-end; } }
-  @media (max-width: 800px) { .page-header { align-items: flex-start; } .page-subtitle, .summary-copy, .view-label { display: none; } }
+  @media (max-width: 1050px) { .filter-action { align-items: flex-end; } }
+  @media (max-width: 800px) { .page-header { align-items: flex-start; } .page-subtitle, .view-label { display: none; } }
   @media (max-width: 620px) {
     .players-page { gap: 0.8rem; }
     .page-header { align-items: center; flex-direction: row; gap: 0.75rem; padding-top: 0; }
     .page-header > div { min-width: 0; flex: 1; }
     .eyebrow { display: none; }
     .page-header h1 { overflow: hidden; font-size: 1.7rem; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
-    .create-button { width: 2.75rem; min-width: 2.75rem; padding: 0; border-radius: 0; }
-    .create-button :deep(.p-button-label) { display: none; }
+    .create-button { min-width: auto; height: 2.4rem; padding-inline: 0.2rem; }
     .summary-strip { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.8rem; }
     .summary-icon { width: 2.2rem; height: 2.2rem; }
     .summary-strip strong { font-size: 1rem; }
     .summary-strip div:nth-child(2) span { font-size: 0.72rem; }
     .filters-panel { padding: 0.65rem; border-radius: 0; box-shadow: none; }
-    .filter-title { min-height: 2rem; margin: 0; padding-inline: 0.2rem; font-size: 0.875rem; }
+    .filters-header { align-items: center; gap: 0.5rem; margin-bottom: 0; }
+    .filter-title { min-height: 2rem; padding-inline: 0.2rem; font-size: 0.875rem; }
     .mobile-filter-count { display: inline-flex; margin-left: auto; }
     .mobile-filter-count i { transition: transform 160ms; }
     .mobile-open .mobile-filter-count i { transform: rotate(180deg); }
+    .filter-action :deep(.p-button) { height: 2.2rem; padding-inline: 0.35rem; }
     .filters-grid { grid-template-columns: 1fr; }
     .filters-grid { margin-top: 0.55rem; }
     .filters-grid > :not(.search-name-field) { display: none; }
     .mobile-open .filters-grid > * { display: flex; }
-    .filter-action :deep(.p-button) { width: 100%; }
     .section-heading h2 { font-size: 1.05rem; }
     .section-heading span { font-size: 0.75rem; }
     .players-grid { display: flex; flex-direction: column; gap: 0.45rem; }
@@ -382,7 +391,7 @@
     .skeleton-topline > :deep(.p-skeleton:last-child) { grid-column: 4; grid-row: 1; width: 2rem !important; height: 2rem !important; }
     .skeleton-details { display: none; }
     .load-more-area { width: 100%; }
-    .load-more-area :deep(.p-button) { width: 100%; }
+    .load-more-button { min-width: auto; height: 2.4rem; padding-inline: 0.2rem; }
   }
 
   /* Player collections always use the compact list-item language. */
