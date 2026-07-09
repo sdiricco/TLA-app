@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import PrimeVue from 'primevue/config'
 import ConfirmationService from 'primevue/confirmationservice'
 import ToastService from 'primevue/toastservice'
+import { Icon } from '@iconify/vue'
 import Nora from '@primeuix/themes/nora'
 import 'primeicons/primeicons.css'
 import './style.css'
@@ -41,5 +42,6 @@ app.use(PrimeVue, {
 })
 app.use(ConfirmationService)
 app.use(ToastService)
+app.component('IconifyIcon', Icon)
 
 app.mount('#app')

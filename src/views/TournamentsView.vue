@@ -190,25 +190,41 @@
         <h1>Il campo è pronto.</h1>
         <p class="page-subtitle">Organizza, monitora e porta a termine ogni competizione.</p>
       </div>
-      <Button v-if="canViewAdmin" class="create-button" label="Nuovo torneo" icon="pi pi-plus" :disabled="auth.isGuest" @click="openCreate" />
     </header>
 
     <section class="summary-strip">
-      <div class="summary-icon"><i class="pi pi-trophy" /></div>
+      <div class="summary-icon"><IconifyIcon icon="mdi:trophy-outline" /></div>
       <div><strong>{{ store.total }}</strong><span>Tornei totali</span></div>
-      <span class="summary-copy">Tutto il tuo tennis, in un solo colpo d'occhio.</span>
+      <button
+        v-if="canViewAdmin"
+        class="create-button"
+        type="button"
+        aria-label="Aggiungi torneo"
+        title="Aggiungi torneo"
+        :disabled="auth.isGuest"
+        @click="openCreate"
+      >
+        <IconifyIcon icon="mdi:calendar-plus-outline" />
+        <span>Aggiungi</span>
+      </button>
     </section>
 
     <section class="filters-panel" :class="{ 'mobile-open': mobileFiltersOpen }" aria-label="Filtri tornei">
-      <button class="filter-title" type="button" :aria-expanded="mobileFiltersOpen" @click="mobileFiltersOpen = !mobileFiltersOpen">
-        <i class="pi pi-sliders-h" />
-        <span>Filtra tornei</span>
-        <span class="mobile-filter-count">{{ activeFiltersCount || '' }}<i class="pi pi-chevron-down" /></span>
-      </button>
+      <div class="filters-header">
+        <button class="filter-title" type="button" :aria-expanded="mobileFiltersOpen" @click="mobileFiltersOpen = !mobileFiltersOpen">
+          <IconifyIcon icon="mdi:tune-variant" />
+          <span>Filtra tornei</span>
+          <span class="mobile-filter-count">{{ activeFiltersCount || '' }}<IconifyIcon icon="mdi:chevron-down" /></span>
+        </button>
+        <div class="filter-action">
+          <Button label="Azzera" icon="pi pi-refresh" severity="secondary" text @click="clearFilters" />
+        </div>
+      </div>
+
       <div class="filters-grid">
         <div class="filter-field search-field">
         <label for="tournament-name-filter" class="text-sm font-medium">Cerca per nome</label>
-          <span class="search-wrap"><i class="pi pi-search" /><InputText id="tournament-name-filter" v-model="searchName" placeholder="Es. Open 2026" fluid /></span>
+          <span class="search-wrap"><IconifyIcon icon="mdi:magnify" /><InputText id="tournament-name-filter" v-model="searchName" placeholder="Es. Open 2026" fluid /></span>
         </div>
 
         <div class="filter-field">
@@ -248,16 +264,16 @@
           fluid
         />
         </div>
+      </div>
 
-        <div class="filter-action">
-          <Button label="Azzera" icon="pi pi-refresh" severity="secondary" text @click="clearFilters" />
-        </div>
+      <div v-if="mobileFiltersOpen" class="filter-action filter-action-mobile">
+        <Button label="Azzera" icon="pi pi-refresh" severity="secondary" text @click="clearFilters" />
       </div>
     </section>
 
     <div class="section-heading">
       <div><h2>I tuoi tornei</h2><span>{{ store.total }} risultati</span></div>
-      <span class="view-label"><i class="pi pi-th-large" /> Vista griglia</span>
+      <span class="view-label"><IconifyIcon icon="mdi:view-grid-outline" /> Vista griglia</span>
     </div>
 
     <div v-if="store.loading" class="tournaments-grid">
@@ -270,7 +286,7 @@
     </div>
 
     <div v-else-if="store.tournaments.length === 0" class="empty-state">
-      <span><i class="pi pi-trophy" /></span>
+      <span><IconifyIcon icon="mdi:trophy-outline" /></span>
       <h3>Nessun torneo in campo</h3>
       <p>Modifica i filtri oppure crea una nuova competizione.</p>
     </div>
@@ -293,24 +309,24 @@
         <div class="card-title-row">
           <div>
             <h3>{{ t.name }}</h3>
-            <span v-if="t.location" class="location"><i class="pi pi-map-marker" />{{ t.location }}</span>
+            <span v-if="t.location" class="location"><IconifyIcon icon="mdi:map-marker-outline" />{{ t.location }}</span>
           </div>
-          <span class="card-arrow"><i class="pi pi-arrow-up-right" /></span>
+          <span class="card-arrow"><IconifyIcon icon="mdi:arrow-top-right" /></span>
         </div>
 
         <div class="date-panel">
-          <span class="date-icon"><i class="pi pi-calendar" /></span>
+          <span class="date-icon"><IconifyIcon icon="mdi:calendar-month-outline" /></span>
           <div><small>PERIODO</small><strong>{{ formatDate(t.start_date) }}<template v-if="t.end_date"> — {{ formatDate(t.end_date) }}</template></strong></div>
         </div>
 
         <div class="card-meta">
-          <div><i class="pi pi-sitemap" /><span><small>FORMATO</small>{{ tournamentFormatLabels[t.format] ?? t.format }}</span></div>
-          <div><i class="pi pi-users" /><span><small>CATEGORIA</small>{{ categoryLabels[t.category] ?? t.category }}</span></div>
+          <div><IconifyIcon icon="mdi:account-tree-outline" /><span><small>FORMATO</small>{{ tournamentFormatLabels[t.format] ?? t.format }}</span></div>
+          <div><IconifyIcon icon="mdi:account-group-outline" /><span><small>CATEGORIA</small>{{ categoryLabels[t.category] ?? t.category }}</span></div>
         </div>
 
         <footer class="card-footer">
-          <span><i class="pi pi-user-plus" /> Fino a {{ t.participant_limit ?? '∞' }} giocatori</span>
-          <span>Apri torneo <i class="pi pi-chevron-right" /></span>
+          <span><IconifyIcon icon="mdi:account-plus-outline" /> Fino a {{ t.participant_limit ?? '∞' }} giocatori</span>
+          <span>Apri torneo <IconifyIcon icon="mdi:chevron-right" /></span>
         </footer>
       </article>
     </div>
@@ -330,7 +346,7 @@
         @click="loadMore"
       />
 
-      <p v-if="!hasMoreTournaments" class="all-loaded"><i class="pi pi-check-circle" /> Hai visualizzato tutti i tornei</p>
+      <p v-if="!hasMoreTournaments" class="all-loaded"><IconifyIcon icon="mdi:check-circle-outline" /> Hai visualizzato tutti i tornei</p>
     </div>
   </div>
 </template>
@@ -341,22 +357,24 @@
   .eyebrow { margin: 0 0 0.5rem; color: var(--green); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; }
   .page-header h1 { margin: 0; font-size: clamp(2rem, 3vw, 3rem); line-height: 1; letter-spacing: -0.055em; }
   .page-subtitle { margin: 0.75rem 0 0; color: var(--color-text-muted); font-size: 0.95rem; }
-  .create-button { height: 3rem; border-color: var(--green); border-radius: 0; background: var(--green); box-shadow: 0 10px 22px rgb(var(--color-primary-rgb) / 18%); font-weight: 700; }
+  .create-button { display: inline-flex; align-items: center; gap: 0.45rem; min-width: auto; height: 3rem; margin-left: auto; padding-inline: 0.35rem; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: var(--green); font-weight: 700; cursor: pointer; }
+  .create-button :deep(svg) { width: 1rem; height: 1rem; }
+  .create-button:hover { background: rgb(var(--color-primary-rgb) / 8%) !important; color: var(--color-primary-800) !important; }
   .summary-strip { display: flex; align-items: center; gap: 0.9rem; padding: 0.85rem 1rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); }
   .summary-icon { display: grid; place-items: center; width: 2.65rem; height: 2.65rem; border-radius: 0; background: var(--color-primary-soft-surface); color: var(--green); }
   .summary-strip div:nth-child(2) { display: grid; min-width: 100px; }
   .summary-strip strong { font-size: 1.15rem; line-height: 1; }
   .summary-strip div span { margin-top: 0.25rem; color: var(--color-text-muted); font-size: 0.68rem; }
-  .summary-copy { margin-left: auto; color: var(--color-text-muted); font-size: 0.76rem; font-style: italic; }
   .filters-panel { padding: 1rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); box-shadow: 0 8px 30px rgb(var(--color-shadow-rgb) / 5%); }
-  .filter-title { display: flex; width: 100%; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; padding: 0; border: 0; background: transparent; color: var(--color-text-muted); font-size: 0.75rem; font-weight: 800; text-align: left; }
-  .filter-title i { color: var(--green); }
+  .filters-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.8rem; }
+  .filter-title { display: flex; min-width: 0; flex: 1; align-items: center; gap: 0.5rem; padding: 0; border: 0; background: transparent; color: var(--color-text-muted); font-size: 0.75rem; font-weight: 800; text-align: left; }
+  .filter-title :deep(svg) { color: var(--green); width: 1rem; height: 1rem; }
   .mobile-filter-count { display: none; }
-  .filters-grid { display: grid; grid-template-columns: minmax(12rem, 1.2fr) repeat(3, minmax(10rem, 1fr)) auto; gap: 0.75rem; }
-  .filter-field { display: flex; flex-direction: column; gap: 0.4rem; }
+  .filters-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+  .filter-field { display: flex; min-width: 0; flex-direction: column; gap: 0.4rem; }
   .filter-field label { color: var(--color-text-muted); font-size: 0.68rem; font-weight: 700; }
   .search-wrap { position: relative; }
-  .search-wrap > i { position: absolute; z-index: 2; top: 50%; left: 0.9rem; transform: translateY(-50%); color: var(--color-text-subtle); font-size: 0.8rem; }
+  .search-wrap > :deep(svg) { position: absolute; z-index: 2; top: 50%; left: 0.9rem; transform: translateY(-50%); color: var(--color-text-subtle); width: 0.85rem; height: 0.85rem; }
   .search-wrap :deep(.p-inputtext) { padding-left: 2.4rem; }
   .filter-field :deep(.p-inputtext), .filter-field :deep(.p-select) { height: 2.75rem; border-color: var(--color-border); border-radius: 0; background: var(--color-surface-soft); color: var(--color-text); font-size: 0.82rem; }
   .date-filter :deep(.p-datepicker) { width: 100%; }
@@ -370,6 +388,7 @@
   .section-heading h2 { margin: 0; font-size: 1.2rem; letter-spacing: -0.025em; }
   .section-heading span { color: var(--color-text-subtle); font-size: 0.72rem; }
   .view-label { display: flex; align-items: center; gap: 0.4rem; }
+  .view-label :deep(svg) { width: 0.95rem; height: 0.95rem; }
   .tournaments-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(350px, 100%), 1fr)); gap: 1rem; }
   .tournament-card { position: relative; overflow: hidden; padding: 1.25rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); box-shadow: 0 8px 24px rgb(var(--color-shadow-rgb) / 6%); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
   .tournament-card::before { position: absolute; inset: 0 0 auto; height: 3px; background: var(--color-primary-500); content: ''; }
@@ -389,16 +408,19 @@
   .card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin: 1.15rem 0; }
   .card-title-row h3 { margin: 0; font-size: 1.2rem; letter-spacing: -0.03em; }
   .location { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.4rem; color: var(--color-text-muted); font-size: 0.7rem; }
+  .location :deep(svg) { width: 0.8rem; height: 0.8rem; }
   .card-arrow { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border-radius: 50%; background: var(--color-surface-muted); color: var(--green); font-size: 0.75rem; transition: 180ms; }
+  .card-arrow :deep(svg) { width: 0.95rem; height: 0.95rem; }
   .tournament-card:hover .card-arrow { background: var(--green); color: var(--color-white); }
   .date-panel { display: flex; align-items: center; gap: 0.75rem; padding: 0.8rem; border-radius: 0; background: var(--color-surface-soft); }
   .date-icon { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; flex: 0 0 auto; border-radius: 0; background: var(--color-surface-card); color: var(--green); box-shadow: 0 3px 9px rgb(var(--color-shadow-rgb) / 8%); }
+  .date-icon :deep(svg) { width: 1rem; height: 1rem; }
   .date-panel div { display: grid; gap: 0.2rem; }
   .date-panel small, .card-meta small { color: var(--color-text-subtle); font-size: 0.56rem; font-weight: 800; letter-spacing: 0.1em; }
   .date-panel strong { font-size: 0.75rem; }
   .card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1rem 0; }
   .card-meta > div { display: flex; align-items: center; gap: 0.55rem; min-width: 0; color: var(--color-text-muted); font-size: 0.7rem; }
-  .card-meta > div > i { color: var(--color-primary-300); }
+  .card-meta > div :deep(svg) { width: 0.95rem; height: 0.95rem; color: var(--color-primary-300); }
   .card-meta span { display: grid; gap: 0.15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .card-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 0.8rem; border-top: 1px solid var(--color-surface-muted); color: var(--color-text-muted); font-size: 0.65rem; }
   .card-footer span { display: flex; align-items: center; gap: 0.35rem; }
@@ -408,24 +430,22 @@
   .skeleton-date, .skeleton-meta { display: flex; align-items: center; gap: 0.65rem; }
   .empty-state { display: flex; min-height: 280px; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed var(--color-border); border-radius: 0; background: var(--color-surface-soft); text-align: center; }
   .empty-state > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; background: var(--color-primary-soft-surface); color: var(--green); font-size: 1.3rem; }
+  .empty-state > span :deep(svg) { width: 1.35rem; height: 1.35rem; }
   .empty-state h3 { margin: 1rem 0 0.3rem; }
   .empty-state p { margin: 0; color: var(--color-text-muted); font-size: 0.8rem; }
   .load-more-area { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
   .loading-more-grid { width: 100%; }
   .all-loaded { display: flex; align-items: center; gap: 0.4rem; margin: 0; color: var(--color-text-subtle); font-size: 0.72rem; }
-  .all-loaded i { color: var(--color-primary-500); }
+  .all-loaded :deep(svg) { width: 1rem; height: 1rem; color: var(--color-primary-500); }
+  .filter-action-mobile { display: none; }
 
   @media (max-width: 1100px) {
-    .filters-grid { grid-template-columns: repeat(3, 1fr); }
-    .search-field { grid-column: span 2; }
+    .filters-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
   @media (max-width: 800px) {
     .page-header { align-items: flex-start; }
-    .page-subtitle, .summary-copy, .view-label { display: none; }
-    .filters-grid { grid-template-columns: 1fr 1fr; }
-    .search-field { grid-column: 1 / -1; }
-    .filter-action { align-items: flex-end; }
+    .page-subtitle, .view-label { display: none; }
   }
 
   @media (max-width: 520px) {
@@ -434,23 +454,24 @@
     .page-header > div { min-width: 0; flex: 1; }
     .eyebrow { display: none; }
     .page-header h1 { overflow: hidden; font-size: 1.7rem; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
-    .create-button { width: 2.75rem; min-width: 2.75rem; padding: 0; border-radius: 0; }
-    .create-button :deep(.p-button-label) { display: none; }
+    .create-button { min-width: auto; height: 2.4rem; padding-inline: 0.2rem; }
     .summary-strip { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.8rem; }
     .summary-icon { width: 2.2rem; height: 2.2rem; }
     .summary-strip strong { font-size: 1rem; }
     .summary-strip div:nth-child(2) span { font-size: 0.72rem; }
     .filters-panel { padding: 0.65rem; border-radius: 0; box-shadow: none; }
-    .filter-title { min-height: 2rem; margin: 0; padding-inline: 0.2rem; font-size: 0.875rem; }
+    .filters-header { align-items: center; gap: 0.5rem; margin-bottom: 0; }
+    .filter-title { min-height: 2rem; padding-inline: 0.2rem; font-size: 0.875rem; }
+    .filters-header .filter-action { display: none; }
     .mobile-filter-count { display: inline-flex; align-items: center; gap: 0.45rem; margin-left: auto; color: var(--green); }
     .mobile-filter-count > i { transition: transform 160ms; }
     .mobile-open .mobile-filter-count > i { transform: rotate(180deg); }
     .filters-grid { grid-template-columns: 1fr; }
-    .search-field { grid-column: auto; }
     .filters-grid > :not(.search-field) { display: none; }
     .mobile-open .filters-grid > * { display: flex; }
     .filters-grid { margin-top: 0.55rem; }
-    .filter-action :deep(.p-button) { width: 100%; }
+    .filter-action-mobile { display: flex; margin-top: 0.65rem; }
+    .filter-action-mobile :deep(.p-button) { width: 100%; height: 2.2rem; padding-inline: 0.35rem; }
     .section-heading { margin-top: 0.2rem; }
     .section-heading h2 { font-size: 1.05rem; }
     .section-heading span { font-size: 0.75rem; }

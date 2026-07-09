@@ -32,21 +32,21 @@ const activeOrganizationName = computed(() => organizations.activeOrganization?.
 const accountItems = computed(() => [
   {
     label: 'Profilo',
-    icon: 'pi pi-user',
+    icon: 'mdi:account-outline',
     command: () => {
       void router.push({ name: 'profile' })
     },
   },
   {
     label: 'Organizzazioni',
-    icon: 'pi pi-building',
+    icon: 'mdi:domain',
     command: () => {
       void router.push({ name: 'organizations' })
     },
   },
   {
     label: 'Esci',
-    icon: 'pi pi-sign-out',
+    icon: 'mdi:logout',
     command: async () => {
       await auth.logout()
       await router.push('/login')

@@ -9,15 +9,15 @@ const auth = useAuthStore()
 const navItems = computed(() => {
   if (auth.isAdmin) {
     return [
-      { label: 'Tornei', icon: 'pi pi-trophy', to: '/tournaments' },
-      { label: 'Giocatori', icon: 'pi pi-users', to: '/players' },
-      { label: 'Profilo', icon: 'pi pi-user', to: '/profile' },
+      { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
+      { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
+      { label: 'Profilo', icon: 'mdi:account-outline', to: '/profile' },
     ]
   }
 
   return [
-    { label: 'Tornei', icon: 'pi pi-trophy', to: '/tournaments' },
-    { label: 'Profilo', icon: 'pi pi-user', to: '/profile' },
+    { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
+    { label: 'Profilo', icon: 'mdi:account-outline', to: '/profile' },
   ]
 })
 
@@ -36,7 +36,7 @@ function isActive(to: string): boolean {
       class="bottom-link"
       :class="{ active: isActive(item.to) }"
     >
-      <i :class="item.icon" />
+      <IconifyIcon :icon="item.icon" />
       <span>{{ item.label }}</span>
     </RouterLink>
   </nav>
@@ -74,7 +74,7 @@ function isActive(to: string): boolean {
   transition: 160ms ease;
 }
 
-.bottom-link i {
+.bottom-link :deep(svg) {
   font-size: 1rem;
 }
 

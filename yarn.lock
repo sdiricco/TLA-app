@@ -1014,6 +1014,25 @@
   resolved "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.28.1.tgz"
   integrity sha512-TZbWkQY7kvTAXbXUT7uVACR5cMHsDiSz9z7ZKAX/RTq/WJEk3QyRr0wZpNhBDX+/0CtdqUIJlOiodQcta6tY3Q==
 
+"@iconify-json/mdi@^1.2.3":
+  version "1.2.3"
+  resolved "https://registry.npmjs.org/@iconify-json/mdi/-/mdi-1.2.3.tgz"
+  integrity sha512-O3cLwbDOK7NNDf2ihaQOH5F9JglnulNDFV7WprU2dSoZu3h3cWH//h74uQAB87brHmvFVxIOkuBX2sZSzYhScg==
+  dependencies:
+    "@iconify/types" "*"
+
+"@iconify/types@*", "@iconify/types@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.npmjs.org/@iconify/types/-/types-2.0.0.tgz"
+  integrity sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==
+
+"@iconify/vue@^5.0.1":
+  version "5.0.1"
+  resolved "https://registry.npmjs.org/@iconify/vue/-/vue-5.0.1.tgz"
+  integrity sha512-aumwwooJlFJ5H5qYWB6ZTAyM0C8hpfcSVLB9/a3qnH1GGvIJ+FEbpEs4s/HfErYe/M5qZeLjwmESR5fFm3lXEw==
+  dependencies:
+    "@iconify/types" "^2.0.0"
+
 "@inquirer/ansi@^2.0.7":
   version "2.0.7"
   resolved "https://registry.npmjs.org/@inquirer/ansi/-/ansi-2.0.7.tgz"
@@ -5131,7 +5150,7 @@ vue-tsc@^3.3.3:
     "@volar/typescript" "2.4.28"
     "@vue/language-core" "3.3.6"
 
-"vue@^2.7.0 || ^3.2.25", vue@^3.2.25, vue@^3.5.0, vue@^3.5.11, vue@^3.5.34, vue@3.5.39:
+"vue@^2.7.0 || ^3.2.25", vue@^3.2.25, vue@^3.5.0, vue@^3.5.11, vue@^3.5.34, vue@>=3.0.0, vue@3.5.39:
   version "3.5.39"
   resolved "https://registry.npmjs.org/vue/-/vue-3.5.39.tgz"
   integrity sha512-xmZCYabFGcirU8r0fTuvl/LICc1OU620rnqepaJDL/a141ZigkG7AyaxQLdqJ02ZRYzWe6YPaDHeQx7MfknQfA==

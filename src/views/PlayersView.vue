@@ -146,7 +146,7 @@
     </header>
 
     <section class="summary-strip">
-      <div class="summary-icon"><i class="pi pi-users" /></div>
+      <div class="summary-icon"><IconifyIcon icon="mdi:account-group-outline" /></div>
       <div><strong>{{ store.total }}</strong><span>Giocatori registrati</span></div>
       <Button
         v-if="canViewAdmin"
@@ -163,7 +163,7 @@
 
     <section class="filters-panel" :class="{ 'mobile-open': mobileFiltersOpen }" aria-label="Filtri giocatori">
       <div class="filters-header">
-        <button class="filter-title" type="button" :aria-expanded="mobileFiltersOpen" @click="mobileFiltersOpen = !mobileFiltersOpen"><i class="pi pi-sliders-h" /><span>Cerca e ordina</span><span class="mobile-filter-count"><i class="pi pi-chevron-down" /></span></button>
+        <button class="filter-title" type="button" :aria-expanded="mobileFiltersOpen" @click="mobileFiltersOpen = !mobileFiltersOpen"><IconifyIcon icon="mdi:tune-variant" /><span>Cerca e ordina</span><span class="mobile-filter-count"><IconifyIcon icon="mdi:chevron-down" /></span></button>
         <div class="filter-action">
           <Button label="Azzera" icon="pi pi-refresh" severity="secondary" text @click="clearFilters" />
         </div>
@@ -172,12 +172,12 @@
       <div class="filters-grid">
         <div class="filter-field search-name-field">
         <label for="player-name-filter" class="text-sm font-medium">Cerca per nome</label>
-          <span class="input-wrap"><i class="pi pi-search" /><InputText id="player-name-filter" v-model="searchName" placeholder="Es. Mario Rossi" fluid /></span>
+          <span class="input-wrap"><IconifyIcon icon="mdi:magnify" /><InputText id="player-name-filter" v-model="searchName" placeholder="Es. Mario Rossi" fluid /></span>
         </div>
 
         <div class="filter-field">
         <label for="player-club-filter" class="text-sm font-medium">Cerca per club</label>
-          <span class="input-wrap"><i class="pi pi-building-columns" /><InputText id="player-club-filter" v-model="searchClub" placeholder="Es. TC Milano" fluid /></span>
+          <span class="input-wrap"><IconifyIcon icon="mdi:domain" /><InputText id="player-club-filter" v-model="searchClub" placeholder="Es. TC Milano" fluid /></span>
         </div>
 
         <div class="filter-field">
@@ -204,26 +204,33 @@
           />
         </div>
       </div>
+
+      <div v-if="mobileFiltersOpen" class="filter-action filter-action-mobile">
+        <Button label="Azzera" icon="pi pi-refresh" severity="secondary" text @click="clearFilters" />
+      </div>
     </section>
 
     <div class="section-heading">
       <div><h2>Giocatori</h2><span>{{ store.total }} profili</span></div>
-      <span class="view-label"><i class="pi pi-th-large" /> Vista griglia</span>
+      <span class="view-label"><IconifyIcon icon="mdi:view-grid-outline" /> Vista griglia</span>
     </div>
 
     <div v-if="store.loading" class="players-grid">
       <div v-for="item in 8" :key="item" class="player-card skeleton-card">
-        <div class="skeleton-topline"><Skeleton width="2rem" height="1rem" /><Skeleton width="2rem" height="2rem" /></div>
+        <div class="skeleton-topline"><Skeleton class="skeleton-arrow" width="1rem" height="1rem" /></div>
         <div class="skeleton-identity">
-          <Skeleton class="skeleton-avatar" shape="circle" size="4.4rem" />
-          <Skeleton class="skeleton-name" width="65%" height="1.15rem" />
+          <Skeleton class="skeleton-avatar" shape="square" size="4.4rem" />
+          <div class="skeleton-name-wrap">
+            <Skeleton class="skeleton-name" width="65%" height="1.15rem" />
+            <Skeleton class="skeleton-ranking" width="3rem" height="0.9rem" />
+          </div>
         </div>
         <div class="skeleton-details"><Skeleton height="3.2rem" /><Skeleton height="3.2rem" /></div>
       </div>
     </div>
 
     <div v-else-if="store.players.length === 0" class="empty-state">
-      <span><i class="pi pi-users" /></span>
+      <span><IconifyIcon icon="mdi:account-group-outline" /></span>
       <h3>Nessun giocatore trovato</h3>
       <p>Modifica i filtri oppure aggiungi il primo giocatore.</p>
     </div>
@@ -238,23 +245,27 @@
         @keydown.enter="openDetail(player)"
       >
         <div class="card-topline">
-          <span v-if="player.ranking" class="ranking-value">#{{ player.ranking }}</span>
-          <span class="card-arrow"><i class="pi pi-arrow-up-right" /></span>
+          <span class="card-arrow"><IconifyIcon icon="mdi:arrow-top-right" /></span>
         </div>
 
         <div class="player-identity">
           <div class="avatar-wrap">
             <Avatar :label="getPlayerInitials(player)" :image="player.photo_url ?? undefined" shape="circle" size="xlarge" />
           </div>
-          <div><h3>{{ player.name }}</h3></div>
+          <div>
+            <h3>
+              {{ player.name }}
+              <span v-if="player.ranking" class="player-ranking">(#{{ player.ranking }})</span>
+            </h3>
+          </div>
         </div>
 
         <div class="player-details">
-          <div><span class="detail-icon"><i class="pi pi-building-columns" /></span><p><small>CLUB</small>{{ formatValue(player.club) }}</p></div>
-          <div><span class="detail-icon"><i class="pi pi-phone" /></span><p><small>TELEFONO</small>{{ formatValue(player.phone) }}</p></div>
+          <div><span class="detail-icon"><IconifyIcon icon="mdi:domain" /></span><p><small>CLUB</small>{{ formatValue(player.club) }}</p></div>
+          <div><span class="detail-icon"><IconifyIcon icon="mdi:phone-outline" /></span><p><small>TELEFONO</small>{{ formatValue(player.phone) }}</p></div>
         </div>
 
-        <footer class="card-footer"><span>Profilo giocatore</span><span>Visualizza <i class="pi pi-chevron-right" /></span></footer>
+        <footer class="card-footer"><span>Profilo giocatore</span><span>Visualizza <IconifyIcon icon="mdi:chevron-right" /></span></footer>
       </article>
 
       <div class="load-more-area">
@@ -271,7 +282,7 @@
           @click="loadMore"
         />
 
-        <p v-else class="all-loaded"><i class="pi pi-check-circle" /> Hai visualizzato tutti i giocatori</p>
+        <p v-else class="all-loaded"><IconifyIcon icon="mdi:check-circle-outline" /> Hai visualizzato tutti i giocatori</p>
       </div>
     </div>
   </div>
@@ -293,40 +304,43 @@
   .filters-panel { padding: 1rem; border: 1px solid var(--color-border); border-radius: 0; background: rgb(var(--color-white-rgb) / 88%); box-shadow: 0 8px 30px rgb(var(--color-shadow-rgb) / 5%); }
   .filters-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.8rem; }
   .filter-title { display: flex; min-width: 0; flex: 1; align-items: center; gap: 0.5rem; padding: 0; border: 0; background: transparent; color: var(--color-text-muted); font-size: 0.75rem; font-weight: 800; text-align: left; }
-  .filter-title i { color: var(--green); }
+  .filter-title :deep(svg) { color: var(--green); width: 1rem; height: 1rem; }
   .mobile-filter-count { display: none; }
   .filters-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
   .filter-field { display: flex; min-width: 0; flex-direction: column; gap: 0.4rem; }
   .filter-field label { color: var(--color-text-muted); font-size: 0.68rem; font-weight: 700; }
   .input-wrap { position: relative; }
-  .input-wrap > i { position: absolute; z-index: 2; top: 50%; left: 0.9rem; transform: translateY(-50%); color: var(--color-text-subtle); font-size: 0.8rem; }
+  .input-wrap > :deep(svg) { position: absolute; z-index: 2; top: 50%; left: 0.9rem; transform: translateY(-50%); color: var(--color-text-subtle); width: 0.85rem; height: 0.85rem; }
   .input-wrap :deep(.p-inputtext) { padding-left: 2.4rem; }
   .filter-field :deep(.p-inputtext), .filter-field :deep(.p-select) { height: 2.75rem; border-color: var(--color-border); border-radius: 0; background: var(--color-surface-soft); font-size: 0.82rem; }
   .filter-field :deep(.p-inputtext:focus), .filter-field :deep(.p-select.p-focus) { border-color: var(--color-primary-500); box-shadow: 0 0 0 3px rgb(var(--color-primary-500-rgb) / 10%); }
   .filter-action { display: flex; align-items: flex-end; }
   .filter-action :deep(.p-button) { height: 2.75rem; color: var(--color-text-muted); font-size: 0.78rem; }
+  .filter-action-mobile { display: none; }
   .section-heading { display: flex; align-items: center; justify-content: space-between; margin-top: 0.25rem; }
   .section-heading > div { display: flex; align-items: baseline; gap: 0.65rem; }
   .section-heading h2 { margin: 0; font-size: 1.2rem; letter-spacing: -0.025em; }
   .section-heading span { color: var(--color-text-subtle); font-size: 0.72rem; }
   .view-label { display: flex; align-items: center; gap: 0.4rem; }
+  .view-label :deep(svg) { width: 0.95rem; height: 0.95rem; }
   .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(310px, 100%), 1fr)); gap: 1rem; }
   .player-card { position: relative; overflow: hidden; padding: 1.2rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); box-shadow: 0 8px 24px rgb(var(--color-shadow-rgb) / 6%); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
   .player-card::before { position: absolute; inset: 0 0 auto; height: 3px; background: var(--color-border-strong); content: ''; }
   .player-card:hover, .player-card:focus-visible { transform: translateY(-3px); border-color: var(--color-primary-300); box-shadow: 0 16px 36px rgb(var(--color-shadow-rgb) / 11%); outline: none; }
   .card-topline { display: flex; align-items: center; justify-content: space-between; }
-  .ranking-value { color: var(--color-text-muted); font-size: 0.82rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .card-arrow { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--color-surface-muted); color: var(--green); font-size: 0.72rem; transition: 180ms; }
-  .player-card:hover .card-arrow { background: var(--green); color: var(--color-white); }
+  .card-arrow { display: inline-flex; align-items: center; justify-content: center; color: var(--green); font-size: 0.72rem; line-height: 1; }
+  .card-arrow :deep(svg) { width: 0.95rem; height: 0.95rem; }
   .player-identity { display: flex; align-items: center; gap: 1rem; padding: 1.35rem 0 1.15rem; }
   .avatar-wrap { position: relative; }
-  .avatar-wrap :deep(.p-avatar) { width: 4.4rem; height: 4.4rem; border: 3px solid white; background: var(--color-border); color: var(--color-text-muted); font-size: 1.35rem; box-shadow: 0 5px 16px rgb(var(--color-shadow-rgb) / 13%); }
+  .avatar-wrap :deep(.p-avatar) { width: 4.4rem; height: 4.4rem; border: 3px solid var(--color-border); border-radius: 0; background: transparent; color: var(--color-text-muted); font-size: 1.35rem; box-shadow: none; }
   .player-identity > div:last-child { min-width: 0; }
   .player-identity h3 { overflow: hidden; margin: 0; font-size: 1.08rem; letter-spacing: -0.025em; text-overflow: ellipsis; white-space: nowrap; }
+  .player-ranking { color: var(--color-text-subtle); font-size: 0.78em; font-weight: 700; }
   .player-identity > div:last-child span { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.35rem; color: var(--color-text-muted); font-size: 0.68rem; }
   .player-details { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
   .player-details > div { display: flex; align-items: center; gap: 0.6rem; min-width: 0; padding: 0.7rem; border-radius: 0; background: var(--color-surface-soft); }
   .detail-icon { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; flex: 0 0 auto; border-radius: 0; background: var(--color-surface-card); color: var(--color-primary-300); font-size: 0.7rem; box-shadow: 0 2px 7px rgb(var(--color-shadow-rgb) / 7%); }
+  .detail-icon :deep(svg) { width: 1em; height: 1em; }
   .player-details p { display: grid; min-width: 0; margin: 0; overflow: hidden; color: var(--color-text-muted); font-size: 0.67rem; text-overflow: ellipsis; white-space: nowrap; }
   .player-details small { margin-bottom: 0.17rem; color: var(--color-text-subtle); font-size: 0.51rem; font-weight: 800; letter-spacing: 0.08em; }
   .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid var(--color-surface-muted); color: var(--color-text-subtle); font-size: 0.62rem; }
@@ -334,15 +348,17 @@
   .skeleton-card { min-height: 290px; cursor: default; }
   .skeleton-topline { display: flex; align-items: center; justify-content: space-between; }
   .skeleton-identity { display: flex; align-items: center; gap: 1rem; padding: 1.35rem 0 1.15rem; }
+  .skeleton-name-wrap { display: grid; min-width: 0; gap: 0.22rem; }
   .skeleton-details { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
   .empty-state { display: flex; min-height: 280px; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed var(--color-border); border-radius: 0; background: var(--color-surface-soft); text-align: center; }
   .empty-state > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; background: var(--color-primary-soft-surface); color: var(--green); font-size: 1.3rem; }
+  .empty-state > span :deep(svg) { width: 1.35rem; height: 1.35rem; }
   .empty-state h3 { margin: 1rem 0 0.3rem; }
   .empty-state p { margin: 0; color: var(--color-text-muted); font-size: 0.8rem; }
   .load-more-area { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 1rem; padding-top: 0.35rem; }
   .load-more-button { min-width: auto; height: 2.75rem; padding-inline: 0.35rem; border-radius: 0; color: var(--color-text-muted); font-size: 0.78rem; }
   .all-loaded { display: flex; align-items: center; gap: 0.4rem; margin: 0; color: var(--color-text-subtle); font-size: 0.72rem; }
-  .all-loaded i { color: var(--color-primary-500); }
+  .all-loaded :deep(svg) { width: 1rem; height: 1rem; color: var(--color-primary-500); }
 
   @media (max-width: 1050px) { .filter-action { align-items: flex-end; } }
   @media (max-width: 800px) { .page-header { align-items: flex-start; } .page-subtitle, .view-label { display: none; } }
@@ -360,14 +376,16 @@
     .filters-panel { padding: 0.65rem; border-radius: 0; box-shadow: none; }
     .filters-header { align-items: center; gap: 0.5rem; margin-bottom: 0; }
     .filter-title { min-height: 2rem; padding-inline: 0.2rem; font-size: 0.875rem; }
+    .filters-header .filter-action { display: none; }
     .mobile-filter-count { display: inline-flex; margin-left: auto; }
     .mobile-filter-count i { transition: transform 160ms; }
     .mobile-open .mobile-filter-count i { transform: rotate(180deg); }
-    .filter-action :deep(.p-button) { height: 2.2rem; padding-inline: 0.35rem; }
     .filters-grid { grid-template-columns: 1fr; }
     .filters-grid { margin-top: 0.55rem; }
     .filters-grid > :not(.search-name-field) { display: none; }
     .mobile-open .filters-grid > * { display: flex; }
+    .filter-action-mobile { display: flex; margin-top: 0.65rem; }
+    .filter-action-mobile :deep(.p-button) { width: 100%; height: 2.2rem; padding-inline: 0.35rem; }
     .section-heading h2 { font-size: 1.05rem; }
     .section-heading span { font-size: 0.75rem; }
     .players-grid { display: flex; flex-direction: column; gap: 0.45rem; }
@@ -375,20 +393,20 @@
     .player-card::before { width: 3px; height: auto; inset: 0 auto 0 0; }
     .player-card:hover { transform: none; }
     .card-topline { display: contents; }
-    .ranking-value { grid-column: 3; grid-row: 1; padding-left: 0; color: var(--color-text-muted); font-size: 0.875rem; }
-    .card-arrow { grid-column: 4; grid-row: 1; width: 2rem; height: 2rem; background: transparent; }
+    .card-arrow { grid-column: 4; grid-row: 1; }
     .player-identity { display: contents; }
     .avatar-wrap { grid-column: 1; grid-row: 1; margin-right: 0; }
-    .avatar-wrap :deep(.p-avatar) { width: 2.75rem; height: 2.75rem; border-width: 2px; font-size: 0.9rem; box-shadow: none; }
-    .player-identity > div:last-child { grid-column: 2; grid-row: 1; }
+    .avatar-wrap :deep(.p-avatar) { width: 2.75rem; height: 2.75rem; border-width: 2px; border-radius: 0; background: transparent; font-size: 0.9rem; box-shadow: none; }
+    .player-identity > div:last-child { grid-column: 2 / 4; grid-row: 1; }
     .player-identity h3 { font-size: 1rem; }
     .player-details, .card-footer { display: none; }
     .skeleton-card { display: grid; min-height: 4rem; }
     .skeleton-topline, .skeleton-identity { display: contents; }
-    .skeleton-avatar { grid-column: 1; grid-row: 1; width: 2.75rem !important; height: 2.75rem !important; margin-right: 0; }
-    .skeleton-name { grid-column: 2; grid-row: 1; width: min(10rem, 72%) !important; }
-    .skeleton-topline > :deep(.p-skeleton:first-child) { grid-column: 3; grid-row: 1; width: 1.6rem !important; margin-left: 0; }
-    .skeleton-topline > :deep(.p-skeleton:last-child) { grid-column: 4; grid-row: 1; width: 2rem !important; height: 2rem !important; }
+    .skeleton-avatar { grid-column: 1; grid-row: 1; width: 2.75rem !important; height: 2.75rem !important; margin-right: 0; border-radius: 0 !important; }
+    .skeleton-name-wrap { grid-column: 2 / 4; grid-row: 1; }
+    .skeleton-name { width: min(10rem, 72%) !important; }
+    .skeleton-ranking { width: 2.4rem !important; }
+    .skeleton-topline > :deep(.p-skeleton) { grid-column: 4; grid-row: 1; width: 1rem !important; height: 1rem !important; margin-left: 0; }
     .skeleton-details { display: none; }
     .load-more-area { width: 100%; }
     .load-more-button { min-width: auto; height: 2.4rem; padding-inline: 0.2rem; }
@@ -401,20 +419,20 @@
   .player-card:hover { transform: none; }
   .card-topline, .player-identity { display: contents; }
   .avatar-wrap { grid-column: 1; grid-row: 1; margin-right: 0; }
-  .avatar-wrap :deep(.p-avatar) { width: 2.75rem; height: 2.75rem; border-width: 2px; font-size: 0.9rem; box-shadow: none; }
-  .player-identity > div:last-child { grid-column: 2; grid-row: 1; }
+  .avatar-wrap :deep(.p-avatar) { width: 2.75rem; height: 2.75rem; border-width: 2px; border-radius: 0; background: transparent; font-size: 0.9rem; box-shadow: none; }
+  .player-identity > div:last-child { grid-column: 2 / 4; grid-row: 1; }
   .player-identity h3 { font-size: 1rem; }
-  .ranking-value { grid-column: 3; grid-row: 1; padding-left: 0; color: var(--color-text-muted); font-size: 0.875rem; }
-  .card-arrow { grid-column: 4; grid-row: 1; width: 2rem; height: 2rem; background: transparent; }
+  .card-arrow { grid-column: 4; grid-row: 1; }
   .player-details, .card-footer { display: none; }
   .load-more-area { width: 100%; }
 
   .skeleton-card { display: grid; min-height: 4rem; }
   .skeleton-topline, .skeleton-identity { display: contents; }
-  .skeleton-avatar { grid-column: 1; grid-row: 1; width: 2.75rem !important; height: 2.75rem !important; margin-right: 0; }
-  .skeleton-name { grid-column: 2; grid-row: 1; width: min(10rem, 72%) !important; }
-  .skeleton-topline > :deep(.p-skeleton:first-child) { grid-column: 3; grid-row: 1; width: 1.6rem !important; margin-left: 0; }
-  .skeleton-topline > :deep(.p-skeleton:last-child) { grid-column: 4; grid-row: 1; width: 2rem !important; height: 2rem !important; }
+  .skeleton-avatar { grid-column: 1; grid-row: 1; width: 2.75rem !important; height: 2.75rem !important; margin-right: 0; border-radius: 0 !important; }
+  .skeleton-name-wrap { grid-column: 2 / 4; grid-row: 1; }
+  .skeleton-name { width: min(10rem, 72%) !important; }
+  .skeleton-ranking { width: 2.4rem !important; }
+  .skeleton-topline > :deep(.p-skeleton) { grid-column: 4; grid-row: 1; width: 1rem !important; height: 1rem !important; margin-left: 0; }
   .skeleton-details { display: none; }
 
   @media (min-width: 768px) {

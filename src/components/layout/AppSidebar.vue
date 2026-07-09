@@ -21,14 +21,14 @@ function isActive(to: string): boolean {
 const navItems = computed(() => {
   if (auth.isAdmin) {
     return [
-      { label: 'Tornei', icon: 'pi pi-trophy', to: '/tournaments' },
-      { label: 'Giocatori', icon: 'pi pi-users', to: '/players' },
-      { label: 'Profilo', icon: 'pi pi-user', to: '/profile' },
+      { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
+      { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
+      { label: 'Profilo', icon: 'mdi:account-outline', to: '/profile' },
     ]
   }
   return [
-    { label: 'Tornei', icon: 'pi pi-trophy', to: '/tournaments' },
-    { label: 'Profilo', icon: 'pi pi-user', to: '/profile' },
+    { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
+    { label: 'Profilo', icon: 'mdi:account-outline', to: '/profile' },
   ]
 })
 
@@ -75,14 +75,14 @@ function openProfile(): void {
           :disabled="otherOrganizations.length === 0"
           @click="organizationsOpen = !organizationsOpen"
         >
-          <span class="organization-current-icon"><i class="pi pi-building" /></span>
+          <span class="organization-current-icon"><IconifyIcon icon="mdi:office-building-outline" /></span>
           <span class="organization-current-copy">
             <strong>{{ organizations.activeOrganization.name }}</strong>
             <small>
               {{ organizations.activeOrganization.role === 'owner' ? 'Proprietario' : organizations.activeOrganization.role === 'admin' ? 'Amministratore' : 'Membro' }}
             </small>
           </span>
-          <i v-if="otherOrganizations.length > 0" class="pi pi-chevron-down organization-chevron" :class="{ open: organizationsOpen }" />
+          <IconifyIcon v-if="otherOrganizations.length > 0" icon="mdi:chevron-down" class="organization-chevron" :class="{ open: organizationsOpen }" />
         </button>
 
         <div v-if="organizationsOpen && otherOrganizations.length > 0" class="organization-list">
@@ -109,9 +109,9 @@ function openProfile(): void {
             :class="{ active: isActive(item.to) }"
             @click="layout.closeSidebar()"
           >
-            <span class="nav-icon"><i :class="item.icon" /></span>
+            <span class="nav-icon"><IconifyIcon :icon="item.icon" /></span>
             <span>{{ item.label }}</span>
-            <i v-if="isActive(item.to)" class="pi pi-chevron-right nav-arrow" />
+            <IconifyIcon v-if="isActive(item.to)" icon="mdi:chevron-right" class="nav-arrow" />
           </RouterLink>
         </li>
       </ul>
@@ -119,7 +119,7 @@ function openProfile(): void {
 
     <div class="sidebar-footer">
       <button class="profile-row" type="button" @click="openProfile">
-        <div class="profile-avatar"><i class="pi pi-user" /></div>
+        <div class="profile-avatar"><IconifyIcon icon="mdi:account" /></div>
         <div class="profile-copy">
           <span>{{ displayName }}</span>
           <small>{{ auth.isAdmin ? 'Amministratore' : auth.isGuest ? 'Ospite' : 'Giocatore' }}</small>
@@ -158,10 +158,12 @@ function openProfile(): void {
 .organization-current { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .55rem; width: 100%; padding: .35rem 0; border: 0; background: transparent; color: var(--color-white); text-align: left; cursor: pointer; }
 .organization-current:disabled { cursor: default; }
 .organization-current-icon { display: grid; place-items: center; width: 1.55rem; height: 1.55rem; color: var(--color-accent); font-size: .72rem; }
+.organization-current-icon :deep(svg) { width: 1em; height: 1em; }
 .organization-current-copy { display: grid; min-width: 0; gap: .1rem; }
 .organization-current-copy strong { overflow: hidden; font-size: .74rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .organization-current-copy small { color: rgb(var(--color-white-rgb) / 55%); font-size: .62rem; }
 .organization-chevron { color: rgb(var(--color-white-rgb) / 45%); font-size: .58rem; transition: transform 160ms ease; }
+.organization-chevron :deep(svg) { width: 1em; height: 1em; }
 .organization-chevron.open { transform: rotate(180deg); }
 .organization-list { display: grid; gap: .16rem; margin-left: 2.1rem; padding-top: .1rem; }
 .organization-option { display: grid; gap: .08rem; padding: .28rem 0; border: 0; background: transparent; color: rgb(var(--color-white-rgb) / 80%); text-align: left; cursor: pointer; }
@@ -176,10 +178,12 @@ function openProfile(): void {
 .nav-icon { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; flex: 0 0 auto; border-radius: 0; background: rgb(var(--color-white-rgb) / 7%); font-size: 0.8rem; }
 .active .nav-icon { background: var(--color-accent); color: var(--color-primary-800); }
 .nav-arrow { margin-left: auto; font-size: 0.6rem; }
+.nav-arrow :deep(svg) { width: 1em; height: 1em; }
 .sidebar-footer { display: flex; flex-direction: column; gap: 0.65rem; padding: 0.85rem; border-top: 1px solid rgb(var(--color-white-rgb) / 9%); background: rgb(var(--color-black-rgb) / 6%); }
 .profile-row { display: flex; align-items: center; gap: 0.6rem; min-width: 0; padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
 .profile-row:hover .profile-copy span { color: var(--color-accent-soft); }
 .profile-avatar { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border: 1px solid rgb(var(--color-accent-rgb) / 28%); border-radius: 0; background: rgb(var(--color-accent-rgb) / 12%); color: var(--color-accent); font-size: 0.72rem; }
+.profile-avatar :deep(svg) { width: 1em; height: 1em; }
 .profile-copy { display: grid; min-width: 0; }
 .profile-copy span { overflow: hidden; color: rgb(var(--color-white-rgb) / 88%); font-size: 0.8rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .profile-copy small { margin-top: 0.12rem; color: rgb(var(--color-white-rgb) / 55%); font-size: 0.68rem; }
