@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { organizationsService } from '../services/organizationsApi'
-import type { Organization } from '../types'
+import type { Organization, OrganizationVisibility } from '../types'
 
 const STORAGE_KEY = 'tla_organization_id'
 
@@ -42,9 +42,18 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     }
   }
 
-  async function create(name: string): Promise<Organization> {
-    const organization = await organizationsService.create(name)
+  async function create(name: string, visibility: OrganizationVisibility): Promise<Organization> {
+    const organization = await organizationsService.create(name, visibility)
     organizations.value.push(organization)
+    select(organization.id)
+    return organization
+  }
+
+  async function joinPublic(id: string): Promise<Organization> {
+    const organization = await organizationsService.joinPublic(id)
+    const index = organizations.value.findIndex(item => item.id === organization.id)
+    if (index >= 0) organizations.value[index] = organization
+    else organizations.value.push(organization)
     select(organization.id)
     return organization
   }
@@ -65,5 +74,5 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     localStorage.removeItem(STORAGE_KEY)
   }
 
-  return { organizations, activeId, activeOrganization, loading, initialized, error, isAdmin, select, load, create, join, clear }
+  return { organizations, activeId, activeOrganization, loading, initialized, error, isAdmin, select, load, create, join, joinPublic, clear }
 })

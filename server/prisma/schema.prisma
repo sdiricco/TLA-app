@@ -23,6 +23,11 @@ model Profile {
 model Organization {
   id          String                   @id @default(uuid())
   name        String
+  slug        String                   @unique
+  description String?
+  city        String?
+  sport       String?
+  visibility  String                   @default("private")
   joinCode    String                   @unique @map("join_code")
   memberships OrganizationMembership[]
   players     Player[]

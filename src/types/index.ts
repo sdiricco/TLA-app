@@ -16,12 +16,24 @@ export interface Profile {
 }
 
 export type OrganizationRole = 'owner' | 'admin' | 'member'
+export type OrganizationVisibility = 'public' | 'private'
 
 export interface Organization {
   id: string
   name: string
+  slug?: string
+  description?: string | null
+  city?: string | null
+  sport?: string | null
+  visibility?: OrganizationVisibility
+  member_count?: number
   join_code: string
   role: OrganizationRole
+}
+
+export type OrganizationPreview = Omit<Organization, 'join_code' | 'role'> & {
+  join_code?: string
+  role?: OrganizationRole
 }
 
 export interface Player {
@@ -214,8 +226,10 @@ export interface AuthService {
 
 export interface OrganizationsService {
   getAll(): Promise<Organization[]>
-  create(name: string): Promise<Organization>
+  discover(query?: string): Promise<OrganizationPreview[]>
+  create(name: string, visibility: OrganizationVisibility): Promise<Organization>
   join(joinCode: string): Promise<Organization>
+  joinPublic(id: string): Promise<Organization>
 }
 
 export interface PlayersService {
