@@ -30,13 +30,15 @@ const accountInitials = computed(() => {
 const activeOrganizationName = computed(() => organizations.activeOrganization?.name ?? 'Organizzazione')
 
 const accountItems = computed(() => [
-  {
-    label: 'Profilo',
-    icon: 'mdi:account-outline',
-    command: () => {
-      void router.push({ name: 'profile' })
-    },
-  },
+  ...(auth.isGuest
+    ? []
+    : [{
+        label: 'Profilo',
+        icon: 'mdi:account-outline',
+        command: () => {
+          void router.push({ name: 'profile' })
+        },
+      }]),
   {
     label: 'Organizzazioni',
     icon: 'mdi:domain',

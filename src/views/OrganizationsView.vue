@@ -4,9 +4,11 @@ import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
+import { useAuthStore } from '../stores/auth'
 import { useOrganizationsStore } from '../stores/organizations'
 
 const router = useRouter()
+const auth = useAuthStore()
 const store = useOrganizationsStore()
 const name = ref('')
 const joinCode = ref('')
@@ -50,8 +52,8 @@ function openOrganization(id: string): void {
   <section class="organizations-page">
     <header>
       <p class="eyebrow">I TUOI SPAZI</p>
-      <h1>{{ hasOrganizations ? 'Organizzazioni' : 'Crea il tuo primo spazio' }}</h1>
-      <p>Ogni organizzazione mantiene separati giocatori, tornei e ruoli.</p>
+      <h1>{{ auth.isGuest ? 'Scegli un’organizzazione' : hasOrganizations ? 'Organizzazioni' : 'Crea il tuo primo spazio' }}</h1>
+      <p>{{ auth.isGuest ? 'Seleziona uno spazio per consultare tornei e giocatori come ospite.' : 'Ogni organizzazione mantiene separati giocatori, tornei e ruoli.' }}</p>
     </header>
 
     <Message v-if="localError" severity="error" :closable="false">{{ localError }}</Message>
@@ -64,7 +66,9 @@ function openOrganization(id: string): void {
       </button>
     </div>
 
-    <div class="actions-grid">
+    <Message v-if="auth.isGuest && !hasOrganizations" severity="info" :closable="false">Non ci sono organizzazioni disponibili.</Message>
+
+    <div v-if="!auth.isGuest" class="actions-grid">
       <form class="action-card" @submit.prevent="createOrganization">
         <span class="card-icon"><i class="pi pi-plus" /></span>
         <h2>Crea un’organizzazione</h2>

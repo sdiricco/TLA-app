@@ -19,7 +19,13 @@ export async function requireOrganization(req: OrganizationRequest, res: Respons
     return
   }
   if (!req.authUser || req.authUser.id === 'guest') {
-    res.status(403).json({ message: 'L’accesso ospite non appartiene a un’organizzazione' })
+    const organizationExists = await prisma.organization.count({ where: { id: organizationId } })
+    if (!organizationExists) {
+      res.status(404).json({ message: 'Organizzazione non trovata' })
+      return
+    }
+    req.organization = { id: organizationId, role: 'member' }
+    next()
     return
   }
 

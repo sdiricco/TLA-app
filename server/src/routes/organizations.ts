@@ -23,6 +23,19 @@ async function profileFor(req: AuthenticatedRequest) {
 
 organizationsRouter.get('/', async (req, res) => {
   try {
+    if ((req as AuthenticatedRequest).authUser?.id === 'guest') {
+      const organizations = await prisma.organization.findMany({
+        orderBy: { createdAt: 'asc' },
+      })
+      res.json(organizations.map((organization) => ({
+        id: organization.id,
+        name: organization.name,
+        join_code: '',
+        role: 'member',
+      })))
+      return
+    }
+
     const profile = await profileFor(req as AuthenticatedRequest)
     const memberships = await prisma.organizationMembership.findMany({
       where: { profileId: profile.id },

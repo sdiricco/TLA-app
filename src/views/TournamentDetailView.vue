@@ -815,7 +815,7 @@ function openMatchDetail(match: Match): void {
                       </div>
 
                       <div class="player-card-identity">
-                        <div class="player-avatar"><Avatar :label="getPlayerInitials(player)" :image="player.photo_url ?? undefined" shape="circle" /></div>
+                        <div class="player-avatar"><Avatar :label="getPlayerInitials(player)" :image="player.photo_url ?? undefined" shape="square" /></div>
                         <div><h3>{{ player.name }}</h3></div>
                       </div>
 
@@ -878,7 +878,7 @@ function openMatchDetail(match: Match): void {
                         <span class="player-arrow"><i class="pi pi-arrow-up-right" /></span>
                       </div>
                       <div class="player-card-identity">
-                        <div class="player-avatar"><Avatar :label="getPlayerInitials(player)" :image="player.photo_url ?? undefined" shape="circle" /></div>
+                        <div class="player-avatar"><Avatar :label="getPlayerInitials(player)" :image="player.photo_url ?? undefined" shape="square" /></div>
                         <div><h3>{{ player.name }}</h3></div>
                       </div>
                       <div class="player-card-details">
@@ -1040,7 +1040,7 @@ function openMatchDetail(match: Match): void {
                         <tbody>
                           <tr v-for="(row, index) in roundRobinStandings" :key="row.player.id" class="border-t border-surface-200">
                             <td class="p-3 text-center font-bold"><span class="position-badge" :class="{ podium: index < 3 }">{{ index + 1 }}</span></td>
-                            <td class="p-3 font-semibold"><div class="standing-player"><Avatar :label="getPlayerInitials(row.player)" :image="row.player.photo_url ?? undefined" shape="circle" /><span>{{ row.player.name }}<small>{{ row.player.club || 'Club non specificato' }}</small></span></div></td>
+                            <td class="p-3 font-semibold"><div class="standing-player"><Avatar :label="getPlayerInitials(row.player)" :image="row.player.photo_url ?? undefined" shape="square" /><span>{{ row.player.name }}<small>{{ row.player.club || 'Club non specificato' }}</small></span></div></td>
                             <td class="p-3 text-center">{{ row.played }}</td>
                             <td class="p-3 text-center font-semibold text-emerald-700">{{ row.wins }}</td>
                             <td class="p-3 text-center">{{ row.losses }}</td>
@@ -1140,49 +1140,69 @@ function openMatchDetail(match: Match): void {
                         {{ bracketRoundTabs.find((tab) => tab.index === activeBracketRound)?.fullLabel }}
                       </div>
                       <div class="flex flex-col gap-3">
-                        <div
+                      <div
                           v-for="match in activeBracketMatches"
                           :key="match.id"
-                          class="flex min-h-[9.5rem] cursor-pointer flex-col overflow-hidden border border-surface-200 bg-surface-0 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md"
+                          class="flex min-h-[8.25rem] cursor-pointer flex-col overflow-hidden border border-surface-200 bg-surface-0 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md"
                           @click="openMatchDetail(match)"
                         >
-                          <div class="flex items-center justify-end gap-3 border-b border-surface-100 px-4 py-2 text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-muted-color">
+                          <div class="flex items-center justify-end gap-3 border-b border-surface-100 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-muted-color">
                             <span v-if="match.result">{{ match.result }}</span>
                             <span v-else-if="canViewAdmin">Da giocare</span>
                           </div>
 
                           <div
-                            class="flex flex-1 items-center justify-between gap-3 px-4 py-3"
+                            class="flex flex-1 items-center justify-between gap-2 px-3 py-2"
                             :class="{
                               'bg-emerald-500/10': isWinner(match, 'player1_id'),
                               'text-muted-color': isByeSlot(match, 'player1_id') || isTbdSlot(match, 'player1_id'),
                             }"
                           >
-                            <div class="flex min-w-0 items-center gap-3">
-                              <span class="overflow-hidden whitespace-nowrap text-ellipsis text-inherit" :class="{ 'font-bold': isSeededPlayer(match.player1_id) }">
-                                {{ getSlotLabel(match, 'player1_id') }}
-                              </span>
-                              <span v-if="getSeed(match.player1_id)" class="shrink-0 text-sm font-semibold text-muted-color">
-                                {{ getSeed(match.player1_id) }}
-                              </span>
+                            <div class="flex min-w-0 items-center gap-2">
+                              <div class="match-slot-avatar">
+                                <Avatar
+                                  v-if="getPlayer(match.player1_id)"
+                                  :label="getPlayerInitialsById(match.player1_id)"
+                                  :image="getPlayer(match.player1_id)?.photo_url ?? undefined"
+                                  shape="circle"
+                                />
+                              </div>
+                              <div class="flex min-w-0 flex-col">
+                                <span class="overflow-hidden whitespace-nowrap text-ellipsis text-[0.92rem] text-inherit" :class="{ 'font-bold': isSeededPlayer(match.player1_id) }">
+                                  {{ getSlotLabel(match, 'player1_id') }}
+                                </span>
+                                <span v-if="getSeed(match.player1_id)" class="text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-muted-color">
+                                  Seed {{ getSeed(match.player1_id) }}
+                                </span>
+                              </div>
                             </div>
                             <i v-if="isWinner(match, 'player1_id')" class="pi pi-check text-sm text-emerald-600" />
                           </div>
 
                           <div
-                            class="flex flex-1 items-center justify-between gap-3 border-t border-surface-100 px-4 py-3"
+                            class="flex flex-1 items-center justify-between gap-2 border-t border-surface-100 px-3 py-2"
                             :class="{
                               'bg-emerald-500/10': isWinner(match, 'player2_id'),
                               'text-muted-color': isByeSlot(match, 'player2_id') || isTbdSlot(match, 'player2_id'),
                             }"
                           >
-                            <div class="flex min-w-0 items-center gap-3">
-                              <span class="overflow-hidden whitespace-nowrap text-ellipsis text-inherit" :class="{ 'font-bold': isSeededPlayer(match.player2_id) }">
-                                {{ getSlotLabel(match, 'player2_id') }}
-                              </span>
-                              <span v-if="getSeed(match.player2_id)" class="shrink-0 text-sm font-semibold text-muted-color">
-                                {{ getSeed(match.player2_id) }}
-                              </span>
+                            <div class="flex min-w-0 items-center gap-2">
+                              <div class="match-slot-avatar">
+                                <Avatar
+                                  v-if="getPlayer(match.player2_id)"
+                                  :label="getPlayerInitialsById(match.player2_id)"
+                                  :image="getPlayer(match.player2_id)?.photo_url ?? undefined"
+                                  shape="circle"
+                                />
+                              </div>
+                              <div class="flex min-w-0 flex-col">
+                                <span class="overflow-hidden whitespace-nowrap text-ellipsis text-[0.92rem] text-inherit" :class="{ 'font-bold': isSeededPlayer(match.player2_id) }">
+                                  {{ getSlotLabel(match, 'player2_id') }}
+                                </span>
+                                <span v-if="getSeed(match.player2_id)" class="text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-muted-color">
+                                  Seed {{ getSeed(match.player2_id) }}
+                                </span>
+                              </div>
                             </div>
                             <i v-if="isWinner(match, 'player2_id')" class="pi pi-check text-sm text-emerald-600" />
                           </div>
@@ -1245,41 +1265,61 @@ function openMatchDetail(match: Match): void {
                               <div
                                 v-for="entry in column.matches"
                                 :key="entry.match.id"
-                                class="absolute right-4 left-4 flex h-[8.25rem] -translate-y-1/2 cursor-pointer flex-col overflow-hidden border border-surface-200 bg-surface-0 shadow-md transition-shadow hover:border-primary-300 hover:shadow-lg"
+                                class="absolute right-4 left-4 flex h-[7.5rem] -translate-y-1/2 cursor-pointer flex-col overflow-hidden border border-surface-200 bg-surface-0 shadow-md transition-shadow hover:border-primary-300 hover:shadow-lg"
                                 :style="getGlobalMatchStyle(column.index, entry.match.position)"
                                 @click="openMatchDetail(entry.match)"
                               >
-                                <div class="flex h-8 items-center justify-end gap-3 border-b border-surface-100 px-4 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-muted-color">
+                                <div class="flex h-7 items-center justify-end gap-3 border-b border-surface-100 px-3 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-muted-color">
                                   <span v-if="entry.match.result">{{ entry.match.result }}</span>
                                   <span v-else-if="canViewAdmin">Da giocare</span>
                                 </div>
                                 <div
-                                  class="flex flex-1 items-center justify-between gap-3 px-4"
+                                  class="flex flex-1 items-center justify-between gap-2 px-3"
                                   :class="{
                                     'bg-emerald-500/10': isWinner(entry.match, 'player1_id'),
                                     'text-muted-color': isByeSlot(entry.match, 'player1_id') || isTbdSlot(entry.match, 'player1_id'),
                                   }"
                                 >
                                   <div class="flex min-w-0 items-center gap-2">
-                                    <span class="overflow-hidden whitespace-nowrap text-ellipsis text-inherit" :class="{ 'font-bold': isSeededPlayer(entry.match.player1_id) }">
-                                      {{ getSlotLabel(entry.match, 'player1_id') }}
-                                    </span>
-                                    <span v-if="getSeed(entry.match.player1_id)" class="shrink-0 text-xs font-semibold text-muted-color">{{ getSeed(entry.match.player1_id) }}</span>
+                                    <div class="match-slot-avatar">
+                                      <Avatar
+                                        v-if="getPlayer(entry.match.player1_id)"
+                                        :label="getPlayerInitialsById(entry.match.player1_id)"
+                                        :image="getPlayer(entry.match.player1_id)?.photo_url ?? undefined"
+                                        shape="circle"
+                                      />
+                                    </div>
+                                    <div class="flex min-w-0 flex-col">
+                                      <span class="overflow-hidden whitespace-nowrap text-ellipsis text-[0.9rem] text-inherit" :class="{ 'font-bold': isSeededPlayer(entry.match.player1_id) }">
+                                        {{ getSlotLabel(entry.match, 'player1_id') }}
+                                      </span>
+                                      <span v-if="getSeed(entry.match.player1_id)" class="text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-muted-color">Seed {{ getSeed(entry.match.player1_id) }}</span>
+                                    </div>
                                   </div>
                                   <i v-if="isWinner(entry.match, 'player1_id')" class="pi pi-check text-sm text-emerald-600" />
                                 </div>
                                 <div
-                                  class="flex flex-1 items-center justify-between gap-3 border-t border-surface-100 px-4"
+                                  class="flex flex-1 items-center justify-between gap-2 border-t border-surface-100 px-3"
                                   :class="{
                                     'bg-emerald-500/10': isWinner(entry.match, 'player2_id'),
                                     'text-muted-color': isByeSlot(entry.match, 'player2_id') || isTbdSlot(entry.match, 'player2_id'),
                                   }"
                                 >
                                   <div class="flex min-w-0 items-center gap-2">
-                                    <span class="overflow-hidden whitespace-nowrap text-ellipsis text-inherit" :class="{ 'font-bold': isSeededPlayer(entry.match.player2_id) }">
-                                      {{ getSlotLabel(entry.match, 'player2_id') }}
-                                    </span>
-                                    <span v-if="getSeed(entry.match.player2_id)" class="shrink-0 text-xs font-semibold text-muted-color">{{ getSeed(entry.match.player2_id) }}</span>
+                                    <div class="match-slot-avatar">
+                                      <Avatar
+                                        v-if="getPlayer(entry.match.player2_id)"
+                                        :label="getPlayerInitialsById(entry.match.player2_id)"
+                                        :image="getPlayer(entry.match.player2_id)?.photo_url ?? undefined"
+                                        shape="circle"
+                                      />
+                                    </div>
+                                    <div class="flex min-w-0 flex-col">
+                                      <span class="overflow-hidden whitespace-nowrap text-ellipsis text-[0.9rem] text-inherit" :class="{ 'font-bold': isSeededPlayer(entry.match.player2_id) }">
+                                        {{ getSlotLabel(entry.match, 'player2_id') }}
+                                      </span>
+                                      <span v-if="getSeed(entry.match.player2_id)" class="text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-muted-color">Seed {{ getSeed(entry.match.player2_id) }}</span>
+                                    </div>
                                   </div>
                                   <i v-if="isWinner(entry.match, 'player2_id')" class="pi pi-check text-sm text-emerald-600" />
                                 </div>
@@ -1361,6 +1401,9 @@ function openMatchDetail(match: Match): void {
 .tournament-tabs :deep(.bg-emerald-500\/10) { background: var(--color-surface-muted) !important; }
 .tournament-tabs :deep(table) { overflow: hidden; border-radius: 0; font-size: 0.75rem; }
 .tournament-tabs :deep(thead) { background: var(--color-surface-muted) !important; color: var(--color-text-muted); }
+.match-slot-avatar { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; overflow: hidden; border-radius: 0; background: var(--color-surface-soft); color: var(--color-text-muted); }
+.match-slot-avatar :deep(.p-avatar) { width: 100%; height: 100%; border-radius: 0; background: transparent; color: inherit; font-size: 0.62rem; }
+.match-slot-avatar :deep(img) { width: 100%; height: 100%; object-fit: cover; }
 .round-robin-toggle { display: flex; justify-content: flex-end; gap: 0.45rem; padding: 0.35rem; align-self: flex-end; border-radius: 0; background: var(--color-surface-muted); }
 .round-robin-toggle :deep(.p-button) { min-width: 7rem; border: 0; box-shadow: none; }
 .round-robin-schedule, .standings-section { display: flex; flex-direction: column; gap: 1rem; }
@@ -1402,7 +1445,8 @@ function openMatchDetail(match: Match): void {
 .position-badge { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; border-radius: 50%; background: var(--color-surface-muted); color: var(--color-text-muted); }
 .position-badge.podium { background: var(--color-surface-muted); color: var(--color-sidebar-on-accent); }
 .standing-player { display: flex; align-items: center; gap: 0.65rem; }
-.standing-player :deep(.p-avatar) { width: 2.1rem; height: 2.1rem; background: var(--color-surface-muted); color: var(--color-text-muted); font-size: 0.62rem; }
+.standing-player :deep(.p-avatar) { width: 2.1rem; height: 2.1rem; border-radius: 0; background: var(--color-surface-muted); color: var(--color-text-muted); font-size: 0.62rem; }
+.standing-player :deep(img) { border-radius: 0; object-fit: cover; }
 .standing-player > span { display: grid; }
 .standing-player small { margin-top: 0.12rem; color: var(--color-text-subtle); font-size: 0.52rem; font-weight: 400; }
 .enrolled-section { display: flex; flex-direction: column; gap: 1rem; }
@@ -1420,7 +1464,8 @@ function openMatchDetail(match: Match): void {
 .enrolled-player-card:hover .player-arrow { background: var(--green); color: var(--color-white); }
 .player-card-identity { display: flex; align-items: center; gap: 0.85rem; padding: 1rem 0 0.9rem; }
 .player-avatar { position: relative; flex: 0 0 auto; }
-.player-avatar :deep(.p-avatar) { width: 4rem; height: 4rem; border: 3px solid white; background: var(--color-surface-muted); color: var(--color-text-muted); font-size: 1.2rem; box-shadow: 0 5px 14px rgb(var(--color-shadow-rgb) / 12%); }
+.player-avatar :deep(.p-avatar) { width: 4rem; height: 4rem; border: 3px solid white; border-radius: 0; background: var(--color-surface-muted); color: var(--color-text-muted); font-size: 1.2rem; box-shadow: 0 5px 14px rgb(var(--color-shadow-rgb) / 12%); }
+.player-avatar :deep(img) { border-radius: 0; object-fit: cover; }
 .player-card-identity > div:last-child { min-width: 0; }
 .player-card-identity h3 { overflow: hidden; margin: 0; font-size: 0.94rem; letter-spacing: -0.025em; text-overflow: ellipsis; white-space: nowrap; }
 .player-card-identity > div:last-child span { display: flex; align-items: center; gap: 0.32rem; margin-top: 0.3rem; color: var(--color-text-muted); font-size: 0.61rem; }
@@ -1486,7 +1531,7 @@ function openMatchDetail(match: Match): void {
   .player-badges { grid-column: 4; grid-row: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 0.05rem; }
   .player-card-top :deep(.p-checkbox) { grid-column: 1; grid-row: 1; margin-right: 0.1rem; }
   .player-avatar { grid-column: 2; grid-row: 1; }
-  .player-avatar :deep(.p-avatar) { width: 2.75rem; height: 2.75rem; border-width: 2px; font-size: 0.9rem; box-shadow: none; }
+  .player-avatar :deep(.p-avatar) { width: 2.75rem; height: 2.75rem; border-width: 2px; border-radius: 0; font-size: 0.9rem; box-shadow: none; }
   .player-card-identity > div:last-child { grid-column: 3; grid-row: 1; }
   .player-card-identity h3 { font-size: 1rem; }
   .seed-value { font-size: 0.75rem; }
@@ -1508,7 +1553,7 @@ function openMatchDetail(match: Match): void {
 .player-badges { grid-column: 4; grid-row: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 0.05rem; }
 .player-card-top :deep(.p-checkbox) { grid-column: 1; grid-row: 1; margin-right: 0.1rem; }
 .player-avatar { grid-column: 2; grid-row: 1; }
-.player-avatar :deep(.p-avatar) { width: 2.75rem; height: 2.75rem; border-width: 2px; font-size: 0.9rem; box-shadow: none; }
+.player-avatar :deep(.p-avatar) { width: 2.75rem; height: 2.75rem; border-width: 2px; border-radius: 0; font-size: 0.9rem; box-shadow: none; }
 .player-card-identity > div:last-child { grid-column: 3; grid-row: 1; }
 .player-card-identity h3 { font-size: 1rem; }
 .seed-value { font-size: 0.75rem; }

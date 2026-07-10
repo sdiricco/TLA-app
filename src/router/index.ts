@@ -76,7 +76,7 @@ const router = createRouter({
           path: 'players',
           name: 'players',
           component: () => import('../views/PlayersView.vue'),
-          meta: { requiresAuth: true, requiresAdmin: true },
+          meta: { requiresAuth: true },
         },
         {
           path: 'players/new',
@@ -124,10 +124,13 @@ router.beforeEach(async (to) => {
     return { name: 'login' }
   }
 
-  if (to.meta.requiresAuth && auth.isAuthenticated && !auth.isGuest) {
+  if (to.meta.requiresAuth && auth.isAuthenticated) {
     const { useOrganizationsStore } = await import('../stores/organizations')
     const organizations = useOrganizationsStore()
     if (!organizations.initialized) await organizations.load()
+    if (auth.isGuest && to.name === 'profile') {
+      return { name: organizations.activeOrganization ? 'tournaments' : 'organizations' }
+    }
     if (!organizations.activeOrganization && !to.meta.organizationSetup) {
       return { name: 'organizations' }
     }

@@ -19,6 +19,14 @@ function isActive(to: string): boolean {
 }
 
 const navItems = computed(() => {
+  if (auth.isGuest) {
+    return [
+      { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
+      { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
+      { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
+    ]
+  }
+
   if (auth.isAdmin) {
     return [
       { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
@@ -49,6 +57,7 @@ async function handleLogout(): Promise<void> {
 }
 
 function openProfile(): void {
+  if (auth.isGuest) return
   void router.push({ name: 'profile' })
   layout.closeSidebar()
 }
@@ -118,7 +127,7 @@ function openProfile(): void {
     </nav>
 
     <div class="sidebar-footer">
-      <button class="profile-row" type="button" @click="openProfile">
+      <button class="profile-row" type="button" :disabled="auth.isGuest" @click="openProfile">
         <div class="profile-avatar"><IconifyIcon icon="mdi:account" /></div>
         <div class="profile-copy">
           <span>{{ displayName }}</span>

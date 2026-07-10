@@ -7,6 +7,14 @@ const route = useRoute()
 const auth = useAuthStore()
 
 const navItems = computed(() => {
+  if (auth.isGuest) {
+    return [
+      { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
+      { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
+      { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
+    ]
+  }
+
   if (auth.isAdmin) {
     return [
       { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },

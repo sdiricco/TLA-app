@@ -18,6 +18,11 @@
     if (auth.isAuthenticated) await router.push('/');
   }
 
+  async function handleGuestLogin(): Promise<void> {
+    await auth.loginAsGuest();
+    if (auth.isAuthenticated) await router.push('/');
+  }
+
 </script>
 
 <template>
@@ -55,6 +60,10 @@
             </div>
 
             <Button class="login-button" type="submit" label="Accedi" icon="pi pi-arrow-right" icon-pos="right" :loading="auth.loading" fluid />
+
+            <div class="divider">oppure</div>
+
+            <Button class="guest-button" type="button" label="Entra come ospite" icon="pi pi-eye" severity="secondary" outlined :loading="auth.loading" fluid @click="handleGuestLogin" />
 
             <div class="register-row">
               <span>Non hai ancora un account?</span>
