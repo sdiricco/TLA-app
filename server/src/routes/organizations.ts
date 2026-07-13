@@ -9,6 +9,28 @@ import { requireOrganization, type OrganizationRequest } from '../middleware/req
 export const organizationsRouter = Router()
 organizationsRouter.use(requireAuth)
 
+const discoveryHits = new Map<string, { startedAt: number; count: number }>()
+const DISCOVERY_WINDOW_MS = 60_000
+const DISCOVERY_MAX_REQUESTS = 60
+
+function allowDiscovery(req: import('express').Request): boolean {
+  const key = req.ip || req.socket.remoteAddress || 'unknown'
+  const now = Date.now()
+  const current = discoveryHits.get(key)
+  if (discoveryHits.size > 1000) {
+    for (const [storedKey, hit] of discoveryHits) {
+      if (now - hit.startedAt >= DISCOVERY_WINDOW_MS) discoveryHits.delete(storedKey)
+    }
+  }
+  if (!current || now - current.startedAt >= DISCOVERY_WINDOW_MS) {
+    discoveryHits.set(key, { startedAt: now, count: 1 })
+    return true
+  }
+  if (current.count >= DISCOVERY_MAX_REQUESTS) return false
+  current.count += 1
+  return true
+}
+
 function serializeMembership(row: { role: string; organization: { id: string; name: string; slug: string; description: string | null; city: string | null; sport: string | null; visibility: string; joinCode: string; _count?: { memberships: number } } }) {
   return {
     id: row.organization.id,
@@ -81,24 +103,34 @@ organizationsRouter.get('/', async (req, res) => {
 })
 
 organizationsRouter.get('/discover', async (req, res) => {
+  if (!allowDiscovery(req)) {
+    res.setHeader('Retry-After', '60')
+    res.status(429).json({ message: 'Troppe richieste di ricerca. Riprova tra poco.' })
+    return
+  }
   const query = typeof req.query.q === 'string' ? req.query.q.trim() : ''
+  const page = Math.max(1, Number.parseInt(String(req.query.page ?? '1'), 10) || 1)
+  const perPage = Math.min(30, Math.max(1, Number.parseInt(String(req.query.per_page ?? '12'), 10) || 12))
+  const where = {
+    visibility: 'public' as const,
+    ...(query ? {
+      OR: [
+        { name: { contains: query, mode: 'insensitive' as const } },
+        { slug: { contains: query, mode: 'insensitive' as const } },
+        { city: { contains: query, mode: 'insensitive' as const } },
+        { sport: { contains: query, mode: 'insensitive' as const } },
+      ],
+    } : {}),
+  }
+  const total = await prisma.organization.count({ where })
   const organizations = await prisma.organization.findMany({
-    where: {
-      visibility: 'public',
-      ...(query ? {
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { slug: { contains: query, mode: 'insensitive' } },
-          { city: { contains: query, mode: 'insensitive' } },
-          { sport: { contains: query, mode: 'insensitive' } },
-        ],
-      } : {}),
-    },
+    where,
     orderBy: [{ name: 'asc' }],
-    take: 40,
+    skip: (page - 1) * perPage,
+    take: perPage,
     include: { _count: { select: { memberships: true } } },
   })
-  res.json(organizations.map(serializePublicOrganization))
+  res.json({ items: organizations.map(serializePublicOrganization), page, per_page: perPage, total, has_more: page * perPage < total })
 })
 
 organizationsRouter.post('/', async (req, res) => {

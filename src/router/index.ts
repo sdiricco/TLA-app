@@ -38,6 +38,12 @@ const router = createRouter({
           meta: { requiresAuth: true, organizationSetup: true },
         },
         {
+          path: 'changelog',
+          name: 'changelog',
+          component: () => import('../views/ChangelogView.vue'),
+          meta: { requiresAuth: true, organizationSetup: true },
+        },
+        {
           path: '',
           name: 'home',
           redirect: () => ({ name: 'tournaments' }),

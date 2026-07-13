@@ -83,7 +83,9 @@ authRouter.post('/register', async (req, res) => {
     const session = await signUpWithPassword(email, password, name)
 
     if (!session.access_token) {
-      res.status(400).json({
+      res.status(200).json({
+        requires_email_confirmation: true,
+        email: email.trim(),
         message: 'Registrazione completata, ma serve confermare l’email prima del login.',
       })
       return

@@ -49,11 +49,20 @@
         <div class="register-content">
           <header class="register-header">
             <p class="kicker">UNISCITI AL CLUB</p>
-            <h1>Crea il tuo account</h1>
-            <p>Inserisci i tuoi dati per iniziare a utilizzare TLA.</p>
+            <h1>{{ auth.registrationPending ? 'Controlla la tua email' : 'Crea il tuo account' }}</h1>
+            <p>{{ auth.registrationPending ? 'Abbiamo inviato il link di conferma. Attiva l’account per poter accedere a TLA.' : 'Inserisci i tuoi dati per iniziare a utilizzare TLA.' }}</p>
           </header>
 
-          <form class="register-form" @submit.prevent="handleSubmit">
+          <section v-if="auth.registrationPending" class="confirmation-panel">
+            <span class="confirmation-icon"><i class="pi pi-envelope" /></span>
+            <h2>Email di conferma inviata</h2>
+            <p>{{ auth.registrationPending.message }}</p>
+            <strong>{{ auth.registrationPending.email }}</strong>
+            <small>Controlla anche la cartella spam. Dopo la conferma potrai accedere con le tue credenziali.</small>
+            <Button label="Vai al login" icon="pi pi-arrow-right" icon-pos="right" fluid @click="router.push({ name: 'login' })" />
+          </section>
+
+          <form v-else class="register-form" @submit.prevent="handleSubmit">
             <Message v-if="auth.error" severity="error" :closable="false">{{ auth.error }}</Message>
 
             <div class="field">
@@ -101,6 +110,12 @@
 .register-header h1 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.3rem); line-height: 1.15; letter-spacing: -0.045em; }
 .register-header > p:last-child { margin: 0.7rem 0 0; color: var(--color-text-muted); font-size: 0.9rem; }
 .register-form { display: flex; flex-direction: column; gap: 1rem; }
+.confirmation-panel { display: flex; flex-direction: column; align-items: center; gap: .8rem; padding: 1.5rem 1.25rem; border: 1px solid var(--color-border); background: var(--color-surface-soft); text-align: center; }
+.confirmation-icon { display: grid; width: 3.5rem; height: 3.5rem; place-items: center; border-radius: 50%; background: rgb(var(--color-primary-500-rgb) / 14%); color: var(--color-primary-700); font-size: 1.35rem; }
+.confirmation-panel h2 { margin: .2rem 0 0; font-size: 1.2rem; }
+.confirmation-panel p, .confirmation-panel small { margin: 0; color: var(--color-text-muted); line-height: 1.5; }
+.confirmation-panel strong { overflow-wrap: anywhere; color: var(--color-text); }
+.confirmation-panel :deep(.p-button) { margin-top: .45rem; }
 .field { display: flex; flex-direction: column; gap: 0.45rem; }
 .field label { color: var(--color-text-muted); font-size: 0.82rem; font-weight: 700; }
 .input-wrap { position: relative; display: block; }

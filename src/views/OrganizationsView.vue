@@ -17,8 +17,17 @@ const joinCode = ref('')
 const visibility = ref<OrganizationVisibility>('private')
 const search = ref('')
 const discoverOrganizations = ref<OrganizationPreview[]>([])
+const discoverPage = ref(1)
+const discoverTotal = ref(0)
+const discoverHasMore = ref(false)
 const busy = ref(false)
 const joiningId = ref<string | null>(null)
+const settingsBusy = ref(false)
+const settingsMessage = ref<string | null>(null)
+const settingsDescription = ref('')
+const settingsCity = ref('')
+const settingsSport = ref('')
+const settingsVisibility = ref<OrganizationVisibility>('private')
 const localError = ref<string | null>(null)
 const hasOrganizations = computed(() => store.organizations.length > 0)
 
@@ -35,11 +44,61 @@ async function createOrganization(): Promise<void> {
   }
 }
 
-async function loadDiscover(): Promise<void> {
+async function loadDiscover(reset = true): Promise<void> {
   try {
-    discoverOrganizations.value = await organizationsService.discover(search.value)
+    const page = reset ? 1 : discoverPage.value + 1
+    const response = await organizationsService.discover(search.value, page)
+    discoverOrganizations.value = reset ? response.items : [...discoverOrganizations.value, ...response.items]
+    discoverPage.value = response.page
+    discoverTotal.value = response.total
+    discoverHasMore.value = response.has_more
   } catch (error) {
     localError.value = (error as Error).message
+  }
+}
+
+function syncOrganizationSettings(): void {
+  const organization = store.activeOrganization
+  settingsDescription.value = organization?.description ?? ''
+  settingsCity.value = organization?.city ?? ''
+  settingsSport.value = organization?.sport ?? ''
+  settingsVisibility.value = organization?.visibility ?? 'private'
+  settingsMessage.value = null
+}
+
+async function saveOrganizationSettings(): Promise<void> {
+  const organization = store.activeOrganization
+  if (!organization) return
+  settingsBusy.value = true
+  settingsMessage.value = null
+  try {
+    await store.update(organization.id, {
+      visibility: settingsVisibility.value,
+      description: settingsDescription.value.trim() || null,
+      city: settingsCity.value.trim() || null,
+      sport: settingsSport.value.trim() || null,
+    })
+    settingsMessage.value = 'Impostazioni salvate.'
+    void loadDiscover()
+  } catch (error) {
+    settingsMessage.value = (error as Error).message
+  } finally {
+    settingsBusy.value = false
+  }
+}
+
+async function regenerateOrganizationCode(): Promise<void> {
+  const organization = store.activeOrganization
+  if (!organization) return
+  settingsBusy.value = true
+  settingsMessage.value = null
+  try {
+    await store.update(organization.id, { regenerateCode: true })
+    settingsMessage.value = 'Codice rigenerato.'
+  } catch (error) {
+    settingsMessage.value = (error as Error).message
+  } finally {
+    settingsBusy.value = false
   }
 }
 
@@ -74,8 +133,13 @@ function openOrganization(id: string): void {
   void router.push({ name: 'tournaments' })
 }
 
+let searchTimer: ReturnType<typeof setTimeout> | undefined
 onMounted(() => { void loadDiscover() })
-watch(search, () => { void loadDiscover() })
+watch(search, () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => { void loadDiscover() }, 250)
+})
+watch(() => store.activeOrganization?.id, syncOrganizationSettings, { immediate: true })
 </script>
 
 <template>
@@ -96,10 +160,29 @@ watch(search, () => { void loadDiscover() })
       </button>
     </div>
 
+    <section v-if="store.activeOrganization && store.isAdmin" class="settings-card">
+      <div class="section-heading">
+        <div><p class="eyebrow">GESTIONE SPAZIO</p><h2>{{ store.activeOrganization.name }}</h2></div>
+        <span>{{ store.activeOrganization.role === 'owner' ? 'Proprietario' : 'Amministratore' }}</span>
+      </div>
+      <div class="settings-grid">
+        <label for="settings-visibility">Visibilità<select id="settings-visibility" v-model="settingsVisibility" class="native-select"><option value="private">Privata · solo con codice</option><option value="public">Pubblica · visibile nella ricerca</option></select></label>
+        <label for="settings-city">Città<InputText id="settings-city" v-model="settingsCity" placeholder="Es. Roma" fluid /></label>
+        <label for="settings-sport">Sport<InputText id="settings-sport" v-model="settingsSport" placeholder="Es. Tennis" fluid /></label>
+        <label for="settings-description" class="full-width">Descrizione<textarea id="settings-description" v-model="settingsDescription" class="native-textarea" rows="3" maxlength="240" placeholder="Presenta brevemente la community" /></label>
+      </div>
+      <div class="settings-actions">
+        <Button label="Salva impostazioni" icon="pi pi-check" :loading="settingsBusy" @click="saveOrganizationSettings" />
+        <Button label="Rigenera codice" icon="pi pi-refresh" severity="secondary" outlined :loading="settingsBusy" @click="regenerateOrganizationCode" />
+        <small v-if="settingsMessage" class="settings-message">{{ settingsMessage }}</small>
+      </div>
+      <p v-if="store.activeOrganization.join_code" class="current-code">Codice attuale: <strong>{{ store.activeOrganization.join_code }}</strong></p>
+    </section>
+
     <section class="discover-section">
       <div class="section-heading">
         <div><p class="eyebrow">SCOPRI</p><h2>Organizzazioni pubbliche</h2></div>
-        <span>{{ discoverOrganizations.length }} risultati</span>
+        <span>{{ discoverTotal }} risultati</span>
       </div>
       <InputText v-model="search" placeholder="Cerca per nome, città o sport" fluid />
       <div v-if="discoverOrganizations.length" class="discover-list">
@@ -110,7 +193,8 @@ watch(search, () => { void loadDiscover() })
           <span v-else class="public-label">Pubblica</span>
         </article>
       </div>
-      <Message v-else severity="info" :closable="false">Nessuna organizzazione pubblica trovata.</Message>
+      <Button v-if="discoverHasMore" label="Carica altre organizzazioni" icon="pi pi-plus" text :loading="busy" @click="loadDiscover(false)" />
+      <Message v-if="!discoverOrganizations.length" severity="info" :closable="false">Nessuna organizzazione pubblica trovata.</Message>
     </section>
 
     <div v-if="!auth.isGuest" class="actions-grid">
@@ -153,6 +237,14 @@ header > p:last-child, .action-card p { color: var(--color-text-muted); line-hei
 .organization-icon, .card-icon { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; background: rgb(var(--color-primary-500-rgb) / 12%); color: var(--color-primary-700); }
 .actions-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .discover-section { display: grid; gap: .9rem; margin: 2.4rem 0; }
+.settings-card { display: grid; gap: 1rem; margin: 2rem 0; padding: clamp(1.1rem, 3vw, 1.6rem); border: 1px solid var(--color-border); background: var(--color-surface-card); }
+.settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; }
+.settings-grid label { display: grid; gap: .4rem; color: var(--color-text-muted); font-size: .78rem; font-weight: 750; }
+.full-width { grid-column: 1 / -1; }
+.native-textarea { width: 100%; resize: vertical; padding: .75rem; border: 1px solid var(--color-border); background: var(--color-surface-card); color: var(--color-text); font: inherit; }
+.settings-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.settings-message { color: var(--color-text-muted); }
+.current-code { margin: 0; color: var(--color-text-muted); font-size: .8rem; }
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
 .section-heading h2 { margin: 0; font-size: 1.35rem; letter-spacing: -.03em; }
 .section-heading > span { color: var(--color-text-muted); font-size: .78rem; }
@@ -171,5 +263,5 @@ header > p:last-child, .action-card p { color: var(--color-text-muted); line-hei
 .action-card label { color: var(--color-text-muted); font-size: .78rem; font-weight: 750; }
 .action-card :deep(.p-inputtext), .action-card :deep(.p-button) { border-radius: 0; }
 .action-card :deep(.p-button) { margin-top: .35rem; }
-@media (max-width: 680px) { .actions-grid { grid-template-columns: 1fr; } .action-card p { min-height: 0; } }
+@media (max-width: 680px) { .actions-grid, .settings-grid { grid-template-columns: 1fr; } .full-width { grid-column: auto; } .action-card p { min-height: 0; } }
 </style>

@@ -9,6 +9,13 @@ export interface User {
   role: UserRole
 }
 
+export interface RegistrationResult {
+  user?: User
+  requiresEmailConfirmation?: boolean
+  message?: string
+  email?: string
+}
+
 export interface Profile {
   id: string
   name: string | null
@@ -34,6 +41,22 @@ export interface Organization {
 export type OrganizationPreview = Omit<Organization, 'join_code' | 'role'> & {
   join_code?: string
   role?: OrganizationRole
+}
+
+export interface OrganizationUpdate {
+  visibility?: OrganizationVisibility
+  description?: string | null
+  city?: string | null
+  sport?: string | null
+  regenerateCode?: boolean
+}
+
+export interface OrganizationSearchResponse {
+  items: OrganizationPreview[]
+  page: number
+  per_page: number
+  total: number
+  has_more: boolean
 }
 
 export interface Player {
@@ -218,7 +241,7 @@ export interface ProfilesService {
 
 export interface AuthService {
   login(email: string, password: string): Promise<User>
-  register(email: string, password: string, name?: string): Promise<User>
+  register(email: string, password: string, name?: string): Promise<RegistrationResult>
   loginAsGuest(): Promise<User>
   logout(): Promise<void>
   getCurrentUser(): Promise<User | null>
@@ -226,10 +249,11 @@ export interface AuthService {
 
 export interface OrganizationsService {
   getAll(): Promise<Organization[]>
-  discover(query?: string): Promise<OrganizationPreview[]>
+  discover(query?: string, page?: number, perPage?: number): Promise<OrganizationSearchResponse>
   create(name: string, visibility: OrganizationVisibility): Promise<Organization>
   join(joinCode: string): Promise<Organization>
   joinPublic(id: string): Promise<Organization>
+  update(id: string, data: OrganizationUpdate): Promise<Organization>
 }
 
 export interface PlayersService {

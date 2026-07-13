@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { organizationsService } from '../services/organizationsApi'
-import type { Organization, OrganizationVisibility } from '../types'
+import type { Organization, OrganizationUpdate, OrganizationVisibility } from '../types'
 
 const STORAGE_KEY = 'tla_organization_id'
 
@@ -67,6 +67,13 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     return organization
   }
 
+  async function update(id: string, data: OrganizationUpdate): Promise<Organization> {
+    const organization = await organizationsService.update(id, data)
+    const index = organizations.value.findIndex(item => item.id === id)
+    if (index >= 0) organizations.value[index] = organization
+    return organization
+  }
+
   function clear(): void {
     organizations.value = []
     activeId.value = null
@@ -74,5 +81,5 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     localStorage.removeItem(STORAGE_KEY)
   }
 
-  return { organizations, activeId, activeOrganization, loading, initialized, error, isAdmin, select, load, create, join, joinPublic, clear }
+  return { organizations, activeId, activeOrganization, loading, initialized, error, isAdmin, select, load, create, join, joinPublic, update, clear }
 })

@@ -8,6 +8,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const registrationPending = ref<{ email: string; message: string } | null>(null)
 
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => useOrganizationsStore().isAdmin)
@@ -38,8 +39,18 @@ export const useAuthStore = defineStore('auth', () => {
   async function register(email: string, password: string, name?: string): Promise<void> {
     loading.value = true
     error.value = null
+    registrationPending.value = null
     try {
-      user.value = await authService.register(email, password, name)
+      const result = await authService.register(email, password, name)
+      if (result.requiresEmailConfirmation) {
+        user.value = null
+        registrationPending.value = {
+          email: result.email ?? email,
+          message: result.message ?? 'Controlla la tua email per confermare l’account.',
+        }
+      } else {
+        user.value = result.user ?? null
+      }
     } catch (e) {
       error.value = (e as Error).message
     } finally {
@@ -59,5 +70,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, loading, error, isAuthenticated, isAdmin, isGuest, init, login, register, logout, loginAsGuest }
+  return { user, loading, error, registrationPending, isAuthenticated, isAdmin, isGuest, init, login, register, logout, loginAsGuest }
 })

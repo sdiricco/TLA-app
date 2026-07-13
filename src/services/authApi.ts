@@ -1,4 +1,4 @@
-import type { AuthService, User } from '../types'
+import type { AuthService, RegistrationResult, User } from '../types'
 import { authApiClient } from './authApiClient'
 import { apiRequest } from './request'
 import {
@@ -39,12 +39,33 @@ async function authenticate(
   return data.user
 }
 
+async function registerAccount(email: string, password: string, name?: string): Promise<RegistrationResult> {
+  const data = await apiRequest<{ message?: string; user?: User; token?: string; requires_email_confirmation?: boolean; email?: string }>(authApiClient, {
+    url: '/auth/register',
+    method: 'POST',
+    data: { email, password, name },
+  })
+
+  if (data?.requires_email_confirmation) {
+    return {
+      requiresEmailConfirmation: true,
+      message: data.message,
+      email: data.email ?? email,
+    }
+  }
+
+  if (!data?.token || !data.user) throw new Error(data?.message ?? 'Registration failed')
+  clearGuestToken()
+  setAuthToken(data.token)
+  return { user: data.user }
+}
+
 /**
  * Auth service
  */
 export const authService: AuthService = {
   login: (email, password) => authenticate('/auth/login', { email, password }),
-  register: (email, password, name) => authenticate('/auth/register', { email, password, name }),
+  register: (email, password, name) => registerAccount(email, password, name),
   loginAsGuest: async () => {
     clearAuthToken()
     setGuestToken()
