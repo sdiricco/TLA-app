@@ -59,6 +59,37 @@ export interface OrganizationSearchResponse {
   has_more: boolean
 }
 
+export type OrganizationRequestType = 'feature' | 'improvement' | 'bug'
+export type OrganizationRequestPriority = 'low' | 'medium' | 'high'
+export type OrganizationRequestStatus = 'open' | 'planned' | 'in_progress' | 'done' | 'rejected'
+
+export interface OrganizationRequest {
+  id: string
+  title: string
+  description: string | null
+  type: OrganizationRequestType
+  priority: OrganizationRequestPriority
+  status: OrganizationRequestStatus
+  created_at: string
+  updated_at: string
+  created_by: { id: string; name: string }
+}
+
+export interface OrganizationRequestCreate {
+  title: string
+  description?: string | null
+  type: OrganizationRequestType
+  priority: OrganizationRequestPriority
+}
+
+export interface OrganizationRequestUpdate {
+  title?: string
+  description?: string | null
+  type?: OrganizationRequestType
+  priority?: OrganizationRequestPriority
+  status?: OrganizationRequestStatus
+}
+
 export interface Player {
   id: string
   name: string
@@ -254,6 +285,12 @@ export interface OrganizationsService {
   join(joinCode: string): Promise<Organization>
   joinPublic(id: string): Promise<Organization>
   update(id: string, data: OrganizationUpdate): Promise<Organization>
+}
+
+export interface RequestsService {
+  getAll(filters?: { status?: OrganizationRequestStatus | 'all'; type?: OrganizationRequestType | 'all' }): Promise<OrganizationRequest[]>
+  create(data: OrganizationRequestCreate): Promise<OrganizationRequest>
+  update(id: string, data: OrganizationRequestUpdate): Promise<OrganizationRequest>
 }
 
 export interface PlayersService {

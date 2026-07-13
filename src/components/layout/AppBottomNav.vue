@@ -11,6 +11,7 @@ const navItems = computed(() => {
     return [
       { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
       { label: 'Changelog', icon: 'mdi:history', to: '/changelog' },
+      { label: 'Richieste', icon: 'mdi:lightbulb-outline', to: '/requests' },
       { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
       { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
     ]
@@ -22,6 +23,7 @@ const navItems = computed(() => {
       { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
       { label: 'Profilo', icon: 'mdi:account-outline', to: '/profile' },
       { label: 'Changelog', icon: 'mdi:history', to: '/changelog' },
+      { label: 'Richieste', icon: 'mdi:lightbulb-outline', to: '/requests' },
     ]
   }
 
@@ -29,6 +31,7 @@ const navItems = computed(() => {
     { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
     { label: 'Profilo', icon: 'mdi:account-outline', to: '/profile' },
     { label: 'Changelog', icon: 'mdi:history', to: '/changelog' },
+    { label: 'Richieste', icon: 'mdi:lightbulb-outline', to: '/requests' },
   ]
 })
 

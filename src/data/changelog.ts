@@ -11,6 +11,14 @@ export interface ChangelogEntry {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: '2026-07-13',
+    version: 'Backlog 1.0',
+    kind: 'feature',
+    title: 'Richieste e attività dell’organizzazione',
+    description: 'Suggerimenti, bug e idee possono essere raccolti e portati avanti con uno stato condiviso.',
+    items: ['Priorità e tipologie di richiesta', 'Stati aperta, pianificata, in lavorazione e completata', 'Gestione dello stato riservata agli amministratori'],
+  },
+  {
     date: '2026-07-10',
     version: 'Organizzazioni 1.1',
     kind: 'feature',

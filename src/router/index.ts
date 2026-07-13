@@ -44,6 +44,12 @@ const router = createRouter({
           meta: { requiresAuth: true, organizationSetup: true },
         },
         {
+          path: 'requests',
+          name: 'requests',
+          component: () => import('../views/RequestsView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: '',
           name: 'home',
           redirect: () => ({ name: 'tournaments' }),

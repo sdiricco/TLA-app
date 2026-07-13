@@ -8,14 +8,15 @@ datasource db {
 }
 
 model Profile {
-  id          String                   @id
-  email       String                   @unique
-  name        String?
-  role        String                   @default("player")
-  players     Player[]
-  memberships OrganizationMembership[]
-  createdAt   DateTime                 @default(now()) @map("created_at")
-  updatedAt   DateTime                 @updatedAt @map("updated_at")
+  id              String                   @id
+  email           String                   @unique
+  name            String?
+  role            String                   @default("player")
+  players         Player[]
+  memberships     OrganizationMembership[]
+  requestsCreated OrganizationRequest[]    @relation("RequestCreator")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
 
   @@map("profiles")
 }
@@ -32,10 +33,30 @@ model Organization {
   memberships OrganizationMembership[]
   players     Player[]
   tournaments Tournament[]
+  requests    OrganizationRequest[]
   createdAt   DateTime                 @default(now()) @map("created_at")
   updatedAt   DateTime                 @updatedAt @map("updated_at")
 
   @@map("organizations")
+}
+
+model OrganizationRequest {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  createdById    String       @map("created_by_id")
+  title          String
+  description    String?
+  type           String       @default("improvement")
+  priority       String       @default("medium")
+  status         String       @default("open")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      Profile      @relation("RequestCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@map("organization_requests")
 }
 
 model OrganizationMembership {
