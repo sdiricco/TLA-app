@@ -19,6 +19,10 @@ function isActive(to: string): boolean {
 }
 
 const navItems = computed(() => {
+  if (!organizations.activeOrganization) {
+    return [{ label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' }]
+  }
+
   if (auth.isGuest) {
     return [
       { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },

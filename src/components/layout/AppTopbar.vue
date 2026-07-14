@@ -30,7 +30,7 @@ const accountInitials = computed(() => {
 const activeOrganizationName = computed(() => organizations.activeOrganization?.name ?? 'Organizzazione')
 
 const accountItems = computed(() => [
-  ...(auth.isGuest
+  ...(!organizations.activeOrganization || auth.isGuest
     ? []
     : [{
         label: 'Profilo',

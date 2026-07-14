@@ -2,11 +2,17 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { useOrganizationsStore } from '../../stores/organizations'
 
 const route = useRoute()
 const auth = useAuthStore()
+const organizations = useOrganizationsStore()
 
 const navItems = computed(() => {
+  if (!organizations.activeOrganization) {
+    return [{ label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' }]
+  }
+
   if (auth.isGuest) {
     return [
       { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
