@@ -54,11 +54,13 @@
           </header>
 
           <section v-if="auth.registrationPending" class="confirmation-panel">
+            <Message v-if="auth.error" severity="error" :closable="false">{{ auth.error }}</Message>
             <span class="confirmation-icon"><i class="pi pi-envelope" /></span>
             <h2>Email di conferma inviata</h2>
             <p>{{ auth.registrationPending.message }}</p>
             <strong>{{ auth.registrationPending.email }}</strong>
             <small>Controlla anche la cartella spam. Dopo la conferma potrai accedere con le tue credenziali.</small>
+            <Button label="Reinvia email di conferma" icon="pi pi-refresh" severity="secondary" outlined fluid :loading="auth.loading" @click="auth.resendConfirmation()" />
             <Button label="Vai al login" icon="pi pi-arrow-right" icon-pos="right" fluid @click="router.push({ name: 'login' })" />
           </section>
 

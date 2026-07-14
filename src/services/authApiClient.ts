@@ -9,7 +9,7 @@ const authBaseUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_U
 /**
  * Public auth routes that must not send the bearer token
  */
-const publicAuthRoutes = ['/auth/login', '/auth/register']
+const publicAuthRoutes = ['/auth/login', '/auth/register', '/auth/resend-confirmation']
 
 /**
  * Axios client for authentication-related APIs

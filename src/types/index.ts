@@ -273,6 +273,7 @@ export interface ProfilesService {
 export interface AuthService {
   login(email: string, password: string): Promise<User>
   register(email: string, password: string, name?: string): Promise<RegistrationResult>
+  resendConfirmation(email: string): Promise<void>
   loginAsGuest(): Promise<User>
   logout(): Promise<void>
   getCurrentUser(): Promise<User | null>

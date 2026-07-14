@@ -60,12 +60,21 @@ async function registerAccount(email: string, password: string, name?: string): 
   return { user: data.user }
 }
 
+async function resendConfirmation(email: string): Promise<void> {
+  await apiRequest(authApiClient, {
+    url: '/auth/resend-confirmation',
+    method: 'POST',
+    data: { email },
+  })
+}
+
 /**
  * Auth service
  */
 export const authService: AuthService = {
   login: (email, password) => authenticate('/auth/login', { email, password }),
   register: (email, password, name) => registerAccount(email, password, name),
+  resendConfirmation,
   loginAsGuest: async () => {
     clearAuthToken()
     setGuestToken()

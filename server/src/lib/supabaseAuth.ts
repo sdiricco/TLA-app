@@ -89,3 +89,19 @@ export async function signUpWithPassword(email: string, password: string, name?:
     user: SupabaseAuthUser
   }
 }
+
+export async function resendSignupConfirmation(email: string): Promise<void> {
+  const response = await fetch(`${env.supabaseUrl}/auth/v1/resend`, {
+    method: 'POST',
+    headers: {
+      apikey: env.supabaseAnonKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ type: 'signup', email }),
+  })
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as SupabaseErrorResponse
+    throw new Error(extractSupabaseError(data))
+  }
+}

@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
-import { signInWithPassword, signUpWithPassword } from '../lib/supabaseAuth'
+import { resendSignupConfirmation, signInWithPassword, signUpWithPassword } from '../lib/supabaseAuth'
 import { getOrCreateProfile, listUnlinkedProfiles } from '../lib/profileRepo'
 import { requireOrganization, type OrganizationRequest } from '../middleware/requireOrganization'
 
@@ -103,6 +103,43 @@ authRouter.post('/register', async (req, res) => {
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Registration failed'
+
+    if (message.toLowerCase().includes('already registered')) {
+      try {
+        await resendSignupConfirmation(email.trim())
+        res.status(200).json({
+          requires_email_confirmation: true,
+          email: email.trim(),
+          message: 'Questo account esiste già ma potrebbe non essere confermato. Ti abbiamo inviato un nuovo link di conferma.',
+        })
+        return
+      } catch (resendError) {
+        const resendMessage = resendError instanceof Error ? resendError.message : ''
+        if (resendMessage.toLowerCase().includes('already confirmed')) {
+          res.status(409).json({ message: 'Esiste già un account con questa email. Accedi con le tue credenziali.' })
+          return
+        }
+      }
+    }
+
+    const status = message.toLowerCase().includes('rate limit') ? 429 : 400
+    res.status(status).json({ message })
+  }
+})
+
+authRouter.post('/resend-confirmation', async (req, res) => {
+  const { email } = req.body as { email?: string }
+
+  if (!email?.trim()) {
+    res.status(400).json({ message: 'Email is required' })
+    return
+  }
+
+  try {
+    await resendSignupConfirmation(email.trim())
+    res.status(204).send()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to resend confirmation email'
     const status = message.toLowerCase().includes('rate limit') ? 429 : 400
     res.status(status).json({ message })
   }
