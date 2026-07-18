@@ -38,6 +38,24 @@ const router = createRouter({
           meta: { requiresAuth: true, organizationSetup: true },
         },
         {
+          path: 'organizations/explore',
+          name: 'organizations-explore',
+          component: () => import('../views/OrganizationExplorerView.vue'),
+          meta: { requiresAuth: true, organizationSetup: true },
+        },
+        {
+          path: 'organizations/new',
+          name: 'organization-create',
+          component: () => import('../views/OrganizationCreateView.vue'),
+          meta: { requiresAuth: true, organizationSetup: true },
+        },
+        {
+          path: 'organizations/edit',
+          name: 'organization-edit',
+          component: () => import('../views/OrganizationEditView.vue'),
+          meta: { requiresAuth: true, requiresAdmin: true },
+        },
+        {
           path: 'changelog',
           name: 'changelog',
           component: () => import('../views/ChangelogView.vue'),
@@ -139,7 +157,14 @@ router.beforeEach(async (to) => {
   if (to.meta.requiresAuth && auth.isAuthenticated) {
     const { useOrganizationsStore } = await import('../stores/organizations')
     const organizations = useOrganizationsStore()
-    if (!organizations.initialized) await organizations.load()
+    if (!organizations.initialized) {
+      try {
+        await organizations.load()
+      } catch {
+        // Keep the authenticated user inside the app so the organizations page
+        // can show the real loading error instead of failing navigation.
+      }
+    }
     if (auth.isGuest && to.name === 'profile') {
       return { name: organizations.activeOrganization ? 'tournaments' : 'organizations' }
     }

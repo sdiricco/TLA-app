@@ -42,8 +42,8 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     }
   }
 
-  async function create(name: string, visibility: OrganizationVisibility): Promise<Organization> {
-    const organization = await organizationsService.create(name, visibility)
+  async function create(name: string, visibility: OrganizationVisibility, latitude?: number | null, longitude?: number | null, discoverable?: boolean, description?: string | null): Promise<Organization> {
+    const organization = await organizationsService.create(name, visibility, latitude, longitude, discoverable, description)
     organizations.value.push(organization)
     select(organization.id)
     return organization
@@ -67,6 +67,10 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     return organization
   }
 
+  async function requestAccess(id: string): Promise<{ organization: Organization; status: 'pending' | 'approved' }> {
+    return organizationsService.requestAccess(id)
+  }
+
   async function update(id: string, data: OrganizationUpdate): Promise<Organization> {
     const organization = await organizationsService.update(id, data)
     const index = organizations.value.findIndex(item => item.id === id)
@@ -81,5 +85,5 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     localStorage.removeItem(STORAGE_KEY)
   }
 
-  return { organizations, activeId, activeOrganization, loading, initialized, error, isAdmin, select, load, create, join, joinPublic, update, clear }
+  return { organizations, activeId, activeOrganization, loading, initialized, error, isAdmin, select, load, create, join, joinPublic, requestAccess, update, clear }
 })

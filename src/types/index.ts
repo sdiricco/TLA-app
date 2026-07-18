@@ -32,7 +32,10 @@ export interface Organization {
   description?: string | null
   city?: string | null
   sport?: string | null
+  latitude?: number | null
+  longitude?: number | null
   visibility?: OrganizationVisibility
+  discoverable?: boolean
   member_count?: number
   join_code: string
   role: OrganizationRole
@@ -48,6 +51,9 @@ export interface OrganizationUpdate {
   description?: string | null
   city?: string | null
   sport?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  discoverable?: boolean
   regenerateCode?: boolean
 }
 
@@ -282,9 +288,10 @@ export interface AuthService {
 export interface OrganizationsService {
   getAll(): Promise<Organization[]>
   discover(query?: string, page?: number, perPage?: number): Promise<OrganizationSearchResponse>
-  create(name: string, visibility: OrganizationVisibility): Promise<Organization>
+  create(name: string, visibility: OrganizationVisibility, latitude?: number | null, longitude?: number | null, discoverable?: boolean, description?: string | null): Promise<Organization>
   join(joinCode: string): Promise<Organization>
   joinPublic(id: string): Promise<Organization>
+  requestAccess(id: string): Promise<{ organization: Organization; status: 'pending' | 'approved' }>
   update(id: string, data: OrganizationUpdate): Promise<Organization>
 }
 

@@ -31,7 +31,7 @@ function allowDiscovery(req: import('express').Request): boolean {
   return true
 }
 
-function serializeMembership(row: { role: string; organization: { id: string; name: string; slug: string; description: string | null; city: string | null; sport: string | null; visibility: string; joinCode: string; _count?: { memberships: number } } }) {
+function serializeMembership(row: { role: string; organization: { id: string; name: string; slug: string; description: string | null; city: string | null; sport: string | null; latitude: number | null; longitude: number | null; visibility: string; discoverable: boolean; joinCode: string; _count?: { memberships: number } } }) {
   return {
     id: row.organization.id,
     name: row.organization.name,
@@ -39,14 +39,17 @@ function serializeMembership(row: { role: string; organization: { id: string; na
     description: row.organization.description,
     city: row.organization.city,
     sport: row.organization.sport,
+    latitude: row.organization.latitude,
+    longitude: row.organization.longitude,
     visibility: row.organization.visibility,
+    discoverable: row.organization.discoverable,
     member_count: row.organization._count?.memberships ?? 0,
     join_code: ['owner', 'admin'].includes(row.role) ? row.organization.joinCode : '',
     role: row.role,
   }
 }
 
-function serializePublicOrganization(organization: { id: string; name: string; slug: string; description: string | null; city: string | null; sport: string | null; visibility: string; _count: { memberships: number } }) {
+function serializePublicOrganization(organization: { id: string; name: string; slug: string; description: string | null; city: string | null; sport: string | null; latitude: number | null; longitude: number | null; visibility: string; discoverable: boolean; _count: { memberships: number } }) {
   return {
     id: organization.id,
     name: organization.name,
@@ -54,7 +57,10 @@ function serializePublicOrganization(organization: { id: string; name: string; s
     description: organization.description,
     city: organization.city,
     sport: organization.sport,
+    latitude: organization.latitude,
+    longitude: organization.longitude,
     visibility: organization.visibility,
+    discoverable: organization.discoverable,
     member_count: organization._count.memberships,
     join_code: '',
     role: 'member',
@@ -63,6 +69,19 @@ function serializePublicOrganization(organization: { id: string; name: string; s
 
 function slugify(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'organization'
+}
+
+function parseCoordinates(body: { latitude?: unknown; longitude?: unknown }, required: boolean): { latitude: number | null; longitude: number | null } {
+  const latitude = body.latitude === null || body.latitude === undefined || body.latitude === '' ? null : Number(body.latitude)
+  const longitude = body.longitude === null || body.longitude === undefined || body.longitude === '' ? null : Number(body.longitude)
+  if (latitude === null && longitude === null) {
+    if (required) throw new Error('Per un’organizzazione pubblica seleziona una posizione sulla mappa')
+    return { latitude: null, longitude: null }
+  }
+  if (latitude === null || longitude === null || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    throw new Error('La posizione selezionata non è valida')
+  }
+  return { latitude, longitude }
 }
 
 async function uniqueSlug(name: string): Promise<string> {
@@ -82,7 +101,7 @@ organizationsRouter.get('/', async (req, res) => {
   try {
     if ((req as AuthenticatedRequest).authUser?.id === 'guest') {
       const organizations = await prisma.organization.findMany({
-        where: { visibility: 'public' },
+        where: { OR: [{ visibility: 'public' }, { discoverable: true }] },
         orderBy: { createdAt: 'asc' },
         include: { _count: { select: { memberships: true } } },
       })
@@ -98,7 +117,8 @@ organizationsRouter.get('/', async (req, res) => {
     })
     res.json(memberships.map(serializeMembership))
   } catch (error) {
-    res.status(403).json({ message: (error as Error).message })
+    console.error('Failed to load organizations', error)
+    res.status(500).json({ message: 'Impossibile caricare le organizzazioni. Verifica la connessione al database e le migrazioni.' })
   }
 })
 
@@ -112,15 +132,17 @@ organizationsRouter.get('/discover', async (req, res) => {
   const page = Math.max(1, Number.parseInt(String(req.query.page ?? '1'), 10) || 1)
   const perPage = Math.min(30, Math.max(1, Number.parseInt(String(req.query.per_page ?? '12'), 10) || 12))
   const where = {
-    visibility: 'public' as const,
-    ...(query ? {
-      OR: [
-        { name: { contains: query, mode: 'insensitive' as const } },
-        { slug: { contains: query, mode: 'insensitive' as const } },
-        { city: { contains: query, mode: 'insensitive' as const } },
-        { sport: { contains: query, mode: 'insensitive' as const } },
-      ],
-    } : {}),
+    AND: [
+      { OR: [{ visibility: 'public' as const }, { discoverable: true }] },
+      ...(query ? [{
+        OR: [
+          { name: { contains: query, mode: 'insensitive' as const } },
+          { slug: { contains: query, mode: 'insensitive' as const } },
+          { city: { contains: query, mode: 'insensitive' as const } },
+          { sport: { contains: query, mode: 'insensitive' as const } },
+        ],
+      }] : []),
+    ],
   }
   const total = await prisma.organization.count({ where })
   const organizations = await prisma.organization.findMany({
@@ -141,17 +163,23 @@ organizationsRouter.post('/', async (req, res) => {
     return
   }
   try {
+    const discoverable = visibility === 'public' || req.body?.discoverable === true
+    const coordinates = parseCoordinates(req.body ?? {}, discoverable)
     const profile = await profileFor(req as AuthenticatedRequest)
     const organization = await prisma.organization.create({
       data: {
         name,
+        description: typeof req.body?.description === 'string' ? req.body.description.trim() || null : null,
         slug: await uniqueSlug(name),
         visibility,
+        discoverable,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
         joinCode: crypto.randomBytes(12).toString('base64url'),
         memberships: { create: { profileId: profile.id, role: 'owner' } },
       },
     })
-    res.status(201).json({ id: organization.id, name: organization.name, join_code: organization.joinCode, role: 'owner' })
+    res.status(201).json({ id: organization.id, name: organization.name, slug: organization.slug, visibility: organization.visibility, discoverable: organization.discoverable, latitude: organization.latitude, longitude: organization.longitude, join_code: organization.joinCode, role: 'owner' })
   } catch (error) {
     res.status(400).json({ message: (error as Error).message })
   }
@@ -181,7 +209,31 @@ organizationsRouter.post('/join', async (req, res) => {
         update: {},
       }),
     ])
-    res.json({ id: organization.id, name: organization.name, join_code: '', role: 'member' })
+    res.json({ id: organization.id, name: organization.name, slug: organization.slug, visibility: organization.visibility, discoverable: organization.discoverable, latitude: organization.latitude, longitude: organization.longitude, join_code: '', role: 'member' })
+  } catch (error) {
+    res.status(400).json({ message: (error as Error).message })
+  }
+})
+
+organizationsRouter.post('/:id/request', async (req, res) => {
+  try {
+    const profile = await profileFor(req as AuthenticatedRequest)
+    const organization = await prisma.organization.findFirst({ where: { id: req.params.id, discoverable: true }, include: { _count: { select: { memberships: true } } } })
+    if (!organization) {
+      res.status(404).json({ message: 'Organizzazione non disponibile per le richieste' })
+      return
+    }
+    const membership = await prisma.organizationMembership.findUnique({ where: { organizationId_profileId: { organizationId: organization.id, profileId: profile.id } } })
+    if (membership) {
+      res.json({ organization: serializeMembership({ role: membership.role, organization }), status: 'approved' })
+      return
+    }
+    await prisma.organizationAccessRequest.upsert({
+      where: { organizationId_profileId: { organizationId: organization.id, profileId: profile.id } },
+      create: { organizationId: organization.id, profileId: profile.id },
+      update: { status: 'pending' },
+    })
+    res.status(201).json({ organization: serializePublicOrganization(organization), status: 'pending' })
   } catch (error) {
     res.status(400).json({ message: (error as Error).message })
   }
@@ -193,10 +245,24 @@ organizationsRouter.patch('/:id', requireOrganization, requireAdmin, async (req,
     res.status(403).json({ message: 'Organizzazione non autorizzata' })
     return
   }
-  const data: { visibility?: string; description?: string | null; city?: string | null; sport?: string | null; joinCode?: string } = {}
+  const currentOrganization = await prisma.organization.findUnique({ where: { id: organizationId }, select: { visibility: true, discoverable: true, latitude: true, longitude: true } })
+  if (!currentOrganization) {
+    res.status(404).json({ message: 'Organizzazione non trovata' })
+    return
+  }
+  const data: { visibility?: string; discoverable?: boolean; description?: string | null; city?: string | null; sport?: string | null; latitude?: number | null; longitude?: number | null; joinCode?: string } = {}
   if (req.body?.visibility === 'public' || req.body?.visibility === 'private') data.visibility = req.body.visibility
+  if (typeof req.body?.discoverable === 'boolean') data.discoverable = data.visibility === 'public' ? true : req.body.discoverable
   for (const field of ['description', 'city', 'sport'] as const) {
     if (typeof req.body?.[field] === 'string' || req.body?.[field] === null) data[field] = req.body[field]
+  }
+  if (req.body?.latitude !== undefined || req.body?.longitude !== undefined || (data.visibility === 'public' && data.discoverable !== false) || (currentOrganization.visibility === 'public' && currentOrganization.discoverable)) {
+    const coordinates = parseCoordinates({
+      latitude: req.body?.latitude !== undefined ? req.body.latitude : currentOrganization.latitude,
+      longitude: req.body?.longitude !== undefined ? req.body.longitude : currentOrganization.longitude,
+    }, data.discoverable ?? currentOrganization.discoverable)
+    data.latitude = coordinates.latitude
+    data.longitude = coordinates.longitude
   }
   if (req.body?.regenerate_code === true) data.joinCode = crypto.randomBytes(12).toString('base64url')
   const organization = await prisma.organization.update({ where: { id: organizationId }, data, include: { _count: { select: { memberships: true } } } })

@@ -8,36 +8,56 @@ datasource db {
 }
 
 model Profile {
-  id              String                   @id
-  email           String                   @unique
+  id              String                      @id
+  email           String                      @unique
   name            String?
-  role            String                   @default("player")
+  role            String                      @default("player")
   players         Player[]
   memberships     OrganizationMembership[]
-  requestsCreated OrganizationRequest[]    @relation("RequestCreator")
-  createdAt       DateTime                 @default(now()) @map("created_at")
-  updatedAt       DateTime                 @updatedAt @map("updated_at")
+  requestsCreated OrganizationRequest[]       @relation("RequestCreator")
+  accessRequests  OrganizationAccessRequest[]
+  createdAt       DateTime                    @default(now()) @map("created_at")
+  updatedAt       DateTime                    @updatedAt @map("updated_at")
 
   @@map("profiles")
 }
 
 model Organization {
-  id          String                   @id @default(uuid())
-  name        String
-  slug        String                   @unique
-  description String?
-  city        String?
-  sport       String?
-  visibility  String                   @default("private")
-  joinCode    String                   @unique @map("join_code")
-  memberships OrganizationMembership[]
-  players     Player[]
-  tournaments Tournament[]
-  requests    OrganizationRequest[]
-  createdAt   DateTime                 @default(now()) @map("created_at")
-  updatedAt   DateTime                 @updatedAt @map("updated_at")
+  id             String                      @id @default(uuid())
+  name           String
+  slug           String                      @unique
+  description    String?
+  city           String?
+  sport          String?
+  latitude       Float?                      @db.DoublePrecision
+  longitude      Float?                      @db.DoublePrecision
+  visibility     String                      @default("private")
+  discoverable   Boolean                     @default(false)
+  joinCode       String                      @unique @map("join_code")
+  memberships    OrganizationMembership[]
+  players        Player[]
+  tournaments    Tournament[]
+  requests       OrganizationRequest[]
+  accessRequests OrganizationAccessRequest[]
+  createdAt      DateTime                    @default(now()) @map("created_at")
+  updatedAt      DateTime                    @updatedAt @map("updated_at")
 
   @@map("organizations")
+}
+
+model OrganizationAccessRequest {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  profileId      String       @map("profile_id")
+  status         String       @default("pending")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  profile        Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@unique([organizationId, profileId])
+  @@index([organizationId, status])
+  @@map("organization_access_requests")
 }
 
 model OrganizationRequest {

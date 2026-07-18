@@ -11,6 +11,9 @@ const auth = useAuthStore()
 const organizations = useOrganizationsStore()
 const accountMenu = ref()
 const title = computed(() => {
+  if (route.path.startsWith('/organizations/explore')) return 'Esplora organizzazioni'
+  if (route.path.startsWith('/organizations/new')) return 'Nuova organizzazione'
+  if (route.path.startsWith('/organizations')) return 'Organizzazioni'
   if (route.path.startsWith('/players')) return 'Giocatori'
   if (route.path.startsWith('/profile')) return 'Profilo'
   if (route.path.startsWith('/admin')) return 'Admin'

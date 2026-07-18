@@ -7,6 +7,7 @@ import { useOrganizationsStore } from '../../stores/organizations'
 const route = useRoute()
 const auth = useAuthStore()
 const organizations = useOrganizationsStore()
+const isOrganizationFlow = computed(() => route.name === 'organizations-explore' || route.name === 'organization-create' || route.name === 'organization-edit')
 
 const navItems = computed(() => {
   if (!organizations.activeOrganization) {
@@ -48,7 +49,7 @@ function isActive(to: string): boolean {
 </script>
 
 <template>
-  <nav class="app-bottom-nav" aria-label="Navigazione mobile principale">
+  <nav v-if="!isOrganizationFlow" class="app-bottom-nav" aria-label="Navigazione mobile principale">
     <RouterLink
       v-for="item in navItems"
       :key="item.to"
