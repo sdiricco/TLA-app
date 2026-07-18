@@ -12,6 +12,11 @@ organizationsRouter.use(requireAuth)
 const discoveryHits = new Map<string, { startedAt: number; count: number }>()
 const DISCOVERY_WINDOW_MS = 60_000
 const DISCOVERY_MAX_REQUESTS = 60
+const JOIN_WINDOW_MS = 60_000
+const JOIN_MAX_REQUESTS = 10
+const JOIN_CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+const JOIN_CODE_LENGTH = 5
+const joinHits = new Map<string, { startedAt: number; count: number }>()
 
 function allowDiscovery(req: import('express').Request): boolean {
   const key = req.ip || req.socket.remoteAddress || 'unknown'
@@ -29,6 +34,34 @@ function allowDiscovery(req: import('express').Request): boolean {
   if (current.count >= DISCOVERY_MAX_REQUESTS) return false
   current.count += 1
   return true
+}
+
+function allowJoinAttempt(req: import('express').Request): boolean {
+  const key = req.ip || req.socket.remoteAddress || 'unknown'
+  const now = Date.now()
+  const current = joinHits.get(key)
+  if (!current || now - current.startedAt >= JOIN_WINDOW_MS) {
+    joinHits.set(key, { startedAt: now, count: 1 })
+    return true
+  }
+  if (current.count >= JOIN_MAX_REQUESTS) return false
+  current.count += 1
+  return true
+}
+
+function joinCodeCandidate(): string {
+  return Array.from(
+    { length: JOIN_CODE_LENGTH },
+    () => JOIN_CODE_ALPHABET[crypto.randomInt(JOIN_CODE_ALPHABET.length)],
+  ).join('')
+}
+
+async function uniqueJoinCode(): Promise<string> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const candidate = joinCodeCandidate()
+    if (!await prisma.organization.count({ where: { joinCode: candidate } })) return candidate
+  }
+  throw new Error('Impossibile generare un codice invito univoco')
 }
 
 function serializeMembership(row: { role: string; organization: { id: string; name: string; slug: string; description: string | null; city: string | null; sport: string | null; latitude: number | null; longitude: number | null; visibility: string; discoverable: boolean; joinCode: string; _count?: { memberships: number } } }) {
@@ -101,7 +134,7 @@ organizationsRouter.get('/', async (req, res) => {
   try {
     if ((req as AuthenticatedRequest).authUser?.id === 'guest') {
       const organizations = await prisma.organization.findMany({
-        where: { OR: [{ visibility: 'public' }, { discoverable: true }] },
+        where: { visibility: 'public' },
         orderBy: { createdAt: 'asc' },
         include: { _count: { select: { memberships: true } } },
       })
@@ -175,7 +208,7 @@ organizationsRouter.post('/', async (req, res) => {
         discoverable,
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
-        joinCode: crypto.randomBytes(12).toString('base64url'),
+        joinCode: await uniqueJoinCode(),
         memberships: { create: { profileId: profile.id, role: 'owner' } },
       },
     })
@@ -186,8 +219,20 @@ organizationsRouter.post('/', async (req, res) => {
 })
 
 organizationsRouter.post('/join', async (req, res) => {
-  const joinCode = typeof req.body?.join_code === 'string' ? req.body.join_code.trim() : ''
+  if (!allowJoinAttempt(req)) {
+    res.setHeader('Retry-After', '60')
+    res.status(429).json({ message: 'Troppi tentativi. Riprova tra un minuto.' })
+    return
+  }
+  const rawJoinCode = typeof req.body?.join_code === 'string' ? req.body.join_code.trim() : ''
+  const joinCode = rawJoinCode.length === JOIN_CODE_LENGTH ? rawJoinCode.toUpperCase() : rawJoinCode
   const organizationId = typeof req.body?.organization_id === 'string' ? req.body.organization_id : ''
+  const validNewCode = /^[A-Z0-9]{5}$/.test(joinCode)
+  const validLegacyCode = /^[A-Za-z0-9_-]{8,64}$/.test(joinCode)
+  if (!organizationId && !validNewCode && !validLegacyCode) {
+    res.status(400).json({ message: 'Il codice invito non è valido' })
+    return
+  }
   try {
     const profile = await profileFor(req as AuthenticatedRequest)
     const organization = organizationId
@@ -264,7 +309,7 @@ organizationsRouter.patch('/:id', requireOrganization, requireAdmin, async (req,
     data.latitude = coordinates.latitude
     data.longitude = coordinates.longitude
   }
-  if (req.body?.regenerate_code === true) data.joinCode = crypto.randomBytes(12).toString('base64url')
+  if (req.body?.regenerate_code === true) data.joinCode = await uniqueJoinCode()
   const organization = await prisma.organization.update({ where: { id: organizationId }, data, include: { _count: { select: { memberships: true } } } })
   res.json(serializeMembership({ role: (req as OrganizationRequest).organization!.role, organization }))
 })
