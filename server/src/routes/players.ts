@@ -12,6 +12,10 @@ export const playersRouter = Router()
 playersRouter.use(requireAuth)
 playersRouter.use(requireOrganization)
 
+function contextOrganizationId(req: OrganizationRequest): string | null {
+  return req.organization?.id ?? null
+}
+
 function parseNullableDate(value: unknown): Date | null | undefined {
   if (value === undefined) return undefined
   if (value === null || value === '') return null
@@ -71,9 +75,8 @@ playersRouter.get('/me', async (req, res) => {
     return
   }
 
-  const player = await prisma.player.findUnique({
-    where: { organizationId_userId: { organizationId: authReq.organization!.id, userId } },
-  })
+  const contextId = contextOrganizationId(authReq)
+  const player = await prisma.player.findFirst({ where: { userId, ...(contextId ? { organizationId: contextId } : {}) } })
   res.json(player ? serializePlayer(player) : null)
 })
 
@@ -90,7 +93,7 @@ playersRouter.get('/', async (req, res) => {
     const page = parseNonNegativeInt(pageParam, 0)
     const perPage = Math.min(parsePositiveInt(perPageParam, 20), 100)
     const orderBy = parsePlayerSort(sortBy, sortOrder)
-    const organizationId = (req as OrganizationRequest).organization!.id
+    const organizationId = contextOrganizationId(req as OrganizationRequest)
     const where: Prisma.PlayerWhereInput = {
       organizationId,
       ...(name
@@ -134,7 +137,7 @@ playersRouter.get('/', async (req, res) => {
 
 playersRouter.get('/:id/matches', async (req, res) => {
   const playerId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   const playerExists = await prisma.player.count({ where: { id: playerId, organizationId } })
   if (!playerExists) {
     res.status(404).json({ message: 'Giocatore non trovato' })
@@ -142,7 +145,7 @@ playersRouter.get('/:id/matches', async (req, res) => {
   }
 
   const playedMatchWhere: Prisma.MatchWhereInput = {
-    tournament: { organizationId },
+    tournament: organizationId ? { organizationId } : { organizationId: null },
     status: 'completed',
     player1Id: { not: null },
     player2Id: { not: null },
@@ -195,7 +198,7 @@ playersRouter.get('/:id/matches', async (req, res) => {
 
 playersRouter.get('/:id', async (req, res) => {
   const playerId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   const player = await prisma.player.findFirst({
     where: { id: playerId, organizationId },
   })
@@ -210,7 +213,7 @@ playersRouter.get('/:id', async (req, res) => {
 
 playersRouter.post('/', requireAdmin, async (req, res) => {
   const data = req.body as PlayerCreate
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   const player = await prisma.player.create({
     data: {
       organizationId,
@@ -229,7 +232,7 @@ playersRouter.post('/', requireAdmin, async (req, res) => {
 playersRouter.put('/:id', requireAdmin, async (req, res) => {
   const data = req.body as PlayerUpdate
   const playerId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   try {
     const existing = await prisma.player.findFirst({ where: { id: playerId, organizationId }, select: { id: true } })
     if (!existing) throw new Error('NOT_FOUND')
@@ -253,7 +256,7 @@ playersRouter.put('/:id', requireAdmin, async (req, res) => {
 
 playersRouter.delete('/:id', requireAdmin, async (req, res) => {
   const playerId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   try {
     const deleted = await prisma.player.deleteMany({ where: { id: playerId, organizationId } })
     if (deleted.count === 0) throw new Error('NOT_FOUND')

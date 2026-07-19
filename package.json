@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "dev:server": "nodemon --watch server/src --watch server/prisma --ext ts,json --exec \"node --import tsx server/src/index.ts\"",
+    "predev:server": "npm run prisma:generate",
     "start:server": "node --import tsx server/src/index.ts",
+    "prestart:server": "npm run prisma:generate",
     "build": "vite build",
     "build:mobile": "vite build && npx cap sync",
     "build:server": "tsc -p server/tsconfig.json",

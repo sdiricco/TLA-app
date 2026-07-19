@@ -1,5 +1,6 @@
 import type { NextFunction, Response } from 'express'
 import type { OrganizationRequest } from './requireOrganization'
+import { prisma } from '../db/prisma'
 
 export async function requireAdmin(req: OrganizationRequest, res: Response, next: NextFunction): Promise<void> {
   if (!req.authUser) {
@@ -12,9 +13,17 @@ export async function requireAdmin(req: OrganizationRequest, res: Response, next
     return
   }
 
-  if (!req.organization || !['owner', 'admin'].includes(req.organization.role)) {
+  const profile = await prisma.profile.findUnique({ where: { id: req.authUser.id }, select: { role: true } })
+  if (profile?.role === 'admin') {
+    next()
+    return
+  }
+  if (req.organization && ['owner', 'admin'].includes(req.organization.role)) {
+    next()
+    return
+  }
+  {
     res.status(403).json({ message: 'Forbidden' })
     return
   }
-  next()
 }

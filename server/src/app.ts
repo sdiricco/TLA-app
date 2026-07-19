@@ -19,7 +19,7 @@ export function createApp() {
       credentials: true,
     }),
   )
-  app.use(express.json())
+  app.use(express.json({ limit: '8mb' }))
 
   app.use('/api', healthRouter)
   app.use('/api/docs', swaggerUi.serve)

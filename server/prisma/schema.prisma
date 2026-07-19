@@ -8,16 +8,18 @@ datasource db {
 }
 
 model Profile {
-  id              String                      @id
-  email           String                      @unique
+  id              String                       @id
+  email           String                       @unique
   name            String?
-  role            String                      @default("player")
+  role            String                       @default("player")
   players         Player[]
   memberships     OrganizationMembership[]
-  requestsCreated OrganizationRequest[]       @relation("RequestCreator")
+  requestsCreated OrganizationRequest[]        @relation("RequestCreator")
+  requestVotes    OrganizationRequestVote[]
+  requestComments OrganizationRequestComment[]
   accessRequests  OrganizationAccessRequest[]
-  createdAt       DateTime                    @default(now()) @map("created_at")
-  updatedAt       DateTime                    @updatedAt @map("updated_at")
+  createdAt       DateTime                     @default(now()) @map("created_at")
+  updatedAt       DateTime                     @updatedAt @map("updated_at")
 
   @@map("profiles")
 }
@@ -61,22 +63,51 @@ model OrganizationAccessRequest {
 }
 
 model OrganizationRequest {
-  id             String       @id @default(uuid())
-  organizationId String       @map("organization_id")
-  createdById    String       @map("created_by_id")
+  id             String                       @id @default(uuid())
+  organizationId String                       @map("organization_id")
+  createdById    String                       @map("created_by_id")
   title          String
   description    String?
-  type           String       @default("improvement")
-  priority       String       @default("medium")
-  status         String       @default("open")
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy      Profile      @relation("RequestCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
+  type           String                       @default("improvement")
+  priority       String                       @default("medium")
+  status         String                       @default("open")
+  imageUrl       String?                      @map("image_url")
+  organization   Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      Profile                      @relation("RequestCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  votes          OrganizationRequestVote[]
+  comments       OrganizationRequestComment[]
+  createdAt      DateTime                     @default(now()) @map("created_at")
+  updatedAt      DateTime                     @updatedAt @map("updated_at")
 
   @@index([organizationId, status])
   @@index([organizationId, createdAt])
   @@map("organization_requests")
+}
+
+model OrganizationRequestVote {
+  requestId String              @map("request_id")
+  profileId String              @map("profile_id")
+  request   OrganizationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  profile   Profile             @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime            @default(now()) @map("created_at")
+
+  @@id([requestId, profileId])
+  @@index([profileId])
+  @@map("organization_request_votes")
+}
+
+model OrganizationRequestComment {
+  id        String              @id @default(uuid())
+  requestId String              @map("request_id")
+  profileId String              @map("profile_id")
+  body      String
+  request   OrganizationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  profile   Profile             @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
+
+  @@index([requestId, createdAt])
+  @@map("organization_request_comments")
 }
 
 model OrganizationMembership {
@@ -100,9 +131,9 @@ model Player {
   photoUrl         String?            @map("photo_url")
   club             String?
   phone            String?
-  organizationId   String             @map("organization_id")
+  organizationId   String?            @map("organization_id")
   userId           String?            @map("user_id")
-  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization     Organization?      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   profile          Profile?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   entries          TournamentPlayer[]
   matchesAsPlayer1 Match[]            @relation("MatchPlayer1")
@@ -134,8 +165,8 @@ model Tournament {
   participantLimit      Int?               @map("participant_limit")
   groupCount            Int?               @map("group_count")
   qualifiersPerGroup    Int?               @map("qualifiers_per_group")
-  organizationId        String             @map("organization_id")
-  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId        String?            @map("organization_id")
+  organization          Organization?      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   players               TournamentPlayer[]
   matches               Match[]
   createdAt             DateTime           @default(now()) @map("created_at")

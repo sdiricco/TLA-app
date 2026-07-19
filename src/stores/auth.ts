@@ -11,7 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
   const registrationPending = ref<{ email: string; message: string } | null>(null)
 
   const isAuthenticated = computed(() => !!user.value)
-  const isAdmin = computed(() => useOrganizationsStore().isAdmin)
+  const isAdmin = computed(() => user.value?.role === 'admin' || useOrganizationsStore().isAdmin)
   const isGuest = computed(() => user.value?.id === 'guest')
 
   async function init(): Promise<void> {

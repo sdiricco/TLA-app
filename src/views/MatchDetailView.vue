@@ -30,10 +30,7 @@ const toast = useToast()
 const tournament = ref<TournamentWithPlayers | null>(null)
 const enrolledPlayers = ref<Player[]>([])
 const loading = ref(true)
-const savingAssignments = ref(false)
 const savingResult = ref(false)
-const player1Id = ref<string | null>(null)
-const player2Id = ref<string | null>(null)
 const resultValue = ref('')
 const winnerId = ref<string | null>(null)
 
@@ -44,6 +41,7 @@ const canModify = computed(() => auth.isAdmin && !auth.isGuest)
 const match = computed<Match | null>(() =>
   matchesStore.matches.find((entry) => entry.id === (route.params['matchId'] as string)) ?? null,
 )
+const hasBye = computed(() => Boolean(match.value && (match.value.player1_id === null || match.value.player2_id === null)))
 const playerById = computed(() => new Map(enrolledPlayers.value.map((player) => [player.id, player])))
 const player1 = computed(() => (match.value?.player1_id ? playerById.value.get(match.value.player1_id) ?? null : null))
 const player2 = computed(() => (match.value?.player2_id ? playerById.value.get(match.value.player2_id) ?? null : null))
@@ -53,8 +51,6 @@ const effectiveWinnerId = computed(() => {
 const roundLabel = computed(() =>
   matchesStore.rounds.find((round) => round.index === match.value?.round_index)?.name ?? 'Turno',
 )
-const availablePlayer1Options = computed(() => enrolledPlayers.value.filter((player) => player.id !== player2Id.value))
-const availablePlayer2Options = computed(() => enrolledPlayers.value.filter((player) => player.id !== player1Id.value))
 
 /**
  * Function: format date for the player cards
@@ -101,8 +97,6 @@ async function loadPage(): Promise<void> {
       throw new Error('Match not found')
     }
 
-    player1Id.value = match.value.player1_id
-    player2Id.value = match.value.player2_id
     resultValue.value = match.value.result ?? ''
     winnerId.value = match.value.winner_id
   } catch {
@@ -120,36 +114,6 @@ watch(
   },
   { immediate: true },
 )
-
-/**
- * Function: save both player assignments from the detail page
- */
-async function saveAssignments(): Promise<void> {
-  if (!canModify.value || !match.value) return
-  savingAssignments.value = true
-  try {
-    if (player1Id.value !== match.value.player1_id) {
-      await matchesStore.assignPlayer(match.value.id, {
-        slot: 'player1_id',
-        player_id: player1Id.value,
-      })
-    }
-
-    if (player2Id.value !== match.value.player2_id) {
-      await matchesStore.assignPlayer(match.value.id, {
-        slot: 'player2_id',
-        player_id: player2Id.value,
-      })
-    }
-
-    await loadPage()
-    toast.add({ severity: 'success', summary: 'Salvato', detail: 'Assegnazioni aggiornate', life: 3000 })
-  } catch (error) {
-    toast.add({ severity: 'error', summary: 'Errore', detail: (error as Error).message, life: 4000 })
-  } finally {
-    savingAssignments.value = false
-  }
-}
 
 /**
  * Function: save result and selected winner
@@ -202,7 +166,6 @@ function getSlotName(playerId: string | null): string {
 
     <template v-else-if="match">
       <section class="match-arena">
-        <div class="arena-pattern" />
         <div class="arena-topline">
           <span><i class="pi pi-calendar" /> {{ roundLabel }}</span>
           <strong v-if="match.result">{{ match.result }}</strong>
@@ -224,7 +187,6 @@ function getSlotName(playerId: string | null): string {
 
           <div class="versus-center">
             <span>VS</span>
-            <i />
           </div>
 
           <article class="arena-player" :class="{ winner: effectiveWinnerId === match.player2_id && match.player2_id }">
@@ -247,25 +209,12 @@ function getSlotName(playerId: string | null): string {
         </div>
       </section>
 
-      <section v-if="canModify" class="management-section">
+      <section v-if="canModify && !hasBye" class="management-section">
         <header class="management-heading"><span><i class="pi pi-sliders-h" /></span><div><p>GESTIONE INCONTRO</p><h2>Aggiorna il match</h2></div></header>
 
         <div class="management-grid">
-          <form class="management-card" @submit.prevent="saveAssignments">
-            <header><span><i class="pi pi-users" /></span><div><h3>Assegnazione giocatori</h3><p>Modifica gli atleti presenti nei due slot.</p></div></header>
-            <div class="form-field">
-              <label for="match-player-1">Giocatore 1</label>
-              <Select id="match-player-1" v-model="player1Id" :options="availablePlayer1Options" option-label="name" option-value="id" placeholder="Seleziona giocatore" fluid />
-            </div>
-            <div class="form-field">
-              <label for="match-player-2">Giocatore 2</label>
-              <Select id="match-player-2" v-model="player2Id" :options="availablePlayer2Options" option-label="name" option-value="id" placeholder="Seleziona giocatore" fluid />
-            </div>
-            <footer><span>Salva entrambi gli slot</span><Button type="submit" label="Salva assegnazioni" icon="pi pi-check" :loading="savingAssignments" /></footer>
-          </form>
-
           <form class="management-card result-card" @submit.prevent="saveResult">
-            <header><span><i class="pi pi-flag" /></span><div><h3>Risultato finale</h3><p>Registra punteggio e vincitore.</p></div></header>
+            <header><span><i class="pi pi-flag" /></span><div><h3>Risultato finale</h3><p>Inserisci il punteggio e indica chi ha vinto.</p></div></header>
             <div class="form-field">
               <label for="match-result">Risultato</label>
               <span class="input-wrap"><i class="pi pi-chart-bar" /><InputText id="match-result" v-model="resultValue" placeholder="es. 6-3 6-4" fluid /></span>
@@ -297,8 +246,6 @@ function getSlotName(playerId: string | null): string {
 .match-loading { display: flex; min-height: 360px; flex-direction: column; align-items: center; justify-content: center; gap: 0.8rem; color: var(--color-text-muted); font-size: 0.72rem; }
 .match-loading i { color: var(--color-primary-500); font-size: 2rem; }
 .match-arena { position: relative; isolation: isolate; overflow: hidden; padding: clamp(1.2rem, 3vw, 2rem); border-radius: 0; background: linear-gradient(140deg, var(--color-primary-900), var(--color-primary-800)); color: var(--color-white); box-shadow: 0 18px 38px rgb(var(--color-shadow-rgb) / 16%); }
-.arena-pattern { position: absolute; z-index: -1; inset: 0; opacity: 0.16; background-image: radial-gradient(rgb(var(--color-white-rgb) / 48%) 0.7px, transparent 0.7px); background-size: 14px 14px; mask-image: linear-gradient(90deg, transparent, var(--color-black), transparent); }
-.match-arena::after { position: absolute; z-index: -1; width: 360px; height: 360px; right: -210px; bottom: -250px; border: 1px solid rgb(var(--color-white-rgb) / 12%); border-radius: 50%; box-shadow: 0 0 0 50px rgb(var(--color-white-rgb) / 3%), 0 0 0 100px rgb(var(--color-white-rgb) / 2%); content: ''; }
 .arena-topline { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--color-white-rgb) / 11%); color: rgb(var(--color-white-rgb) / 48%); font-size: 0.61rem; font-weight: 700; }
 .arena-topline span { display: flex; align-items: center; gap: 0.4rem; }
 .arena-topline strong { padding: 0.38rem 0.6rem; border-radius: 99px; background: var(--lime); color: var(--color-sidebar-on-accent); font-size: 0.67rem; }
@@ -313,9 +260,8 @@ function getSlotName(playerId: string | null): string {
 .player-stats > div { display: grid; gap: 0.15rem; padding: 0.65rem 0.3rem; border-radius: 0; background: rgb(var(--color-white-rgb) / 7%); }
 .player-stats small { color: rgb(var(--color-white-rgb) / 35%); font-size: 0.43rem; font-weight: 850; letter-spacing: 0.09em; }
 .player-stats strong { overflow: hidden; color: rgb(var(--color-white-rgb) / 78%); font-size: 0.62rem; text-overflow: ellipsis; white-space: nowrap; }
-.versus-center { display: flex; flex-direction: column; align-items: center; gap: 0.7rem; }
+.versus-center { display: flex; flex-direction: column; align-items: center; justify-self: center; gap: 0.7rem; }
 .versus-center span { display: grid; place-items: center; width: 3.2rem; height: 3.2rem; border: 1px solid rgb(var(--color-white-rgb) / 17%); border-radius: 50%; background: rgb(var(--color-white-rgb) / 9%); color: var(--lime); font-size: 0.8rem; font-weight: 900; box-shadow: 0 8px 20px rgb(var(--color-black-rgb) / 12%); }
-.versus-center i { width: 1px; height: 2.5rem; background: linear-gradient(transparent, rgb(var(--color-white-rgb) / 20%), transparent); }
 .arena-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; padding-top: 1.15rem; border-top: 1px solid rgb(var(--color-white-rgb) / 11%); }
 .arena-summary > div { display: flex; align-items: center; gap: 0.65rem; min-width: 0; padding-right: 0.7rem; border-right: 1px solid rgb(var(--color-white-rgb) / 9%); }
 .arena-summary > div:last-child { border-right: 0; }
@@ -358,7 +304,6 @@ function getSlotName(playerId: string | null): string {
   .arena-topline { padding-bottom: 0.65rem; }
   .players-versus { grid-template-columns: 1fr; gap: 0.7rem; padding: 1rem 0 0.8rem; }
   .versus-center { flex-direction: row; }
-  .versus-center i { width: 3rem; height: 1px; }
   .arena-player { width: 100%; }
   .arena-player :deep(.p-avatar) { width: 4rem; height: 4rem; }
   .arena-player h2 { margin-top: 0.55rem; font-size: 1.25rem; white-space: normal; }
@@ -375,6 +320,6 @@ function getSlotName(playerId: string | null): string {
   .management-card :deep(.p-inputtext), .management-card :deep(.p-select), .management-card footer :deep(.p-button) { font-size: 0.875rem; }
   .management-card footer { align-items: stretch; flex-direction: column; }
   .management-card footer :deep(.p-button) { width: 100%; }
-  .management-card footer { position: sticky; bottom: calc(4.8rem + env(safe-area-inset-bottom)); z-index: 4; margin: auto -0.85rem -0.85rem; padding: 0.65rem 0.85rem; }
+  .management-card footer { margin: 0 -0.85rem -0.85rem; padding: 0.65rem 0.85rem; }
 }
 </style>

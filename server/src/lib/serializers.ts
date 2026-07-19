@@ -15,6 +15,7 @@ export function serializePlayer(player: {
   club: string | null
   phone: string | null
   userId: string | null
+  organizationId: string | null
   createdAt: Date
   updatedAt: Date
 }): Player {
@@ -27,6 +28,7 @@ export function serializePlayer(player: {
     club: player.club,
     phone: player.phone,
     user_id: player.userId,
+    organization_id: player.organizationId,
     created_at: player.createdAt.toISOString(),
     updated_at: player.updatedAt.toISOString(),
   }
@@ -49,6 +51,7 @@ export function serializeTournament(tournament: {
   participantLimit: number | null
   groupCount: number | null
   qualifiersPerGroup: number | null
+  organizationId: string | null
   createdAt: Date
   updatedAt: Date
 }): Tournament {
@@ -69,6 +72,7 @@ export function serializeTournament(tournament: {
     participant_limit: tournament.participantLimit,
     group_count: tournament.groupCount,
     qualifiers_per_group: tournament.qualifiersPerGroup,
+    organization_id: tournament.organizationId,
     created_at: tournament.createdAt.toISOString(),
     updated_at: tournament.updatedAt.toISOString(),
   }
@@ -91,6 +95,7 @@ export function serializeTournamentWithPlayers(tournament: {
   participantLimit: number | null
   groupCount: number | null
   qualifiersPerGroup: number | null
+  organizationId: string | null
   createdAt: Date
   updatedAt: Date
   players?: Array<{

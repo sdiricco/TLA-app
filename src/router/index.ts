@@ -68,6 +68,12 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'requests/:id',
+          name: 'request-detail',
+          component: () => import('../views/RequestDetailView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: '',
           name: 'home',
           redirect: () => ({ name: 'tournaments' }),
@@ -133,9 +139,15 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'settings',
+          name: 'settings',
+          component: () => import('../views/SettingsView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'admin/feature-flags',
           name: 'admin-feature-flags',
-          redirect: () => ({ name: 'profile' }),
+          redirect: () => ({ name: 'settings' }),
           meta: { requiresAuth: true, requiresAdmin: true },
         },
       ],
@@ -167,9 +179,6 @@ router.beforeEach(async (to) => {
     }
     if (auth.isGuest && to.name === 'profile') {
       return { name: organizations.activeOrganization ? 'tournaments' : 'organizations' }
-    }
-    if (!organizations.activeOrganization && !to.meta.organizationSetup) {
-      return { name: 'organizations' }
     }
   }
 

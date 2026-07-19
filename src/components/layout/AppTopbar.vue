@@ -15,6 +15,7 @@ const title = computed(() => {
   if (route.path.startsWith('/organizations/new')) return 'Nuova organizzazione'
   if (route.path.startsWith('/organizations')) return 'Organizzazioni'
   if (route.path.startsWith('/players')) return 'Giocatori'
+  if (route.path.startsWith('/settings')) return 'Impostazioni'
   if (route.path.startsWith('/profile')) return 'Profilo'
   if (route.path.startsWith('/admin')) return 'Admin'
   if (route.path.includes('/matches/')) return 'Partita'
@@ -30,28 +31,40 @@ const accountInitials = computed(() => {
   return source.slice(0, 2).toUpperCase()
 })
 
-const activeOrganizationName = computed(() => organizations.activeOrganization?.name ?? 'Organizzazione')
+const activeOrganizationName = computed(() => organizations.activeOrganization?.name ?? 'Tornei globali')
 
 const accountItems = computed(() => [
-  ...(!organizations.activeOrganization || auth.isGuest
-    ? []
-    : [{
-        label: 'Profilo',
-        icon: 'mdi:account-outline',
-        command: () => {
-          void router.push({ name: 'profile' })
-        },
-      }]),
   {
-    label: 'Organizzazioni',
-    icon: 'mdi:domain',
+    label: 'Profilo',
+    icon: 'pi pi-user',
     command: () => {
-      void router.push({ name: 'organizations' })
+      void router.push({ name: 'profile' })
+    },
+  },
+  {
+    label: 'Impostazioni',
+    icon: 'pi pi-cog',
+    command: () => {
+      void router.push({ name: 'settings' })
+    },
+  },
+  {
+    label: 'Changelog',
+    icon: 'pi pi-history',
+    command: () => {
+      void router.push({ name: 'changelog' })
+    },
+  },
+  {
+    label: 'Richieste',
+    icon: 'pi pi-lightbulb',
+    command: () => {
+      void router.push({ name: 'requests' })
     },
   },
   {
     label: 'Esci',
-    icon: 'mdi:logout',
+    icon: 'pi pi-sign-out',
     command: async () => {
       await auth.logout()
       await router.push('/login')

@@ -76,6 +76,9 @@ export interface OrganizationRequest {
   type: OrganizationRequestType
   priority: OrganizationRequestPriority
   status: OrganizationRequestStatus
+  image_url: string | null
+  important_count: number
+  important_by_me: boolean
   created_at: string
   updated_at: string
   created_by: { id: string; name: string }
@@ -86,6 +89,7 @@ export interface OrganizationRequestCreate {
   description?: string | null
   type: OrganizationRequestType
   priority: OrganizationRequestPriority
+  image_data_url?: string | null
 }
 
 export interface OrganizationRequestUpdate {
@@ -94,6 +98,14 @@ export interface OrganizationRequestUpdate {
   type?: OrganizationRequestType
   priority?: OrganizationRequestPriority
   status?: OrganizationRequestStatus
+}
+
+export interface OrganizationRequestComment {
+  id: string
+  body: string
+  created_at: string
+  updated_at: string
+  author: { id: string; name: string }
 }
 
 export interface Player {
@@ -105,6 +117,7 @@ export interface Player {
   club?: string | null
   phone?: string | null
   user_id?: string | null
+  organization_id?: string | null
   created_at?: string
   updated_at?: string
 }
@@ -157,6 +170,7 @@ export interface Tournament {
   participant_limit?: number | null
   group_count?: number | null
   qualifiers_per_group?: number | null
+  organization_id?: string | null
   created_at?: string
   updated_at?: string
 }
@@ -273,6 +287,7 @@ export interface MockTournament extends Tournament {
 
 export interface ProfilesService {
   getMyProfile(): Promise<Profile>
+  updateMyProfile(name: string): Promise<Profile>
   getUnlinkedProfiles(): Promise<Profile[]>
 }
 
@@ -297,8 +312,12 @@ export interface OrganizationsService {
 
 export interface RequestsService {
   getAll(filters?: { status?: OrganizationRequestStatus | 'all'; type?: OrganizationRequestType | 'all' }): Promise<OrganizationRequest[]>
+  getById(id: string): Promise<OrganizationRequest>
+  getComments(id: string): Promise<OrganizationRequestComment[]>
   create(data: OrganizationRequestCreate): Promise<OrganizationRequest>
+  createComment(id: string, body: string): Promise<OrganizationRequestComment>
   update(id: string, data: OrganizationRequestUpdate): Promise<OrganizationRequest>
+  markImportant(id: string): Promise<OrganizationRequest>
 }
 
 export interface PlayersService {

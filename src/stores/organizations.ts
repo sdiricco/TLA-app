@@ -21,6 +21,11 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     localStorage.setItem(STORAGE_KEY, id)
   }
 
+  function clearSelection(): void {
+    activeId.value = null
+    localStorage.removeItem(STORAGE_KEY)
+  }
+
   async function load(): Promise<void> {
     if (loading.value) return
     loading.value = true
@@ -85,5 +90,5 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     localStorage.removeItem(STORAGE_KEY)
   }
 
-  return { organizations, activeId, activeOrganization, loading, initialized, error, isAdmin, select, load, create, join, joinPublic, requestAccess, update, clear }
+  return { organizations, activeId, activeOrganization, loading, initialized, error, isAdmin, select, clearSelection, load, create, join, joinPublic, requestAccess, update, clear }
 })

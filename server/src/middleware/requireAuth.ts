@@ -3,6 +3,7 @@ import { verifySupabaseAccessToken } from '../lib/supabaseAuth'
 
 export interface AuthenticatedRequest extends Request {
   authUser?: Awaited<ReturnType<typeof verifySupabaseAccessToken>>
+  authToken?: string
 }
 
 const GUEST_TOKEN = 'tla_guest_token'
@@ -23,6 +24,7 @@ export async function requireAuth(req: AuthenticatedRequest, res: Response, next
 
   if (token === GUEST_TOKEN) {
     req.authUser = guestUser
+    req.authToken = token
     next()
     return
   }
@@ -35,5 +37,6 @@ export async function requireAuth(req: AuthenticatedRequest, res: Response, next
   }
 
   req.authUser = user
+  req.authToken = token
   next()
 }

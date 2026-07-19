@@ -1,199 +1,154 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
-import Tag from 'primevue/tag'
-import AdminSettingsPanel from '../components/admin/AdminSettingsPanel.vue'
+import Dialog from 'primevue/dialog'
+import InputText from 'primevue/inputtext'
+import Skeleton from 'primevue/skeleton'
 import { useAuthStore } from '../stores/auth'
 import { useOrganizationsStore } from '../stores/organizations'
-import { useThemeStore } from '../stores/theme'
+import { playersService } from '../services/playersApi'
+import { profilesService } from '../services/profilesApi'
+import type { Player, PlayerMatchHistory } from '../types'
 
 const router = useRouter()
 const auth = useAuthStore()
 const organizations = useOrganizationsStore()
-const theme = useThemeStore()
+const player = ref<Player | null>(null)
+const history = ref<PlayerMatchHistory>({ stats: { played: 0, wins: 0, losses: 0, win_rate: 0 }, recent_form: [], recent_matches: [] })
+const loadingPlayer = ref(true)
+const editOpen = ref(false)
+const editName = ref('')
+const saving = ref(false)
+const error = ref<string | null>(null)
 
-const displayName = computed(() => auth.user?.name || auth.user?.email || 'Profilo')
+const displayName = computed(() => auth.user?.name || auth.user?.email || 'Il tuo profilo')
 const email = computed(() => auth.user?.email ?? '—')
-const appRoleLabel = computed(() => auth.isAdmin ? 'Admin' : auth.isGuest ? 'Ospite' : 'Giocatore')
-const organizationRoleLabel = computed(() => {
-  const role = organizations.activeOrganization?.role
-  if (role === 'owner') return 'Proprietario'
-  if (role === 'admin') return 'Amministratore'
-  if (role === 'member') return 'Membro'
-  return 'Nessuna organizzazione'
-})
+const roleLabel = computed(() => auth.isAdmin ? 'Amministratore' : 'Giocatore')
+const organizationCount = computed(() => organizations.organizations.length)
 
-const permissions = computed(() => {
-  if (auth.isGuest) {
-    return ['Consultazione tornei', 'Accesso limitato', 'Nessuna modifica dati']
+function initials(name: string): string {
+  return name.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase() ?? '').join('')
+}
+
+function openEdit(): void {
+  editName.value = displayName.value
+  error.value = null
+  editOpen.value = true
+}
+
+async function saveProfile(): Promise<void> {
+  if (editName.value.trim().length < 2) {
+    error.value = 'Inserisci un nome di almeno 2 caratteri.'
+    return
   }
+  saving.value = true
+  error.value = null
+  try {
+    const updated = await profilesService.updateMyProfile(editName.value.trim())
+    if (auth.user) auth.user.name = updated.name ?? editName.value.trim()
+    editOpen.value = false
+  } catch (e) { error.value = (e as Error).message }
+  finally { saving.value = false }
+}
 
-  const base = ['Visualizzazione tornei', 'Accesso organizzazione attiva']
-  if (auth.isAdmin) {
-    return [
-      ...base,
-      'Gestione giocatori',
-      'Gestione tornei',
-      'Configurazione formati e categorie',
-    ]
-  }
+async function loadPlayerCard(): Promise<void> {
+  loadingPlayer.value = true
+  try {
+    const loadedPlayer = await playersService.getMyPlayer()
+    player.value = loadedPlayer
+    if (loadedPlayer) history.value = await playersService.getMatchHistory(loadedPlayer.id)
+  } finally { loadingPlayer.value = false }
+}
 
-  return [...base, 'Profilo personale collegato']
-})
+onMounted(() => { void loadPlayerCard() })
 </script>
 
 <template>
-  <div class="profile-page">
+  <main class="profile-page">
     <header class="profile-hero">
-      <div class="hero-copy">
-        <p class="eyebrow">PROFILO PERSONALE</p>
-        <h1>{{ displayName }}</h1>
-        <p>Ruoli, permessi e impostazioni del tuo accesso TLA in un unico posto.</p>
+      <div class="profile-identity">
+        <Avatar :label="initials(displayName)" shape="circle" class="account-avatar" />
+        <div>
+          <p class="eyebrow">IL TUO ACCOUNT</p>
+          <h1>{{ displayName }}</h1>
+          <p class="email">{{ email }}</p>
+        </div>
       </div>
-
-      <div class="hero-badges">
-        <Tag :value="appRoleLabel" severity="contrast" />
-        <Tag v-if="organizations.activeOrganization" :value="organizationRoleLabel" severity="success" />
+      <div class="hero-actions">
+        <Button label="Le mie organizzazioni" icon="pi pi-building" severity="secondary" outlined @click="router.push({ name: 'organizations' })" />
+        <Button label="Modifica profilo" icon="pi pi-pencil" @click="openEdit" />
       </div>
     </header>
 
-    <section class="summary-grid">
-      <article class="summary-card">
-        <span class="summary-icon"><i class="pi pi-user" /></span>
-        <div>
-          <small>ACCOUNT</small>
-          <strong>{{ email }}</strong>
-          <p>{{ appRoleLabel }}</p>
-        </div>
-      </article>
-
-      <article class="summary-card">
-        <span class="summary-icon"><i class="pi pi-building" /></span>
-        <div>
-          <small>ORGANIZZAZIONE ATTIVA</small>
-          <strong>{{ organizations.activeOrganization?.name ?? 'Nessuna selezione' }}</strong>
-          <p>{{ organizationRoleLabel }}</p>
-        </div>
-      </article>
-
-      <article class="summary-card">
-        <span class="summary-icon"><i class="pi pi-palette" /></span>
-        <div>
-          <small>ASPETTO</small>
-          <strong>Tema verde fisso</strong>
-          <p>{{ theme.isDark ? 'Scuro' : 'Chiaro' }} · Varianti disabilitate</p>
-        </div>
-      </article>
+    <section class="account-overview" aria-label="Riepilogo account">
+      <article><i class="pi pi-shield" /><div><small>RUOLO</small><strong>{{ roleLabel }}</strong></div></article>
+      <article><i class="pi pi-building" /><div><small>LE MIE ORGANIZZAZIONI</small><strong>{{ organizationCount }} {{ organizationCount === 1 ? 'organizzazione' : 'organizzazioni' }}</strong></div></article>
+      <article><i class="pi pi-calendar" /><div><small>ACCESSO</small><strong>Account attivo</strong></div></article>
     </section>
 
-    <section class="content-grid">
-      <article class="panel-card">
-        <div class="panel-heading">
-          <div>
-            <h2>Ruoli e permessi</h2>
-            <p>Qui trovi i privilegi effettivi del tuo accesso corrente.</p>
-          </div>
-        </div>
+    <section class="section-heading"><div><p class="eyebrow">ATTIVITÀ SPORTIVA</p><h2>La mia scheda giocatore</h2><p>Risultati e statistiche personali collegati all’organizzazione selezionata.</p></div></section>
 
-        <div class="info-list">
-          <div>
-            <small>RUOLO APP</small>
-            <strong>{{ appRoleLabel }}</strong>
-          </div>
-          <div>
-            <small>RUOLO ORGANIZZAZIONE</small>
-            <strong>{{ organizationRoleLabel }}</strong>
-          </div>
-          <div>
-            <small>ORGANIZZAZIONE</small>
-            <strong>{{ organizations.activeOrganization?.name ?? '—' }}</strong>
-          </div>
-        </div>
+    <section v-if="loadingPlayer" class="player-card loading-card"><Skeleton shape="circle" size="5rem" /><div><Skeleton width="10rem" height="1.5rem" /><Skeleton width="16rem" height="1rem" /></div></section>
 
-        <div class="permission-chips">
-          <span v-for="permission in permissions" :key="permission">{{ permission }}</span>
-        </div>
-      </article>
-
-      <article class="panel-card">
-        <div class="panel-heading">
-          <div>
-            <h2>Impostazioni</h2>
-            <p>Preferenze e configurazioni personali collegate al tuo accesso.</p>
-          </div>
-        </div>
-
-        <div class="settings-list">
-          <div>
-            <span><i class="pi pi-palette" /> Tema</span>
-            <strong>Verde</strong>
-          </div>
-          <div>
-            <span><i class="pi pi-moon" /> Modalità scura</span>
-            <strong>Disabilitata</strong>
-          </div>
-          <div>
-            <span><i class="pi pi-building" /> Spazi</span>
-            <Button label="Gestisci organizzazioni" icon="pi pi-arrow-right" text @click="router.push({ name: 'organizations' })" />
-          </div>
-        </div>
-      </article>
-    </section>
-
-    <section v-if="auth.isAdmin" class="admin-section">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">AREA ADMIN</p>
-          <h2>Configurazione applicazione</h2>
-          <p>La vecchia pagina Admin ora vive direttamente nel tuo profilo personale.</p>
-        </div>
+    <section v-else-if="player" class="player-card">
+      <div class="player-summary">
+        <Avatar :label="initials(player.name)" :image="player.photo_url ?? undefined" shape="circle" class="player-avatar" />
+        <div class="player-copy"><p class="eyebrow">GIOCATORE COLLEGATO</p><h3>{{ player.name }}</h3><p>{{ player.club ?? 'Club non specificato' }} · Ranking #{{ player.ranking || '—' }}</p></div>
+        <Button label="Apri scheda" icon="pi pi-arrow-right" iconPos="right" text @click="router.push({ name: 'player-detail', params: { id: player.id } })" />
       </div>
-
-      <AdminSettingsPanel embedded />
+      <div class="stats-grid">
+        <div><small>PARTITE GIOCATE</small><strong>{{ history.stats.played }}</strong></div>
+        <div><small>VITTORIE</small><strong>{{ history.stats.wins }}</strong></div>
+        <div><small>SCONFITTE</small><strong>{{ history.stats.losses }}</strong></div>
+        <div><small>VITTORIE %</small><strong>{{ history.stats.win_rate }}%</strong></div>
+      </div>
     </section>
-  </div>
+
+    <section v-else class="empty-player-card">
+      <span><i class="pi pi-user-plus" /></span>
+      <div><h3>La tua scheda giocatore non è ancora collegata</h3><p>Quando verrai associato a un giocatore, qui vedrai partite, vittorie e andamento.</p></div>
+      <Button label="Vai ai giocatori" icon="pi pi-users" severity="secondary" outlined @click="router.push({ name: 'players' })" />
+    </section>
+
+    <section class="permissions-card">
+      <div><p class="eyebrow">ACCESSO</p><h2>Permessi del tuo account</h2><p>{{ auth.isAdmin ? 'Puoi gestire tornei, giocatori e configurazioni della tua organizzazione.' : 'Puoi consultare tornei, richieste e la tua attività sportiva.' }}</p></div>
+      <i :class="auth.isAdmin ? 'pi pi-verified' : 'pi pi-check-circle'" />
+    </section>
+
+    <Dialog v-model:visible="editOpen" modal header="Modifica profilo" :style="{ width: 'min(92vw, 28rem)' }">
+      <form class="edit-form" @submit.prevent="saveProfile">
+        <label for="profile-name">Nome visualizzato</label>
+        <InputText id="profile-name" v-model="editName" maxlength="80" autofocus fluid />
+        <small>L’email dell’account non può essere modificata da qui.</small>
+        <p v-if="error" class="form-error">{{ error }}</p>
+        <div class="dialog-actions"><Button type="button" label="Annulla" severity="secondary" text @click="editOpen = false" /><Button type="submit" label="Salva modifiche" icon="pi pi-check" :loading="saving" /></div>
+      </form>
+    </Dialog>
+  </main>
 </template>
 
 <style scoped>
-.profile-page { --green: var(--color-primary-700); display: flex; max-width: 1480px; margin: 0 auto; flex-direction: column; gap: 1rem; color: var(--color-text); }
-.profile-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.2rem; border: 1px solid var(--color-border); background: var(--color-surface-card); }
-.hero-copy { min-width: 0; }
-.eyebrow { margin: 0 0 0.45rem; color: var(--green); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.14em; }
-.profile-hero h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1; letter-spacing: -0.05em; }
-.profile-hero p:last-child { margin: 0.7rem 0 0; color: var(--color-text-muted); font-size: 0.9rem; }
-.hero-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.45rem; }
-.summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; }
-.summary-card { display: flex; align-items: center; gap: 0.85rem; padding: 0.95rem 1rem; border: 1px solid var(--color-border); background: var(--color-surface-card); }
-.summary-icon { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; flex: 0 0 auto; background: var(--color-primary-soft-surface); color: var(--green); }
-.summary-card small { display: block; color: var(--color-text-subtle); font-size: 0.56rem; font-weight: 800; letter-spacing: 0.08em; }
-.summary-card strong { display: block; margin-top: 0.16rem; font-size: 0.88rem; }
-.summary-card p { margin: 0.2rem 0 0; color: var(--color-text-muted); font-size: 0.7rem; }
-.content-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr); gap: 0.8rem; }
-.panel-card, .admin-section { padding: 1rem; border: 1px solid var(--color-border); background: var(--color-surface-card); }
-.panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.8rem; margin-bottom: 0.9rem; }
-.panel-heading h2 { margin: 0; font-size: 1.1rem; letter-spacing: -0.03em; }
-.panel-heading p { margin: 0.35rem 0 0; color: var(--color-text-muted); font-size: 0.78rem; }
-.info-list { display: grid; gap: 0.65rem; }
-.info-list > div, .settings-list > div { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem 0; border-top: 1px solid var(--color-surface-muted); }
-.info-list > div:first-child, .settings-list > div:first-child { border-top: 0; padding-top: 0; }
-.info-list small { color: var(--color-text-subtle); font-size: 0.56rem; font-weight: 800; letter-spacing: 0.08em; }
-.info-list strong { display: block; margin-top: 0.14rem; font-size: 0.9rem; }
-.permission-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 1rem; }
-.permission-chips span { padding: 0.42rem 0.6rem; background: var(--color-surface-soft); color: var(--color-text-muted); font-size: 0.72rem; font-weight: 650; }
-.settings-list span { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--color-text-muted); font-size: 0.8rem; }
-.settings-list strong { font-size: 0.8rem; }
-.admin-section { display: flex; flex-direction: column; gap: 1rem; }
-
-@media (max-width: 920px) {
-  .summary-grid, .content-grid { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 620px) {
-  .profile-page { gap: 0.8rem; }
-  .profile-hero { flex-direction: column; padding: 0.9rem; }
-  .hero-badges { justify-content: flex-start; }
-  .summary-card, .panel-card, .admin-section { padding: 0.85rem; }
-  .panel-heading h2 { font-size: 1rem; }
-}
+.profile-page { width: min(1080px, 100%); margin: 0 auto; display: grid; gap: 1rem; color: var(--color-text); }
+.profile-hero, .player-card, .empty-player-card, .permissions-card { border: 1px solid var(--color-border); background: var(--color-surface-card); box-shadow: 0 12px 28px rgb(var(--color-shadow-rgb) / 5%); }
+.profile-hero { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: clamp(1rem, 3vw, 1.6rem); }
+.profile-identity, .hero-actions, .player-summary { display: flex; align-items: center; gap: 1rem; }
+.account-avatar { width: 4.5rem; height: 4.5rem; flex: 0 0 auto; background: var(--color-primary-700); color: var(--color-white); font-size: 1.35rem; font-weight: 800; }
+.eyebrow { margin: 0 0 .4rem; color: var(--color-primary-700); font-size: .68rem; font-weight: 850; letter-spacing: .14em; }
+h1, h2, h3 { margin: 0; letter-spacing: -.04em; } h1 { font-size: clamp(1.7rem, 4vw, 2.6rem); } h2 { font-size: 1.3rem; } h3 { font-size: 1.3rem; }
+.email, .section-heading > div > p:last-child, .player-copy > p:last-child, .permissions-card p { margin: .35rem 0 0; color: var(--color-text-muted); line-height: 1.55; }
+.hero-actions { flex-wrap: wrap; justify-content: flex-end; }
+.account-overview { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+.account-overview article { display: flex; align-items: center; gap: .75rem; min-width: 0; padding: .9rem 1rem; border: 1px solid var(--color-border); background: var(--color-surface-card); }
+.account-overview i { color: var(--color-primary-700); font-size: 1.1rem; } .account-overview small, .stats-grid small { display: block; color: var(--color-text-subtle); font-size: .58rem; font-weight: 800; letter-spacing: .08em; } .account-overview strong { display: block; margin-top: .2rem; font-size: .85rem; }
+.section-heading { margin-top: .5rem; }.section-heading > div > p:last-child { max-width: 42rem; }
+.player-card { display: grid; gap: 1.3rem; padding: clamp(1rem, 3vw, 1.4rem); }
+.player-summary { align-items: flex-start; }.player-avatar { width: 5rem; height: 5rem; flex: 0 0 auto; background: var(--color-surface-soft); color: var(--color-primary-700); font-size: 1.25rem; font-weight: 800; }.player-summary > :last-child { margin-left: auto; }.player-copy { min-width: 0; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--color-border); }.stats-grid > div { padding: 1rem 1rem 0 0; }.stats-grid strong { display: block; margin-top: .25rem; font-size: 1.55rem; letter-spacing: -.05em; }
+.empty-player-card { display: flex; align-items: center; gap: 1rem; padding: 1.2rem; }.empty-player-card > span { display: grid; place-items: center; width: 2.8rem; height: 2.8rem; flex: 0 0 auto; background: var(--color-surface-soft); color: var(--color-primary-700); }.empty-player-card p { margin: .3rem 0 0; color: var(--color-text-muted); line-height: 1.5; }.empty-player-card > :last-child { margin-left: auto; }
+.permissions-card { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.2rem; background: var(--color-surface-soft); }.permissions-card > i { color: var(--color-primary-700); font-size: 2rem; }
+.loading-card { align-items: center; grid-template-columns: auto 1fr; }
+.edit-form { display: grid; gap: .7rem; }.edit-form label { font-size: .82rem; font-weight: 750; }.edit-form small { color: var(--color-text-muted); }.form-error { margin: 0; color: var(--color-danger, #c2413d); font-size: .82rem; }.dialog-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .4rem; }
+@media (max-width: 720px) { .profile-hero, .empty-player-card { align-items: flex-start; flex-direction: column; }.hero-actions, .empty-player-card > :last-child { margin-left: 0; }.account-overview { grid-template-columns: 1fr; }.stats-grid { grid-template-columns: repeat(2, 1fr); }.stats-grid > div { padding: .8rem 0; }.player-summary { flex-wrap: wrap; }.player-summary > :last-child { margin-left: 0; width: 100%; }.permissions-card { align-items: flex-start; } }
 </style>

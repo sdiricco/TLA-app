@@ -20,15 +20,25 @@ export const tournamentsRouter = Router()
 tournamentsRouter.use(requireAuth)
 tournamentsRouter.use(requireOrganization)
 
+function contextOrganizationId(req: OrganizationRequest): string | null {
+  return req.organization?.id ?? null
+}
+
+function visibleTournamentWhere(organizationId: string | null): Prisma.TournamentWhereInput {
+  return organizationId
+    ? { OR: [{ organizationId }, { organizationId: null }] }
+    : { organizationId: null }
+}
+
 function parseDate(value: string | null | undefined): Date | null {
   if (!value) return null
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-async function getTournamentWithPlayers(id: string, organizationId: string) {
+async function getTournamentWithPlayers(id: string, organizationId: string | null) {
   return prisma.tournament.findFirst({
-    where: { id, organizationId },
+    where: { id, ...visibleTournamentWhere(organizationId) },
     include: {
       players: {
         orderBy: { seed: 'asc' },
@@ -77,15 +87,17 @@ function tournamentCapacityReached(limit: number | null, count: number): boolean
   return limit !== null && count >= limit
 }
 
-async function assertCanAddParticipant(tournamentId: string, playerId: string, organizationId: string): Promise<void> {
+async function assertCanAddParticipant(tournamentId: string, playerId: string, organizationId: string | null): Promise<void> {
   const tournament = await prisma.tournament.findFirst({
-    where: { id: tournamentId, organizationId },
-    select: { participantLimit: true },
+    where: { id: tournamentId, ...visibleTournamentWhere(organizationId) },
+    select: { participantLimit: true, organizationId: true },
   })
   if (!tournament) {
     throw new Error('Torneo non trovato')
   }
-  const playerExists = await prisma.player.count({ where: { id: playerId, organizationId } })
+  const playerExists = await prisma.player.count({
+    where: { id: playerId, ...(tournament.organizationId ? { organizationId: tournament.organizationId } : {}) },
+  })
   if (!playerExists) throw new Error('Giocatore non trovato')
 
   const alreadyEnrolled = await prisma.tournamentPlayer.findUnique({
@@ -127,9 +139,9 @@ tournamentsRouter.get('/', async (req, res) => {
     if (toDate) toDate.setUTCHours(23, 59, 59, 999)
     if (fromDate && toDate && fromDate > toDate) throw new Error('Invalid date range')
 
-    const organizationId = (req as OrganizationRequest).organization!.id
+    const organizationId = contextOrganizationId(req as OrganizationRequest)
     const where: Prisma.TournamentWhereInput = {
-      organizationId,
+      ...visibleTournamentWhere(organizationId),
       ...(name
         ? {
             name: {
@@ -174,7 +186,7 @@ tournamentsRouter.get('/', async (req, res) => {
 
 tournamentsRouter.get('/:id', async (req, res) => {
   const tournamentId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   const tournament = await getTournamentWithPlayers(tournamentId, organizationId)
   if (!tournament) {
     res.status(404).json({ message: 'Torneo non trovato' })
@@ -186,7 +198,7 @@ tournamentsRouter.get('/:id', async (req, res) => {
 tournamentsRouter.post('/', requireAdmin, async (req, res) => {
   try {
     const data = req.body as TournamentCreate
-    const organizationId = (req as OrganizationRequest).organization!.id
+    const organizationId = contextOrganizationId(req as OrganizationRequest)
     const participantLimit = parseNullableInt(data.participant_limit)
     const groupCount = parseNullableInt(data.group_count)
     const qualifiersPerGroup = parseNullableInt(data.qualifiers_per_group)
@@ -240,16 +252,17 @@ tournamentsRouter.post('/', requireAdmin, async (req, res) => {
 tournamentsRouter.put('/:id', requireAdmin, async (req, res) => {
   const body = req.body as TournamentUpdate & { playerIds?: string[] }
   const tournamentId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
-  const tournamentExists = await prisma.tournament.count({ where: { id: tournamentId, organizationId } })
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
+  const tournamentExists = await prisma.tournament.count({ where: { id: tournamentId, ...visibleTournamentWhere(organizationId) } })
   if (!tournamentExists) {
     res.status(404).json({ message: 'Torneo non trovato' })
     return
   }
 
   if (Array.isArray(body.playerIds)) {
+    const tournamentForPlayers = await prisma.tournament.findFirst({ where: { id: tournamentId, ...visibleTournamentWhere(organizationId) }, select: { organizationId: true } })
     const playersInOrganization = await prisma.player.count({
-      where: { id: { in: body.playerIds }, organizationId },
+      where: { id: { in: body.playerIds }, ...(tournamentForPlayers?.organizationId ? { organizationId: tournamentForPlayers.organizationId } : {}) },
     })
     if (playersInOrganization !== new Set(body.playerIds).size) {
       res.status(400).json({ message: 'Uno o più giocatori non appartengono all’organizzazione' })
@@ -342,9 +355,9 @@ tournamentsRouter.put('/:id', requireAdmin, async (req, res) => {
 
 tournamentsRouter.delete('/:id', requireAdmin, async (req, res) => {
   const tournamentId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   try {
-    const deleted = await prisma.tournament.deleteMany({ where: { id: tournamentId, organizationId } })
+    const deleted = await prisma.tournament.deleteMany({ where: { id: tournamentId, ...visibleTournamentWhere(organizationId) } })
     if (deleted.count === 0) throw new Error('NOT_FOUND')
     res.status(204).send()
   } catch {
@@ -355,7 +368,7 @@ tournamentsRouter.delete('/:id', requireAdmin, async (req, res) => {
 tournamentsRouter.post('/:id/players', requireAdmin, async (req, res) => {
   const { playerId } = req.body as { playerId: string }
   const tournamentId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   try {
     await assertCanAddParticipant(tournamentId, playerId, organizationId)
   } catch (error) {
@@ -386,12 +399,12 @@ tournamentsRouter.post('/:id/players', requireAdmin, async (req, res) => {
 tournamentsRouter.delete('/:id/players/:playerId', requireAdmin, async (req, res) => {
   const tournamentId = req.params['id'] as string
   const playerId = req.params['playerId'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   await prisma.tournamentPlayer.deleteMany({
     where: {
       tournamentId,
       playerId,
-      tournament: { organizationId },
+      tournament: visibleTournamentWhere(organizationId),
     },
   })
   res.status(204).send()
@@ -400,9 +413,9 @@ tournamentsRouter.delete('/:id/players/:playerId', requireAdmin, async (req, res
 tournamentsRouter.patch('/:id/publish', requireAdmin, async (req, res) => {
   const { published } = req.body as { published: boolean }
   const tournamentId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   try {
-    const exists = await prisma.tournament.count({ where: { id: tournamentId, organizationId } })
+    const exists = await prisma.tournament.count({ where: { id: tournamentId, ...visibleTournamentWhere(organizationId) } })
     if (!exists) throw new Error('NOT_FOUND')
     const tournament = await prisma.tournament.update({
       where: { id: tournamentId },
@@ -417,15 +430,13 @@ tournamentsRouter.patch('/:id/publish', requireAdmin, async (req, res) => {
 tournamentsRouter.post('/:id/enroll', async (req, res) => {
   const authReq = req as AuthenticatedRequest
   const tournamentId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   if (!authReq.authUser) {
     res.status(401).json({ message: 'Not authenticated' })
     return
   }
 
-  const player = await prisma.player.findUnique({
-    where: { organizationId_userId: { organizationId, userId: authReq.authUser.id } },
-  })
+  const player = await prisma.player.findFirst({ where: { userId: authReq.authUser.id, ...(organizationId ? { organizationId } : {}) } })
   if (!player) {
     res.status(400).json({ message: 'Profilo giocatore non configurato' })
     return
@@ -463,15 +474,13 @@ tournamentsRouter.post('/:id/enroll', async (req, res) => {
 tournamentsRouter.delete('/:id/enroll', async (req, res) => {
   const authReq = req as AuthenticatedRequest
   const tournamentId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   if (!authReq.authUser) {
     res.status(401).json({ message: 'Not authenticated' })
     return
   }
 
-  const player = await prisma.player.findUnique({
-    where: { organizationId_userId: { organizationId, userId: authReq.authUser.id } },
-  })
+  const player = await prisma.player.findFirst({ where: { userId: authReq.authUser.id, ...(organizationId ? { organizationId } : {}) } })
   if (!player) {
     res.status(400).json({ message: 'Profilo giocatore non configurato' })
     return
@@ -481,7 +490,7 @@ tournamentsRouter.delete('/:id/enroll', async (req, res) => {
     where: {
       tournamentId,
       playerId: player.id,
-      tournament: { organizationId },
+      tournament: visibleTournamentWhere(organizationId),
     },
   })
   res.status(204).send()
@@ -489,9 +498,9 @@ tournamentsRouter.delete('/:id/enroll', async (req, res) => {
 
 tournamentsRouter.get('/:id/draw.pdf', async (req, res) => {
   const tournamentId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   const tournament = await prisma.tournament.findFirst({
-    where: { id: tournamentId, organizationId },
+    where: { id: tournamentId, ...visibleTournamentWhere(organizationId) },
     include: {
       players: {
         include: { player: true },
@@ -553,9 +562,9 @@ tournamentsRouter.get('/:id/draw.pdf', async (req, res) => {
 
 tournamentsRouter.get('/:id/matches', async (req, res) => {
   const tournamentId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   const tournament = await prisma.tournament.findFirst({
-    where: { id: tournamentId, organizationId },
+    where: { id: tournamentId, ...visibleTournamentWhere(organizationId) },
     select: {
       id: true,
       name: true,
@@ -589,9 +598,9 @@ tournamentsRouter.get('/:id/matches', async (req, res) => {
 
 tournamentsRouter.post('/:id/bracket', requireAdmin, async (req, res) => {
   const tournamentId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   const tournament = await prisma.tournament.findFirst({
-    where: { id: tournamentId, organizationId },
+    where: { id: tournamentId, ...visibleTournamentWhere(organizationId) },
     include: {
       players: {
         orderBy: { seed: 'asc' },
@@ -655,9 +664,9 @@ tournamentsRouter.post('/:id/bracket', requireAdmin, async (req, res) => {
 
 tournamentsRouter.delete('/:id/matches', requireAdmin, async (req, res) => {
   const tournamentId = req.params['id'] as string
-  const organizationId = (req as OrganizationRequest).organization!.id
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
   await prisma.match.deleteMany({
-    where: { tournamentId, tournament: { organizationId } },
+    where: { tournamentId, tournament: visibleTournamentWhere(organizationId) },
   })
   res.status(204).send()
 })

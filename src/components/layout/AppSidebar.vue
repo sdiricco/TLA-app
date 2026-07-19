@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import Button from 'primevue/button'
+import Menu from 'primevue/menu'
 import { useAuthStore } from '../../stores/auth'
 import { useLayoutStore } from '../../stores/layout'
 import { useOrganizationsStore } from '../../stores/organizations'
@@ -12,6 +12,7 @@ const auth = useAuthStore()
 const layout = useLayoutStore()
 const organizations = useOrganizationsStore()
 const organizationsOpen = ref(false)
+const profileMenu = ref()
 
 function isActive(to: string): boolean {
   if (to === '/') return route.path === to
@@ -20,14 +21,23 @@ function isActive(to: string): boolean {
 
 const navItems = computed(() => {
   if (!organizations.activeOrganization) {
-    return [{ label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' }]
+    if (auth.isGuest) {
+      return [
+        { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
+        { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
+        { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
+      ]
+    }
+    return [
+      { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
+      { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
+      { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
+    ]
   }
 
   if (auth.isGuest) {
     return [
       { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
-      { label: 'Changelog', icon: 'mdi:history', to: '/changelog' },
-      { label: 'Richieste', icon: 'mdi:lightbulb-outline', to: '/requests' },
       { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
       { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
     ]
@@ -37,21 +47,29 @@ const navItems = computed(() => {
     return [
       { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
       { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
-      { label: 'Profilo', icon: 'mdi:account-outline', to: '/profile' },
-      { label: 'Changelog', icon: 'mdi:history', to: '/changelog' },
-      { label: 'Richieste', icon: 'mdi:lightbulb-outline', to: '/requests' },
     ]
   }
   return [
     { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
-    { label: 'Profilo', icon: 'mdi:account-outline', to: '/profile' },
-    { label: 'Changelog', icon: 'mdi:history', to: '/changelog' },
-    { label: 'Richieste', icon: 'mdi:lightbulb-outline', to: '/requests' },
   ]
 })
 
+const profileItems = computed(() => [
+  { label: 'Profilo', icon: 'pi pi-user', command: () => void router.push({ name: 'profile' }) },
+  { label: 'Impostazioni', icon: 'pi pi-cog', command: () => void router.push({ name: 'settings' }) },
+  { label: 'Changelog', icon: 'pi pi-history', command: () => void router.push({ name: 'changelog' }) },
+  { label: 'Richieste', icon: 'pi pi-lightbulb', command: () => void router.push({ name: 'requests' }) },
+  { label: 'Esci', icon: 'pi pi-sign-out', command: handleLogout },
+])
+
 function selectOrganization(id: string): void {
   organizations.select(id)
+  organizationsOpen.value = false
+  window.location.assign('/tournaments')
+}
+
+function selectGlobalContext(): void {
+  organizations.clearSelection()
   organizationsOpen.value = false
   window.location.assign('/tournaments')
 }
@@ -66,10 +84,8 @@ async function handleLogout(): Promise<void> {
   await router.push('/login')
 }
 
-function openProfile(): void {
-  if (auth.isGuest) return
-  void router.push({ name: 'profile' })
-  layout.closeSidebar()
+function toggleProfileMenu(event: Event): void {
+  profileMenu.value?.toggle(event)
 }
 </script>
 
@@ -91,7 +107,6 @@ function openProfile(): void {
           class="organization-current"
           type="button"
           :aria-expanded="organizationsOpen"
-          :disabled="otherOrganizations.length === 0"
           @click="organizationsOpen = !organizationsOpen"
         >
           <span class="organization-current-icon"><IconifyIcon icon="mdi:office-building-outline" /></span>
@@ -118,6 +133,10 @@ function openProfile(): void {
             </small>
           </button>
         </div>
+        <button v-if="organizationsOpen" type="button" class="organization-option" @click="selectGlobalContext">
+          <span class="organization-option-name">Tornei globali</span>
+          <small>Nessuna organizzazione</small>
+        </button>
       </div>
       <p>MENU</p>
       <ul>
@@ -137,7 +156,7 @@ function openProfile(): void {
     </nav>
 
     <div class="sidebar-footer">
-      <button class="profile-row" type="button" :disabled="auth.isGuest" @click="openProfile">
+      <button class="profile-row" type="button" @click="toggleProfileMenu">
         <div class="profile-avatar"><IconifyIcon icon="mdi:account" /></div>
         <div class="profile-copy">
           <span>{{ displayName }}</span>
@@ -145,15 +164,8 @@ function openProfile(): void {
         </div>
       </button>
 
-      <Button
-        class="logout-button"
-        label="Esci dall’account"
-        icon="pi pi-sign-out"
-        text
-        size="small"
-        fluid
-        @click="handleLogout"
-      />
+      <Menu ref="profileMenu" :model="profileItems" popup class="sidebar-profile-menu" />
+
     </div>
   </aside>
 </template>
@@ -206,6 +218,9 @@ function openProfile(): void {
 .profile-copy { display: grid; min-width: 0; }
 .profile-copy span { overflow: hidden; color: rgb(var(--color-white-rgb) / 88%); font-size: 0.8rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .profile-copy small { margin-top: 0.12rem; color: rgb(var(--color-white-rgb) / 55%); font-size: 0.68rem; }
-.logout-button { justify-content: flex-start; height: 2.35rem; color: rgb(var(--color-white-rgb) / 65%); font-size: 0.76rem; }
-.logout-button:hover { background: rgb(var(--color-white-rgb) / 6%) !important; color: var(--color-white) !important; }
+.sidebar-profile-menu :deep(.p-menu) { min-width: 14rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); box-shadow: 0 16px 34px rgb(var(--color-shadow-rgb) / 12%); }
+.sidebar-profile-menu :deep(.p-menu-list) { padding: .35rem 0; }
+.sidebar-profile-menu :deep(.p-menu-item-link) { gap: .7rem; padding: .75rem .9rem; }
+.sidebar-profile-menu :deep(.p-menu-item-icon) { color: var(--color-text-muted); }
+.sidebar-profile-menu :deep(.p-menu-item-label) { color: var(--color-text); font-weight: 500; }
 </style>

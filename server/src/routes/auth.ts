@@ -1,8 +1,9 @@
 import { Router } from 'express'
+import { prisma } from '../db/prisma'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
 import { resendSignupConfirmation, signInWithPassword, signUpWithPassword } from '../lib/supabaseAuth'
 import { getOrCreateProfile, listUnlinkedProfiles } from '../lib/profileRepo'
-import { requireOrganization, type OrganizationRequest } from '../middleware/requireOrganization'
+import { requireOrganization, requireSelectedOrganization, type OrganizationRequest } from '../middleware/requireOrganization'
 
 export const authRouter = Router()
 
@@ -183,7 +184,26 @@ authRouter.get('/profile', requireAuth, async (req, res) => {
   }
 })
 
-authRouter.get('/profiles/unlinked', requireAuth, requireOrganization, async (req, res) => {
+authRouter.patch('/profile', requireAuth, async (req, res) => {
+  const authReq = req as AuthenticatedRequest
+  const user = authReq.authUser
+  const name = typeof req.body?.name === 'string' ? req.body.name.trim() : ''
+
+  if (!user || user.id === 'guest') {
+    res.status(403).json({ message: 'Accedi con un account per modificare il profilo' })
+    return
+  }
+  if (name.length < 2 || name.length > 80) {
+    res.status(400).json({ message: 'Il nome deve contenere da 2 a 80 caratteri' })
+    return
+  }
+
+  const profile = await getOrCreateProfile(user)
+  const updated = await prisma.profile.update({ where: { id: profile.id }, data: { name } })
+  res.json({ id: updated.id, name: updated.name, role: updated.role })
+})
+
+authRouter.get('/profiles/unlinked', requireAuth, requireOrganization, requireSelectedOrganization, async (req, res) => {
   try {
     res.json(await listUnlinkedProfiles((req as OrganizationRequest).organization!.id))
   } catch (error) {

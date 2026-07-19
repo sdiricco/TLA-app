@@ -4,7 +4,7 @@ import { prisma } from '../db/prisma'
 import { getOrCreateProfile } from '../lib/profileRepo'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
 import { requireAdmin } from '../middleware/requireAdmin'
-import { requireOrganization, type OrganizationRequest } from '../middleware/requireOrganization'
+import { requireOrganization, requireSelectedOrganization, type OrganizationRequest } from '../middleware/requireOrganization'
 
 export const organizationsRouter = Router()
 organizationsRouter.use(requireAuth)
@@ -284,7 +284,7 @@ organizationsRouter.post('/:id/request', async (req, res) => {
   }
 })
 
-organizationsRouter.patch('/:id', requireOrganization, requireAdmin, async (req, res) => {
+organizationsRouter.patch('/:id', requireOrganization, requireSelectedOrganization, requireAdmin, async (req, res) => {
   const organizationId = (req as OrganizationRequest).organization!.id
   if (organizationId !== req.params.id) {
     res.status(403).json({ message: 'Organizzazione non autorizzata' })
