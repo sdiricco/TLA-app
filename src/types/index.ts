@@ -89,7 +89,6 @@ export interface OrganizationRequestCreate {
   description?: string | null
   type: OrganizationRequestType
   priority: OrganizationRequestPriority
-  image_data_url?: string | null
 }
 
 export interface OrganizationRequestUpdate {
@@ -134,7 +133,10 @@ export interface PlayerListQuery {
   perPage?: number
   sortBy?: PlayerSortField
   sortOrder?: SortOrder
+  organizationId?: OrganizationFilter
 }
+
+export type OrganizationFilter = 'mine' | 'global' | string
 
 export interface PaginatedResponse<T> {
   page: number
@@ -186,6 +188,7 @@ export interface TournamentListQuery {
   dateTo?: string
   page?: number
   perPage?: number
+  organizationId?: OrganizationFilter
 }
 
 // ── Tournament detail ────────────────────────────────────────────────────────
@@ -315,6 +318,7 @@ export interface RequestsService {
   getById(id: string): Promise<OrganizationRequest>
   getComments(id: string): Promise<OrganizationRequestComment[]>
   create(data: OrganizationRequestCreate): Promise<OrganizationRequest>
+  uploadImage(imageDataUrl: string): Promise<{ url: string }>
   createComment(id: string, body: string): Promise<OrganizationRequestComment>
   update(id: string, data: OrganizationRequestUpdate): Promise<OrganizationRequest>
   markImportant(id: string): Promise<OrganizationRequest>

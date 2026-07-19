@@ -97,9 +97,9 @@ function toggleProfileMenu(event: Event): void {
     </div>
 
     <nav class="sidebar-nav">
-      <div v-if="organizations.activeOrganization" class="organization-switcher">
+      <div class="organization-switcher">
         <div class="organization-header">
-          <span>ORGANIZZAZIONE</span>
+          <span>FILTRO ORGANIZZAZIONE</span>
           <RouterLink to="/organizations" @click="layout.closeSidebar()">Gestisci</RouterLink>
         </div>
 
@@ -109,12 +109,13 @@ function toggleProfileMenu(event: Event): void {
           :aria-expanded="organizationsOpen"
           @click="organizationsOpen = !organizationsOpen"
         >
-          <span class="organization-current-icon"><IconifyIcon icon="mdi:office-building-outline" /></span>
+          <span class="organization-current-icon"><IconifyIcon :icon="organizations.activeOrganization ? 'mdi:office-building-outline' : 'mdi:filter-variant'" /></span>
           <span class="organization-current-copy">
-            <strong>{{ organizations.activeOrganization.name }}</strong>
-            <small>
+            <strong>{{ organizations.activeOrganization?.name ?? 'I miei contenuti' }}</strong>
+            <small v-if="organizations.activeOrganization">
               {{ organizations.activeOrganization.role === 'owner' ? 'Proprietario' : organizations.activeOrganization.role === 'admin' ? 'Amministratore' : 'Membro' }}
             </small>
+            <small v-else>Globali e mie organizzazioni</small>
           </span>
           <IconifyIcon v-if="otherOrganizations.length > 0" icon="mdi:chevron-down" class="organization-chevron" :class="{ open: organizationsOpen }" />
         </button>
@@ -134,8 +135,8 @@ function toggleProfileMenu(event: Event): void {
           </button>
         </div>
         <button v-if="organizationsOpen" type="button" class="organization-option" @click="selectGlobalContext">
-          <span class="organization-option-name">Tornei globali</span>
-          <small>Nessuna organizzazione</small>
+          <span class="organization-option-name">I miei contenuti</span>
+          <small>Globali e mie organizzazioni</small>
         </button>
       </div>
       <p>MENU</p>

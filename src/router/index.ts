@@ -68,6 +68,12 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'requests/new',
+          name: 'request-create',
+          component: () => import('../views/RequestCreateView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'requests/:id',
           name: 'request-detail',
           component: () => import('../views/RequestDetailView.vue'),
@@ -177,7 +183,7 @@ router.beforeEach(async (to) => {
         // can show the real loading error instead of failing navigation.
       }
     }
-    if (auth.isGuest && to.name === 'profile') {
+    if (auth.isGuest && (to.name === 'profile' || to.name === 'request-create')) {
       return { name: organizations.activeOrganization ? 'tournaments' : 'organizations' }
     }
   }

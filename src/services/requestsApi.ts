@@ -14,6 +14,11 @@ export const requestsService: RequestsService = {
   getById: (id: string) => apiRequest<OrganizationRequest>(apiClient, { url: `/requests/${id}`, method: 'GET' }),
   getComments: (id: string) => apiRequest<OrganizationRequestComment[]>(apiClient, { url: `/requests/${id}/comments`, method: 'GET' }),
   create: (data: OrganizationRequestCreate) => apiRequest<OrganizationRequest>(apiClient, { url: '/requests', method: 'POST', data }),
+  uploadImage: (imageDataUrl: string) => apiRequest<{ url: string }>(apiClient, {
+    url: '/requests/images',
+    method: 'POST',
+    data: { image_data_url: imageDataUrl },
+  }),
   createComment: (id: string, body: string) => apiRequest<OrganizationRequestComment>(apiClient, { url: `/requests/${id}/comments`, method: 'POST', data: { body } }),
   update: (id: string, data: OrganizationRequestUpdate) => apiRequest<OrganizationRequest>(apiClient, { url: `/requests/${id}`, method: 'PATCH', data }),
   markImportant: (id: string) => apiRequest<OrganizationRequest>(apiClient, { url: `/requests/${id}/important`, method: 'POST' }),

@@ -3,6 +3,7 @@
   import { useRouter } from 'vue-router'
   import Avatar from 'primevue/avatar'
   import Button from 'primevue/button'
+  import Drawer from 'primevue/drawer'
   import InputText from 'primevue/inputtext'
   import Select from 'primevue/select'
   import Skeleton from 'primevue/skeleton'
@@ -10,6 +11,8 @@
   import { usePlayersStore } from '../stores/players'
   import type { Player, PlayerSortField, SortOrder } from '../types'
   import { getPlayerInitials } from '@/utils/main'
+  import OrganizationFilter from '../components/filters/OrganizationFilter.vue'
+  import type { OrganizationFilter as OrganizationFilterValue } from '../types'
 
   interface SelectOption<T> {
     label: string
@@ -28,11 +31,19 @@
    */
   const canViewAdmin = computed(() => auth.isAdmin)
   const searchName = ref('')
-  const mobileFiltersOpen = ref(false)
+  const filtersOpen = ref(false)
   const searchClub = ref('')
   const sortBy = ref<PlayerSortField>('ranking')
   const sortOrder = ref<SortOrder>('asc')
+  const organizationFilter = ref<OrganizationFilterValue>('mine')
   const hasMorePlayers = computed(() => store.players.length < store.total)
+  const activeFiltersCount = computed(() => [
+    searchName.value.trim() !== '',
+    searchClub.value.trim() !== '',
+    sortBy.value !== 'ranking',
+    sortOrder.value !== 'asc',
+    organizationFilter.value !== 'mine',
+  ].filter(Boolean).length)
   let searchTimer: ReturnType<typeof setTimeout> | null = null
 
   /**
@@ -83,6 +94,7 @@
       perPage,
       sortBy: sortBy.value,
       sortOrder: sortOrder.value,
+      organizationId: organizationFilter.value,
     })
   }
 
@@ -113,6 +125,7 @@
     searchClub.value = ''
     sortBy.value = 'ranking'
     sortOrder.value = 'asc'
+    organizationFilter.value = 'mine'
     void loadPlayers(0, store.perPage)
   }
 
@@ -129,6 +142,7 @@
       void loadPlayers(0, store.perPage)
     }, 300)
   })
+  watch(organizationFilter, () => void loadPlayers(0, store.perPage))
 
   onBeforeUnmount(() => {
     if (searchTimer) clearTimeout(searchTimer)
@@ -161,59 +175,53 @@
       />
     </section>
 
-    <section class="filters-panel" :class="{ 'mobile-open': mobileFiltersOpen }" aria-label="Filtri giocatori">
-      <div class="filters-header">
-        <button class="filter-title" type="button" :aria-expanded="mobileFiltersOpen" @click="mobileFiltersOpen = !mobileFiltersOpen"><IconifyIcon icon="mdi:tune-variant" /><span>Cerca e ordina</span><span class="mobile-filter-count"><IconifyIcon icon="mdi:chevron-down" /></span></button>
-        <div class="filter-action">
-          <Button label="Azzera" icon="pi pi-refresh" severity="secondary" text @click="clearFilters" />
-        </div>
+    <div class="section-heading">
+      <div><h2>Giocatori</h2><span>{{ store.total }} profili</span></div>
+      <div class="heading-actions">
+        <button class="open-filters-button" type="button" @click="filtersOpen = true">
+          <IconifyIcon icon="mdi:tune-variant" />
+          <span>Filtri</span>
+          <strong v-if="activeFiltersCount">{{ activeFiltersCount }}</strong>
+        </button>
+        <span class="view-label"><IconifyIcon icon="mdi:view-grid-outline" /> Vista griglia</span>
       </div>
+    </div>
 
-      <div class="filters-grid">
+    <Drawer v-model:visible="filtersOpen" position="right" header="Filtra giocatori" class="filters-drawer" :style="{ width: 'min(26rem, 100vw)' }">
+      <div class="drawer-filters">
         <div class="filter-field search-name-field">
-        <label for="player-name-filter" class="text-sm font-medium">Cerca per nome</label>
+          <label for="player-name-filter" class="text-sm font-medium">Cerca per nome</label>
           <span class="input-wrap"><IconifyIcon icon="mdi:magnify" /><InputText id="player-name-filter" v-model="searchName" placeholder="Es. Mario Rossi" fluid /></span>
         </div>
 
         <div class="filter-field">
-        <label for="player-club-filter" class="text-sm font-medium">Cerca per club</label>
+          <label for="player-club-filter" class="text-sm font-medium">Cerca per club</label>
           <span class="input-wrap"><IconifyIcon icon="mdi:domain" /><InputText id="player-club-filter" v-model="searchClub" placeholder="Es. TC Milano" fluid /></span>
         </div>
 
         <div class="filter-field">
-        <label for="player-sort-field" class="text-sm font-medium">Ordina per</label>
-          <Select
-          id="player-sort-field"
-          v-model="sortBy"
-          :options="sortFieldOptions"
-          option-label="label"
-          option-value="value"
-          fluid
-          />
+          <label for="player-organization-filter">Organizzazione</label>
+          <OrganizationFilter id="player-organization-filter" v-model="organizationFilter" />
+        </div>
+
+        <div class="filter-field">
+          <label for="player-sort-field" class="text-sm font-medium">Ordina per</label>
+          <Select id="player-sort-field" v-model="sortBy" :options="sortFieldOptions" option-label="label" option-value="value" fluid />
         </div>
 
         <div class="filter-field compact-sort">
-        <label for="player-sort-order" class="text-sm font-medium">Direzione</label>
-          <Select
-          id="player-sort-order"
-          v-model="sortOrder"
-          :options="sortOrderOptions"
-          option-label="label"
-          option-value="value"
-          fluid
-          />
+          <label for="player-sort-order" class="text-sm font-medium">Direzione</label>
+          <Select id="player-sort-order" v-model="sortOrder" :options="sortOrderOptions" option-label="label" option-value="value" fluid />
         </div>
       </div>
 
-      <div v-if="mobileFiltersOpen" class="filter-action filter-action-mobile">
-        <Button label="Azzera" icon="pi pi-refresh" severity="secondary" text @click="clearFilters" />
-      </div>
-    </section>
-
-    <div class="section-heading">
-      <div><h2>Giocatori</h2><span>{{ store.total }} profili</span></div>
-      <span class="view-label"><IconifyIcon icon="mdi:view-grid-outline" /> Vista griglia</span>
-    </div>
+      <template #footer>
+        <div class="drawer-actions">
+          <Button label="Azzera" icon="pi pi-refresh" severity="secondary" outlined @click="clearFilters" />
+          <Button :label="`Mostra ${store.total} risultati`" icon="pi pi-check" @click="filtersOpen = false" />
+        </div>
+      </template>
+    </Drawer>
 
     <div v-if="store.loading" class="players-grid">
       <div v-for="item in 8" :key="item" class="player-card skeleton-card">
@@ -303,6 +311,7 @@
   .summary-strip div span { margin-top: 0.25rem; color: var(--color-text-muted); font-size: 0.68rem; }
   .filters-panel { padding: 1rem; border: 1px solid var(--color-border); border-radius: 0; background: rgb(var(--color-white-rgb) / 88%); box-shadow: 0 8px 30px rgb(var(--color-shadow-rgb) / 5%); }
   .filters-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.8rem; }
+  .filter-toolbar { display: flex; min-width: 0; align-items: center; gap: .35rem; }
   .filter-title { display: flex; min-width: 0; flex: 1; align-items: center; gap: 0.5rem; padding: 0; border: 0; background: transparent; color: var(--color-text-muted); font-size: 0.75rem; font-weight: 800; text-align: left; }
   .filter-title :deep(svg) { color: var(--green); width: 1rem; height: 1rem; }
   .mobile-filter-count { display: none; }
@@ -321,6 +330,16 @@
   .section-heading > div { display: flex; align-items: baseline; gap: 0.65rem; }
   .section-heading h2 { margin: 0; font-size: 1.2rem; letter-spacing: -0.025em; }
   .section-heading span { color: var(--color-text-subtle); font-size: 0.72rem; }
+  .heading-actions { display: flex; align-items: center !important; gap: .75rem !important; }
+  .open-filters-button { display: inline-flex; height: 2.35rem; align-items: center; gap: .45rem; padding: 0 .75rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); color: var(--color-text); font-size: .78rem; font-weight: 700; cursor: pointer; }
+  .open-filters-button:hover { border-color: var(--color-primary-500); color: var(--green); }
+  .open-filters-button strong { display: grid; min-width: 1.2rem; height: 1.2rem; place-items: center; border-radius: 999px; background: var(--green); color: var(--color-white); font-size: .65rem; }
+  .filters-drawer { width: min(26rem, 100vw) !important; }
+  .drawer-filters { display: flex; flex-direction: column; gap: 1.15rem; }
+  .drawer-filters .filter-field { gap: .45rem; }
+  .drawer-filters .filter-field label { color: var(--color-text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .02em; }
+  .drawer-actions { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .65rem; }
+  .drawer-actions :deep(.p-button) { justify-content: center; border-radius: 0; }
   .view-label { display: flex; align-items: center; gap: 0.4rem; }
   .view-label :deep(svg) { width: 0.95rem; height: 0.95rem; }
   .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(310px, 100%), 1fr)); gap: 1rem; }
@@ -386,6 +405,10 @@
     .mobile-open .filters-grid > * { display: flex; }
     .filter-action-mobile { display: flex; margin-top: 0.65rem; }
     .filter-action-mobile :deep(.p-button) { width: 100%; height: 2.2rem; padding-inline: 0.35rem; }
+    .heading-actions { gap: .35rem !important; }
+    .open-filters-button { height: 2.2rem; padding-inline: .65rem; }
+    .filters-drawer { width: 100vw !important; }
+    .drawer-actions { grid-template-columns: 1fr; }
     .section-heading h2 { font-size: 1.05rem; }
     .section-heading span { font-size: 0.75rem; }
     .players-grid { display: flex; flex-direction: column; gap: 0.45rem; }

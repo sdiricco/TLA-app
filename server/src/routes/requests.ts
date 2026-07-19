@@ -7,6 +7,7 @@ import { getOrCreateProfile } from '../lib/profileRepo'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
 import { requireAdmin } from '../middleware/requireAdmin'
 import { requireOrganization, requireSelectedOrganization, type OrganizationRequest as OrganizationContextRequest } from '../middleware/requireOrganization'
+import { sanitizeRequestDescription } from '../lib/requestDescription'
 
 export const requestsRouter = Router()
 requestsRouter.use(requireAuth, requireOrganization, requireSelectedOrganization)
@@ -32,7 +33,7 @@ function serializeRequest(row: {
   return {
     id: row.id,
     title: row.title,
-    description: row.description,
+    description: sanitizeRequestDescription(row.description),
     type: row.type,
     priority: row.priority,
     status: row.status,
@@ -54,7 +55,7 @@ const requestInclude = (profileId?: string) => ({
   ...(profileId ? { votes: { where: { profileId }, select: { profileId: true } } } : {}),
 })
 
-async function uploadRequestImage(dataUrl: unknown, requestId: string, token: string): Promise<string | null> {
+async function uploadRequestImage(dataUrl: unknown, pathWithoutExtension: string, token: string): Promise<string | null> {
   if (dataUrl == null || dataUrl === '') return null
   if (typeof dataUrl !== 'string') throw new Error('Immagine non valida')
   const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/)
@@ -63,7 +64,7 @@ async function uploadRequestImage(dataUrl: unknown, requestId: string, token: st
   const buffer = Buffer.from(match[2], 'base64')
   if (buffer.length > 5 * 1024 * 1024) throw new Error('L’immagine deve essere più piccola di 5 MB')
   const extension = contentType === 'image/jpeg' ? 'jpg' : contentType.split('/')[1]
-  const path = `requests/${requestId}.${extension}`
+  const path = `${pathWithoutExtension}.${extension}`
   const response = await fetch(`${env.supabaseUrl}/storage/v1/object/request-images/${path}`, {
     method: 'POST',
     headers: { apikey: env.supabaseAnonKey, Authorization: `Bearer ${token}`, 'Content-Type': contentType, 'x-upsert': 'false' },
@@ -107,6 +108,26 @@ requestsRouter.get('/', async (req, res) => {
   res.json(requests.map(request => serializeRequest(request, profileId)))
 })
 
+requestsRouter.post('/images', async (req, res) => {
+  const authReq = req as AuthenticatedRequest & OrganizationContextRequest
+  if (!authReq.authUser || authReq.authUser.id === 'guest') {
+    res.status(403).json({ message: 'Registrati per caricare un’immagine' })
+    return
+  }
+
+  try {
+    const path = `requests/${organizationId(authReq)}/editor/${randomUUID()}`
+    const url = await uploadRequestImage(req.body?.image_data_url, path, authReq.authToken ?? '')
+    if (!url) {
+      res.status(400).json({ message: 'Seleziona un’immagine' })
+      return
+    }
+    res.status(201).json({ url })
+  } catch (error) {
+    res.status(400).json({ message: error instanceof Error ? error.message : 'Impossibile caricare l’immagine' })
+  }
+})
+
 requestsRouter.get('/:id', async (req, res) => {
   const authReq = req as AuthenticatedRequest & OrganizationContextRequest
   const profileId = authReq.authUser?.id !== 'guest' ? authReq.authUser?.id : undefined
@@ -143,7 +164,13 @@ requestsRouter.post('/', async (req, res) => {
     return
   }
   const title = typeof req.body?.title === 'string' ? req.body.title.trim() : ''
-  const description = typeof req.body?.description === 'string' ? req.body.description.trim() : null
+  let description: string | null
+  try {
+    description = sanitizeRequestDescription(req.body?.description)
+  } catch (error) {
+    res.status(400).json({ message: error instanceof Error ? error.message : 'Descrizione non valida' })
+    return
+  }
   const type = requestTypes.has(req.body?.type) ? req.body.type : 'improvement'
   const priority = priorities.has(req.body?.priority) ? req.body.priority : 'medium'
   if (title.length < 3) {
@@ -154,7 +181,7 @@ requestsRouter.post('/', async (req, res) => {
   const requestId = randomUUID()
   let imageUrl: string | null = null
   try {
-    imageUrl = await uploadRequestImage(req.body?.image_data_url, requestId, authReq.authToken ?? '')
+    imageUrl = await uploadRequestImage(req.body?.image_data_url, `requests/${requestId}`, authReq.authToken ?? '')
   } catch (error) {
     res.status(400).json({ message: error instanceof Error ? error.message : 'Impossibile caricare l’immagine' })
     return
@@ -229,7 +256,14 @@ requestsRouter.patch('/:id', requireAdmin, async (req, res) => {
   if (typeof req.body?.priority === 'string' && priorities.has(req.body.priority)) data.priority = req.body.priority
   if (typeof req.body?.type === 'string' && requestTypes.has(req.body.type)) data.type = req.body.type
   if (typeof req.body?.title === 'string' && req.body.title.trim().length >= 3) data.title = req.body.title.trim()
-  if (typeof req.body?.description === 'string' || req.body?.description === null) data.description = req.body.description?.trim() || null
+  if (typeof req.body?.description === 'string' || req.body?.description === null) {
+    try {
+      data.description = sanitizeRequestDescription(req.body.description)
+    } catch (error) {
+      res.status(400).json({ message: error instanceof Error ? error.message : 'Descrizione non valida' })
+      return
+    }
+  }
   const existing = await prisma.organizationRequest.findFirst({ where: { id: requestId, organizationId: organization }, select: { id: true } })
   if (!existing) {
     res.status(404).json({ message: 'Richiesta non trovata' })

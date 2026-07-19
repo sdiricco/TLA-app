@@ -75,7 +75,7 @@ onMounted(() => { void loadDetail() })
           <span class="priority">{{ request.important_count }} {{ request.important_count === 1 ? 'persona la considera importante' : 'persone la considerano importante' }}</span>
         </div>
         <h1>{{ request.title }}</h1>
-        <p v-if="request.description" class="description">{{ request.description }}</p>
+        <div v-if="request.description" class="description" v-html="request.description" />
         <img v-if="request.image_url" class="detail-image" :src="request.image_url" alt="Immagine allegata alla richiesta" />
         <small>Proposta da {{ request.created_by.name }} · {{ new Date(request.created_at).toLocaleDateString('it-IT') }}</small>
       </article>
@@ -111,7 +111,21 @@ onMounted(() => { void loadDetail() })
 h1, h2 { margin: 0; color: var(--color-text); letter-spacing: -.035em; }
 h1 { font-size: clamp(1.8rem, 4vw, 2.7rem); }
 h2 { font-size: 1.35rem; }
-.description { margin: 0; color: var(--color-text-muted); line-height: 1.65; white-space: pre-wrap; }
+.description { overflow-wrap: anywhere; color: var(--color-text-muted); line-height: 1.65; }
+.description :deep(:first-child) { margin-top: 0; }
+.description :deep(:last-child) { margin-bottom: 0; }
+.description :deep(h1), .description :deep(h2), .description :deep(h3) { margin: 1.1em 0 .45em; color: var(--color-text); line-height: 1.25; }
+.description :deep(h1) { font-size: 1.55rem; }
+.description :deep(h2) { font-size: 1.3rem; }
+.description :deep(h3) { font-size: 1.1rem; }
+.description :deep(ul), .description :deep(ol) { padding-left: 1.4rem; }
+.description :deep(blockquote) { margin: 1rem 0; padding: .2rem 0 .2rem 1rem; border-left: 3px solid var(--color-primary-500); }
+.description :deep(a) { color: var(--color-primary-700); }
+.description :deep(img) { display: block; max-width: 100%; max-height: 560px; margin: 1rem 0; border-radius: .55rem; object-fit: contain; }
+.description :deep(.ql-align-center) { text-align: center; }
+.description :deep(.ql-align-right) { text-align: right; }
+.description :deep(.ql-align-justify) { text-align: justify; }
+.description :deep(.ql-ui) { display: none; }
 .detail-card small, .comment-meta small, .login-copy { color: var(--color-text-subtle); font-size: .74rem; }
 .detail-image { width: min(100%, 680px); max-height: 440px; object-fit: contain; justify-self: start; border: 1px solid var(--color-border); background: var(--color-surface-soft); }
 .eyebrow { margin: 0 0 .3rem; color: var(--color-primary-700); font-size: .7rem; font-weight: 850; letter-spacing: .14em; }

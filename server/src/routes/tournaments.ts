@@ -9,6 +9,7 @@ import { buildBracketMatches, buildRoundRobinMatches, sortMatches } from '../lib
 import { autoAdvanceByeMatches, reconcileMatchProgression } from '../lib/matchProgression'
 import { buildTournamentMatchesResponse } from '../../../src/utils/matches'
 import { generateDrawPdf, getDrawPdfFilename } from '../lib/drawPdf'
+import { visibleTournamentWhere as getVisibleTournamentWhere } from '../lib/visibility'
 import {
   serializeMatch,
   serializeTournament,
@@ -34,17 +35,6 @@ function parseDate(value: string | null | undefined): Date | null {
   if (!value) return null
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? null : date
-}
-
-async function getTournamentWithPlayers(id: string, organizationId: string | null) {
-  return prisma.tournament.findFirst({
-    where: { id, ...visibleTournamentWhere(organizationId) },
-    include: {
-      players: {
-        orderBy: { seed: 'asc' },
-      },
-    },
-  })
 }
 
 async function getNextSeed(tournamentId: string): Promise<number> {
@@ -139,9 +129,8 @@ tournamentsRouter.get('/', async (req, res) => {
     if (toDate) toDate.setUTCHours(23, 59, 59, 999)
     if (fromDate && toDate && fromDate > toDate) throw new Error('Invalid date range')
 
-    const organizationId = contextOrganizationId(req as OrganizationRequest)
     const where: Prisma.TournamentWhereInput = {
-      ...visibleTournamentWhere(organizationId),
+      ...(await getVisibleTournamentWhere(req as OrganizationRequest)),
       ...(name
         ? {
             name: {
@@ -186,8 +175,10 @@ tournamentsRouter.get('/', async (req, res) => {
 
 tournamentsRouter.get('/:id', async (req, res) => {
   const tournamentId = req.params['id'] as string
-  const organizationId = contextOrganizationId(req as OrganizationRequest)
-  const tournament = await getTournamentWithPlayers(tournamentId, organizationId)
+  const tournament = await prisma.tournament.findFirst({
+    where: { id: tournamentId, ...(await getVisibleTournamentWhere(req as OrganizationRequest)) },
+    include: { players: { orderBy: { seed: 'asc' } } },
+  })
   if (!tournament) {
     res.status(404).json({ message: 'Torneo non trovato' })
     return

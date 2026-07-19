@@ -3,6 +3,7 @@
   import { useRouter } from 'vue-router'
   import Button from 'primevue/button'
   import DatePicker from 'primevue/datepicker'
+  import Drawer from 'primevue/drawer'
   import InputText from 'primevue/inputtext'
   import Select from 'primevue/select'
   import Skeleton from 'primevue/skeleton'
@@ -10,6 +11,8 @@
   import { useAuthStore } from '../stores/auth'
   import { useTournamentsStore } from '../stores/tournaments'
   import type { TournamentCategory, TournamentStatus } from '../types'
+  import OrganizationFilter from '../components/filters/OrganizationFilter.vue'
+  import type { OrganizationFilter as OrganizationFilterValue } from '../types'
 
   /**
    * Interfaces
@@ -33,8 +36,9 @@
   const categoryFilter = ref<'all' | TournamentCategory>('all')
   const statusFilter = ref<'all' | TournamentStatus>('all')
   const dateRangeFilter = ref<Date[] | null>(null)
+  const organizationFilter = ref<OrganizationFilterValue>('mine')
   const filtersTimer = ref<ReturnType<typeof setTimeout> | null>(null)
-  const mobileFiltersOpen = ref(false)
+  const filtersOpen = ref(false)
   const skeletonItems = Array.from({ length: 6 }, (_, index) => index)
 
   /**
@@ -67,9 +71,11 @@
     return from && to ? [from, to] as const : null
   })
   const activeFiltersCount = computed(() => [
+    searchName.value.trim() !== '',
     categoryFilter.value !== 'all',
     statusFilter.value !== 'all',
     completedDateRange.value !== null,
+    organizationFilter.value !== 'mine',
   ].filter(Boolean).length)
 
   /**
@@ -106,6 +112,7 @@
       status: statusFilter.value === 'all' ? undefined : statusFilter.value,
       dateFrom: toDateQuery(completedDateRange.value?.[0]),
       dateTo: toDateQuery(completedDateRange.value?.[1]),
+      organizationId: organizationFilter.value,
     }
   }
 
@@ -159,6 +166,7 @@
     categoryFilter.value = 'all'
     statusFilter.value = 'all'
     dateRangeFilter.value = null
+    organizationFilter.value = 'mine'
     void loadTournaments(0, store.perPage)
   }
 
@@ -170,6 +178,7 @@
   })
 
   watch([searchName, categoryFilter, statusFilter], scheduleFiltersLoad)
+  watch(organizationFilter, () => void loadTournaments(0, store.perPage))
 
   watch(dateRangeFilter, (range, previousRange) => {
     const isComplete = Boolean(range?.[0] && range?.[1])
@@ -209,72 +218,53 @@
       </button>
     </section>
 
-    <section class="filters-panel" :class="{ 'mobile-open': mobileFiltersOpen }" aria-label="Filtri tornei">
-      <div class="filters-header">
-        <button class="filter-title" type="button" :aria-expanded="mobileFiltersOpen" @click="mobileFiltersOpen = !mobileFiltersOpen">
+    <div class="section-heading">
+      <div><h2>I tuoi tornei</h2><span>{{ store.total }} risultati</span></div>
+      <div class="heading-actions">
+        <button class="open-filters-button" type="button" @click="filtersOpen = true">
           <IconifyIcon icon="mdi:tune-variant" />
-          <span>Filtra tornei</span>
-          <span class="mobile-filter-count">{{ activeFiltersCount || '' }}<IconifyIcon icon="mdi:chevron-down" /></span>
+          <span>Filtri</span>
+          <strong v-if="activeFiltersCount">{{ activeFiltersCount }}</strong>
         </button>
-        <div class="filter-action">
-          <Button label="Azzera" icon="pi pi-refresh" severity="secondary" text @click="clearFilters" />
-        </div>
+        <span class="view-label"><IconifyIcon icon="mdi:view-grid-outline" /> Vista griglia</span>
       </div>
+    </div>
 
-      <div class="filters-grid">
+    <Drawer v-model:visible="filtersOpen" position="right" header="Filtra tornei" class="filters-drawer" :style="{ width: 'min(26rem, 100vw)' }">
+      <div class="drawer-filters">
         <div class="filter-field search-field">
-        <label for="tournament-name-filter" class="text-sm font-medium">Cerca per nome</label>
+          <label for="tournament-name-filter" class="text-sm font-medium">Cerca per nome</label>
           <span class="search-wrap"><IconifyIcon icon="mdi:magnify" /><InputText id="tournament-name-filter" v-model="searchName" placeholder="Es. Open 2026" fluid /></span>
         </div>
 
         <div class="filter-field">
-        <label for="tournament-category-filter" class="text-sm font-medium">Categoria</label>
-        <Select
-          id="tournament-category-filter"
-          v-model="categoryFilter"
-          :options="categoryOptions"
-          option-label="label"
-          option-value="value"
-          fluid
-        />
+          <label for="tournament-organization-filter">Organizzazione</label>
+          <OrganizationFilter id="tournament-organization-filter" v-model="organizationFilter" />
+        </div>
+
+        <div class="filter-field">
+          <label for="tournament-category-filter" class="text-sm font-medium">Categoria</label>
+          <Select id="tournament-category-filter" v-model="categoryFilter" :options="categoryOptions" option-label="label" option-value="value" fluid />
+        </div>
+
+        <div class="filter-field">
+          <label for="tournament-status-filter" class="text-sm font-medium">Stato</label>
+          <Select id="tournament-status-filter" v-model="statusFilter" :options="statusOptions" option-label="label" option-value="value" fluid />
         </div>
 
         <div class="filter-field date-filter">
           <label for="tournament-date-range-filter">Periodo</label>
-          <DatePicker
-            id="tournament-date-range-filter"
-            v-model="dateRangeFilter"
-            selection-mode="range"
-            date-format="dd/mm/yy"
-            placeholder="Dal — Al"
-            show-icon
-            show-button-bar
-            fluid
-          />
-        </div>
-
-        <div class="filter-field">
-        <label for="tournament-status-filter" class="text-sm font-medium">Stato</label>
-        <Select
-          id="tournament-status-filter"
-          v-model="statusFilter"
-          :options="statusOptions"
-          option-label="label"
-          option-value="value"
-          fluid
-        />
+          <DatePicker id="tournament-date-range-filter" v-model="dateRangeFilter" selection-mode="range" date-format="dd/mm/yy" placeholder="Dal — Al" show-icon show-button-bar fluid />
         </div>
       </div>
 
-      <div v-if="mobileFiltersOpen" class="filter-action filter-action-mobile">
-        <Button label="Azzera" icon="pi pi-refresh" severity="secondary" text @click="clearFilters" />
-      </div>
-    </section>
-
-    <div class="section-heading">
-      <div><h2>I tuoi tornei</h2><span>{{ store.total }} risultati</span></div>
-      <span class="view-label"><IconifyIcon icon="mdi:view-grid-outline" /> Vista griglia</span>
-    </div>
+      <template #footer>
+        <div class="drawer-actions">
+          <Button label="Azzera" icon="pi pi-refresh" severity="secondary" outlined @click="clearFilters" />
+          <Button :label="`Mostra ${store.total} risultati`" icon="pi pi-check" @click="filtersOpen = false" />
+        </div>
+      </template>
+    </Drawer>
 
     <div v-if="store.loading" class="tournaments-grid">
       <div v-for="item in skeletonItems" :key="item" class="tournament-card skeleton-card">
@@ -367,6 +357,7 @@
   .summary-strip div span { margin-top: 0.25rem; color: var(--color-text-muted); font-size: 0.68rem; }
   .filters-panel { padding: 1rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); box-shadow: 0 8px 30px rgb(var(--color-shadow-rgb) / 5%); }
   .filters-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.8rem; }
+  .filter-toolbar { display: flex; min-width: 0; align-items: center; gap: .35rem; }
   .filter-title { display: flex; min-width: 0; flex: 1; align-items: center; gap: 0.5rem; padding: 0; border: 0; background: transparent; color: var(--color-text-muted); font-size: 0.75rem; font-weight: 800; text-align: left; }
   .filter-title :deep(svg) { color: var(--green); width: 1rem; height: 1rem; }
   .mobile-filter-count { display: none; }
@@ -387,6 +378,16 @@
   .section-heading > div { display: flex; align-items: baseline; gap: 0.65rem; }
   .section-heading h2 { margin: 0; font-size: 1.2rem; letter-spacing: -0.025em; }
   .section-heading span { color: var(--color-text-subtle); font-size: 0.72rem; }
+  .heading-actions { display: flex; align-items: center !important; gap: .75rem !important; }
+  .open-filters-button { display: inline-flex; height: 2.35rem; align-items: center; gap: .45rem; padding: 0 .75rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); color: var(--color-text); font-size: .78rem; font-weight: 700; cursor: pointer; }
+  .open-filters-button:hover { border-color: var(--color-primary-500); color: var(--green); }
+  .open-filters-button strong { display: grid; min-width: 1.2rem; height: 1.2rem; place-items: center; border-radius: 999px; background: var(--green); color: var(--color-white); font-size: .65rem; }
+  .filters-drawer { width: min(26rem, 100vw) !important; }
+  .drawer-filters { display: flex; flex-direction: column; gap: 1.15rem; }
+  .drawer-filters .filter-field { gap: .45rem; }
+  .drawer-filters .filter-field label { color: var(--color-text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .02em; }
+  .drawer-actions { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .65rem; }
+  .drawer-actions :deep(.p-button) { justify-content: center; border-radius: 0; }
   .view-label { display: flex; align-items: center; gap: 0.4rem; }
   .view-label :deep(svg) { width: 0.95rem; height: 0.95rem; }
   .tournaments-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(350px, 100%), 1fr)); gap: 1rem; }
@@ -473,6 +474,10 @@
     .filter-action-mobile { display: flex; margin-top: 0.65rem; }
     .filter-action-mobile :deep(.p-button) { width: 100%; height: 2.2rem; padding-inline: 0.35rem; }
     .section-heading { margin-top: 0.2rem; }
+    .heading-actions { gap: .35rem !important; }
+    .open-filters-button { height: 2.2rem; padding-inline: .65rem; }
+    .filters-drawer { width: 100vw !important; }
+    .drawer-actions { grid-template-columns: 1fr; }
     .section-heading h2 { font-size: 1.05rem; }
     .section-heading span { font-size: 0.75rem; }
     .tournaments-grid { display: flex; flex-direction: column; gap: 0.65rem; }

@@ -6,6 +6,8 @@ import { requireAuth } from '../middleware/requireAuth'
 import { requireAdmin } from '../middleware/requireAdmin'
 import { requireOrganization, type OrganizationRequest } from '../middleware/requireOrganization'
 import { serializePlayer } from '../lib/serializers'
+import { visiblePlayerWhere as getVisiblePlayerWhere } from '../lib/visibility'
+import { visibleTournamentWhere as getVisibleTournamentWhere } from '../lib/visibility'
 
 export const playersRouter = Router()
 
@@ -75,8 +77,7 @@ playersRouter.get('/me', async (req, res) => {
     return
   }
 
-  const contextId = contextOrganizationId(authReq)
-  const player = await prisma.player.findFirst({ where: { userId, ...(contextId ? { organizationId: contextId } : {}) } })
+  const player = await prisma.player.findFirst({ where: { userId, ...(await getVisiblePlayerWhere(authReq)) } })
   res.json(player ? serializePlayer(player) : null)
 })
 
@@ -93,9 +94,8 @@ playersRouter.get('/', async (req, res) => {
     const page = parseNonNegativeInt(pageParam, 0)
     const perPage = Math.min(parsePositiveInt(perPageParam, 20), 100)
     const orderBy = parsePlayerSort(sortBy, sortOrder)
-    const organizationId = contextOrganizationId(req as OrganizationRequest)
     const where: Prisma.PlayerWhereInput = {
-      organizationId,
+      ...(await getVisiblePlayerWhere(req as OrganizationRequest)),
       ...(name
         ? {
             name: {
@@ -137,15 +137,14 @@ playersRouter.get('/', async (req, res) => {
 
 playersRouter.get('/:id/matches', async (req, res) => {
   const playerId = req.params['id'] as string
-  const organizationId = contextOrganizationId(req as OrganizationRequest)
-  const playerExists = await prisma.player.count({ where: { id: playerId, organizationId } })
+  const playerExists = await prisma.player.count({ where: { id: playerId, ...(await getVisiblePlayerWhere(req as OrganizationRequest)) } })
   if (!playerExists) {
     res.status(404).json({ message: 'Giocatore non trovato' })
     return
   }
 
   const playedMatchWhere: Prisma.MatchWhereInput = {
-    tournament: organizationId ? { organizationId } : { organizationId: null },
+    tournament: await getVisibleTournamentWhere(req as OrganizationRequest),
     status: 'completed',
     player1Id: { not: null },
     player2Id: { not: null },
@@ -198,9 +197,8 @@ playersRouter.get('/:id/matches', async (req, res) => {
 
 playersRouter.get('/:id', async (req, res) => {
   const playerId = req.params['id'] as string
-  const organizationId = contextOrganizationId(req as OrganizationRequest)
   const player = await prisma.player.findFirst({
-    where: { id: playerId, organizationId },
+    where: { id: playerId, ...(await getVisiblePlayerWhere(req as OrganizationRequest)) },
   })
 
   if (!player) {
