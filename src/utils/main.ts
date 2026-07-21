@@ -1,12 +1,13 @@
-import { Player } from '@/types';
+import moment from 'moment';
+import type { Player } from '@/types';
 
 export function formatAge(birthDate: string | null | undefined): string {
   if (!birthDate) return 'Età non disponibile';
-  const dob = new Date(birthDate);
-  if (Number.isNaN(dob.getTime())) return 'Età non disponibile';
-  const diff = Date.now() - dob.getTime();
-  const ageDate = new Date(diff);
-  return `${Math.abs(ageDate.getUTCFullYear() - 1970)} anni`;
+
+  const dob = moment(birthDate, moment.ISO_8601, true);
+  if (!dob.isValid()) return 'Età non disponibile';
+
+  return `${moment().diff(dob, 'years')} anni`;
 }
 
 export function getPlayerInitials(player: Player): string {
@@ -19,5 +20,5 @@ export function getPlayerInitials(player: Player): string {
 }
 
 export function toDateString(value: Date | null): string | null {
-  return value ? (value.toISOString().split('T')[0] ?? null) : null;
+  return value ? moment(value).format('YYYY-MM-DD') : null;
 }

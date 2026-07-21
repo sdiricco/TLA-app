@@ -29,6 +29,8 @@ dist-ssr
 # Environment variables (contains secrets)
 .env
 .env.local
+.env.*
+!.env.example
 .env.*.local
 
 # Supabase CLI temp files

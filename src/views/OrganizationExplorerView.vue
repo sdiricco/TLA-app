@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { watchDebounced } from '@vueuse/core'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
-import { useAuthStore } from '../stores/auth'
-import { useOrganizationsStore } from '../stores/organizations'
-import { organizationsService } from '../services/organizationsApi'
-import OrganizationMap from '../components/organizations/OrganizationMap.vue'
-import type { OrganizationPreview } from '../types'
+import OrganizationMap from '@/components/organizations/OrganizationMap.vue'
+import { organizationsService } from '@/services/organizationsApi'
+import { useAuthStore } from '@/stores/auth'
+import { useOrganizationsStore } from '@/stores/organizations'
+import type { OrganizationPreview } from '@/types'
 
+// Explorer state is intentionally local because results are transient map data.
 const router = useRouter()
 const auth = useAuthStore()
 const store = useOrganizationsStore()
@@ -24,8 +26,14 @@ const requestedId = ref<string | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-const selectedOrganization = computed(() => organizations.value.find(item => item.id === selectedId.value) ?? store.organizations.find(item => item.id === selectedId.value) ?? null)
-const selectedIsMember = computed(() => !!selectedId.value && store.organizations.some(item => item.id === selectedId.value))
+const selectedOrganization = computed(() =>
+  organizations.value.find((item) => item.id === selectedId.value)
+  ?? store.organizations.find((item) => item.id === selectedId.value)
+  ?? null,
+)
+const selectedIsMember = computed(() =>
+  Boolean(selectedId.value && store.organizations.some((item) => item.id === selectedId.value)),
+)
 const myOrganizations = computed(() => store.organizations)
 
 async function loadOrganizations(reset = true): Promise<void> {
@@ -38,7 +46,9 @@ async function loadOrganizations(reset = true): Promise<void> {
     page.value = response.page
     total.value = response.total
     hasMore.value = response.has_more
-    if (reset && selectedId.value && !organizations.value.some(item => item.id === selectedId.value)) selectedId.value = null
+    if (reset && selectedId.value && !organizations.value.some((item) => item.id === selectedId.value)) {
+      selectedId.value = null
+    }
   } catch (requestError) {
     error.value = (requestError as Error).message
   } finally {
@@ -48,10 +58,6 @@ async function loadOrganizations(reset = true): Promise<void> {
 
 function selectOrganization(organization: OrganizationPreview): void {
   selectedId.value = organization.id
-}
-
-function closeExplorer(): void {
-  void router.push({ name: 'organizations' })
 }
 
 function confirmSelection(): void {
@@ -79,52 +85,57 @@ async function joinSelectedOrganization(): Promise<void> {
   }
 }
 
-let searchTimer: ReturnType<typeof setTimeout> | undefined
-onMounted(() => { void loadOrganizations() })
-watch(search, () => {
-  if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => { void loadOrganizations() }, 250)
-})
+onMounted(loadOrganizations)
+watchDebounced(search, loadOrganizations, { debounce: 250 })
 </script>
 
 <template>
-  <section class="organization-explorer" aria-label="Esplora organizzazioni">
-    <div class="explorer-map"><OrganizationMap :organizations="organizations" @select="selectOrganization" /></div>
+  <!------------------------------>
+  <!-- Full-screen explorer layout -->
+  <!------------------------------>
+  <section class="relative m-[calc(var(--app-page-padding)*-1)] min-h-[calc(100dvh-4.8rem)] overflow-hidden bg-(--color-surface-soft) md:min-h-[calc(100dvh-1rem)]" aria-label="Esplora organizzazioni">
+    <!-- Section: Map -->
+    <div class="absolute inset-0 z-0 [&_.organization-map]:h-full [&_.organization-map]:min-h-full [&_.organization-map]:border-0">
+      <OrganizationMap :organizations="organizations" @select="selectOrganization" />
+    </div>
 
-    <header class="explorer-toolbar">
-      <Button icon="pi pi-times" aria-label="Chiudi esplora organizzazioni" text rounded severity="secondary" @click="closeExplorer" />
-      <div class="toolbar-title"><strong>Esplora organizzazioni</strong><small>{{ total }} disponibili</small></div>
+    <!-- Section: Toolbar -->
+    <header class="absolute inset-x-2 top-2 z-20 flex min-h-12 items-center gap-1 border border-(--color-border) bg-(--color-surface-card) p-1 shadow-lg backdrop-blur-md md:inset-x-3 md:top-3">
+      <Button icon="pi pi-times" aria-label="Chiudi esplora organizzazioni" text rounded severity="secondary" @click="router.push({ name: 'organizations' })" />
+      <div class="grid min-w-0 flex-1"><strong class="truncate text-sm">Esplora organizzazioni</strong><small class="text-xs text-(--color-text-muted)">{{ total }} disponibili</small></div>
       <Button label="OK" icon="pi pi-check" :disabled="!selectedIsMember" text @click="confirmSelection" />
     </header>
 
-    <section class="explorer-panel" aria-label="Ricerca e lista organizzazioni">
-      <div class="panel-handle" aria-hidden="true" />
-      <div class="panel-heading"><div><p class="eyebrow">TROVA LA TUA COMMUNITY</p><h1>Organizzazioni pubbliche</h1></div><span>{{ organizations.length }} mostrate</span></div>
+    <!------------------------------>
+    <!-- Section: Search panel -->
+    <!------------------------------>
+    <section class="absolute inset-x-3 bottom-3 z-20 grid max-h-[54dvh] gap-3 overflow-y-auto border border-(--color-border) bg-(--color-surface-card) p-3 shadow-xl backdrop-blur-md md:right-auto md:w-full md:max-w-sm md:max-h-[72dvh]" aria-label="Ricerca e lista organizzazioni">
+      <div class="mx-auto h-1 w-9 bg-(--color-border-strong) md:hidden" aria-hidden="true" />
+      <div class="flex items-end justify-between gap-3"><div><p class="mb-1 text-[0.65rem] font-extrabold tracking-[0.14em] text-primary-700">TROVA LA TUA COMMUNITY</p><h1 class="text-xl font-bold tracking-tight">Organizzazioni pubbliche</h1></div><span class="whitespace-nowrap text-xs text-(--color-text-muted)">{{ organizations.length }} mostrate</span></div>
       <InputText v-model="search" placeholder="Cerca per nome, città o sport" aria-label="Cerca organizzazioni" fluid />
       <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
 
-      <div v-if="selectedOrganization" class="selected-organization">
-        <div class="selected-copy"><strong>{{ selectedOrganization.name }}</strong><small>{{ [selectedOrganization.city, selectedOrganization.sport].filter(Boolean).join(' · ') || 'Community sportiva' }} · {{ selectedOrganization.member_count }} membri</small></div>
+      <!-- Selected organization -->
+      <div v-if="selectedOrganization" class="flex items-center gap-3 border border-primary-200 bg-primary-50 p-3">
+        <div class="grid min-w-0 flex-1"><strong class="truncate">{{ selectedOrganization.name }}</strong><small class="truncate text-xs text-(--color-text-muted)">{{ [selectedOrganization.city, selectedOrganization.sport].filter(Boolean).join(' · ') || 'Community sportiva' }} · {{ selectedOrganization.member_count }} membri</small></div>
         <Button v-if="selectedIsMember" label="Selezionata" icon="pi pi-check" size="small" severity="success" outlined disabled />
         <Button v-else-if="!auth.isGuest" :label="requestedId === selectedOrganization.id ? 'Richiesta inviata' : selectedOrganization.visibility === 'private' ? 'Richiedi accesso' : 'Entra'" :icon="selectedOrganization.visibility === 'private' ? 'pi pi-send' : 'pi pi-sign-in'" size="small" :loading="joiningId === selectedOrganization.id" :disabled="requestedId === selectedOrganization.id" @click="joinSelectedOrganization" />
       </div>
 
-      <section v-if="myOrganizations.length" class="my-organizations" aria-labelledby="my-organizations-title">
-        <div class="list-heading"><strong id="my-organizations-title">Le tue organizzazioni</strong><small>seleziona per cambiare spazio</small></div>
-        <div class="organization-results">
-          <button v-for="organization in myOrganizations" :key="`mine-${organization.id}`" type="button" class="organization-result" :class="{ selected: organization.id === selectedId }" @click="selectOrganization(organization)">
-            <span class="result-icon"><i class="pi pi-building" /></span>
-            <span class="result-copy"><strong>{{ organization.name }}</strong><small>{{ organization.visibility === 'public' ? 'Pubblica' : 'Privata' }} · {{ organization.role === 'owner' ? 'Proprietario' : organization.role === 'admin' ? 'Amministratore' : 'Membro' }}</small></span>
-            <i class="pi pi-chevron-right" aria-hidden="true" />
+      <!-- User organizations -->
+      <section v-if="myOrganizations.length" class="grid gap-2" aria-labelledby="my-organizations-title">
+        <div class="flex items-baseline justify-between gap-2"><strong id="my-organizations-title" class="text-sm">Le tue organizzazioni</strong><small class="text-xs text-(--color-text-muted)">seleziona per cambiare spazio</small></div>
+        <div class="grid gap-2">
+          <button v-for="organization in myOrganizations" :key="`mine-${organization.id}`" type="button" class="flex w-full items-center gap-3 border bg-(--color-surface-card) p-3 text-left" :class="organization.id === selectedId ? 'border-primary-500 bg-primary-50' : 'border-(--color-border)'" @click="selectOrganization(organization)">
+            <span class="grid size-8 shrink-0 place-items-center bg-primary-50 text-primary-700"><i class="pi pi-building" /></span><span class="grid min-w-0 flex-1"><strong class="truncate">{{ organization.name }}</strong><small class="truncate text-xs text-(--color-text-muted)">{{ organization.visibility === 'public' ? 'Pubblica' : 'Privata' }} · {{ organization.role === 'owner' ? 'Proprietario' : organization.role === 'admin' ? 'Amministratore' : 'Membro' }}</small></span><i class="pi pi-chevron-right" aria-hidden="true" />
           </button>
         </div>
       </section>
 
-      <div class="organization-results">
-        <button v-for="organization in organizations" :key="organization.id" type="button" class="organization-result" :class="{ selected: organization.id === selectedId }" @click="selectOrganization(organization)">
-          <span class="result-icon"><i class="pi pi-building" /></span>
-          <span class="result-copy"><strong>{{ organization.name }}</strong><small>{{ [organization.city, organization.sport].filter(Boolean).join(' · ') || 'Community sportiva' }} · {{ organization.member_count }} membri</small></span>
-          <i class="pi pi-chevron-right" aria-hidden="true" />
+      <!-- Discovery results -->
+      <div class="grid gap-2">
+        <button v-for="organization in organizations" :key="organization.id" type="button" class="flex w-full items-center gap-3 border bg-(--color-surface-card) p-3 text-left" :class="organization.id === selectedId ? 'border-primary-500 bg-primary-50' : 'border-(--color-border)'" @click="selectOrganization(organization)">
+          <span class="grid size-8 shrink-0 place-items-center bg-primary-50 text-primary-700"><i class="pi pi-building" /></span><span class="grid min-w-0 flex-1"><strong class="truncate">{{ organization.name }}</strong><small class="truncate text-xs text-(--color-text-muted)">{{ [organization.city, organization.sport].filter(Boolean).join(' · ') || 'Community sportiva' }} · {{ organization.member_count }} membri</small></span><i class="pi pi-chevron-right" aria-hidden="true" />
         </button>
       </div>
       <Button v-if="hasMore" label="Carica altre" icon="pi pi-plus" text :loading="loading" @click="loadOrganizations(false)" />
@@ -132,39 +143,3 @@ watch(search, () => {
     </section>
   </section>
 </template>
-
-<style scoped>
-.organization-explorer { position: relative; min-height: calc(100dvh - 1rem); overflow: hidden; margin: calc(var(--app-page-padding) * -1); background: var(--color-surface-soft); }
-.explorer-map { position: absolute; z-index: 0; inset: 0; }
-.explorer-map :deep(.organization-map) { height: 100%; min-height: 100%; border: 0; }
-.explorer-toolbar { position: absolute; z-index: 20; top: .75rem; left: .75rem; right: .75rem; display: flex; align-items: center; gap: .35rem; min-height: 3.1rem; padding: .3rem .4rem; border: 1px solid var(--color-border); background: var(--color-surface-card); box-shadow: 0 8px 24px rgb(var(--color-shadow-rgb) / 12%); backdrop-filter: blur(14px); }
-.toolbar-title { display: grid; min-width: 0; flex: 1; gap: .08rem; }
-.toolbar-title strong { overflow: hidden; font-size: .9rem; text-overflow: ellipsis; white-space: nowrap; }
-.toolbar-title small { color: var(--color-text-muted); font-size: .7rem; }
-.explorer-panel { position: absolute; z-index: 20; left: .75rem; bottom: .75rem; display: grid; gap: .8rem; width: min(390px, calc(100% - 1.5rem)); max-height: min(72dvh, 650px); overflow-y: auto; padding: .7rem; border: 1px solid var(--color-border); background: var(--color-surface-card); box-shadow: 0 18px 38px rgb(var(--color-shadow-rgb) / 16%); backdrop-filter: blur(16px); }
-.panel-handle { display: none; width: 2.2rem; height: .22rem; margin: 0 auto; background: var(--color-border-strong); }
-.panel-heading { display: flex; align-items: end; justify-content: space-between; gap: .8rem; }
-.eyebrow { margin: 0 0 .35rem; color: var(--color-primary-700); font-size: .65rem; font-weight: 850; letter-spacing: .14em; }
-.panel-heading h1 { margin: 0; font-size: 1.2rem; letter-spacing: -.04em; }
-.panel-heading > span { color: var(--color-text-muted); font-size: .7rem; white-space: nowrap; }
-.selected-organization { display: flex; align-items: center; gap: .65rem; padding: .7rem; border: 1px solid rgb(var(--color-primary-rgb) / 24%); background: rgb(var(--color-primary-500-rgb) / 7%); }
-.selected-copy { display: grid; min-width: 0; flex: 1; gap: .2rem; }
-.selected-copy strong, .selected-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.selected-copy small, .result-copy small { color: var(--color-text-muted); font-size: .72rem; }
-.organization-results { display: grid; gap: .45rem; }
-.my-organizations { display: grid; gap: .45rem; }
-.list-heading { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; }
-.list-heading strong { font-size: .82rem; }
-.list-heading small { color: var(--color-text-muted); font-size: .68rem; }
-.organization-result { display: flex; align-items: center; gap: .7rem; width: 100%; padding: .65rem; border: 1px solid var(--color-border); background: var(--color-surface-card); color: var(--color-text); text-align: left; cursor: pointer; }
-.organization-result.selected { border-color: var(--color-primary-500); background: rgb(var(--color-primary-500-rgb) / 7%); }
-.result-icon { display: grid; flex: 0 0 auto; place-items: center; width: 2rem; height: 2rem; background: rgb(var(--color-primary-500-rgb) / 12%); color: var(--color-primary-700); }
-.result-copy { display: grid; min-width: 0; flex: 1; gap: .12rem; }
-.result-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 767px) {
-  .organization-explorer { min-height: calc(100dvh - 4.8rem); margin: calc(var(--app-page-padding) * -1) calc(var(--app-page-padding) * -1) -.85rem; }
-  .explorer-panel { right: .75rem; bottom: .75rem; width: auto; max-height: 54dvh; }
-  .panel-handle { display: block; }
-  .explorer-toolbar { top: .5rem; left: .5rem; right: .5rem; }
-}
-</style>

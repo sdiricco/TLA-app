@@ -104,9 +104,25 @@ const router = createRouter({
         },
         {
           path: 'tournaments/:id',
-          name: 'tournament-detail',
           component: () => import('../views/TournamentDetailView.vue'),
           meta: { requiresAuth: true },
+          children: [
+            {
+              path: '',
+              name: 'tournament-detail',
+              redirect: (to) => ({ name: 'tournament-draw', params: { id: to.params['id'] } }),
+            },
+            {
+              path: 'draw',
+              name: 'tournament-draw',
+              component: () => import('../views/tournaments/TournamentDrawView.vue'),
+            },
+            {
+              path: 'players',
+              name: 'tournament-players',
+              component: () => import('../views/tournaments/TournamentPlayersView.vue'),
+            },
+          ],
         },
         {
           path: 'tournaments/:id/matches/:matchId',

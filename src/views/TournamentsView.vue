@@ -1,152 +1,189 @@
 <script setup lang="ts">
-  import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-  import { useRouter } from 'vue-router'
-  import Button from 'primevue/button'
-  import DatePicker from 'primevue/datepicker'
-  import Drawer from 'primevue/drawer'
-  import InputText from 'primevue/inputtext'
-  import Select from 'primevue/select'
-  import Skeleton from 'primevue/skeleton'
-  import { tournamentFormatLabels } from '../config/tournamentFormats'
-  import { useAuthStore } from '../stores/auth'
-  import { useTournamentsStore } from '../stores/tournaments'
-  import type { TournamentCategory, TournamentStatus } from '../types'
-  import OrganizationFilter from '../components/filters/OrganizationFilter.vue'
-  import type { OrganizationFilter as OrganizationFilterValue } from '../types'
+  // Vue and third-party dependencies
+  import { computed, onMounted, ref } from 'vue';
+  import { useRouter } from 'vue-router';
+  import { watchDebounced } from '@vueuse/core';
+  import moment from 'moment';
+  import 'moment/locale/it.js';
+  import Badge from 'primevue/badge';
+  import Button from 'primevue/button';
+  import Chip from 'primevue/chip';
+  import InputText from 'primevue/inputtext';
+
+  // Page components and tournament filter types
+  import PageHeader from '@/components/layout/PageHeader.vue';
+  import TournamentEmptyState from '@/components/tournaments/TournamentEmptyState.vue';
+  import TournamentFiltersDrawer from '@/components/tournaments/TournamentFiltersDrawer.vue';
+  import TournamentListItem from '@/components/tournaments/TournamentListItem.vue';
+  import TournamentListSkeleton from '@/components/tournaments/TournamentListSkeleton.vue';
+  import type {
+    TournamentFilterKey,
+    TournamentFilterOption,
+    TournamentFilters,
+  } from '@/components/tournaments/tournamentFilters';
+
+  // Stores and domain types
+  import { useAuthStore } from '../stores/auth';
+  import { useOrganizationsStore } from '../stores/organizations';
+  import { useTournamentsStore } from '../stores/tournaments';
+  import type { TournamentCategory, TournamentStatus } from '../types';
 
   /**
-   * Interfaces
+   * View models
+   *
+   * Represents an applied filter as displayed in the removable chip list.
    */
-  interface FilterOption<T> {
-    label: string
-    value: 'all' | T
+  interface ActiveTournamentFilter {
+    key: TournamentFilterKey;
+    label: string;
   }
 
   /**
-   * Stores
+   * Stores and router
    */
-  const auth = useAuthStore()
-  const store = useTournamentsStore()
-  const router = useRouter()
+  const auth = useAuthStore();
+  const organizationsStore = useOrganizationsStore();
+  const store = useTournamentsStore();
+  const router = useRouter();
 
   /**
-   * Reactive vars
+   * Local state
+   *
+   * Draft filters belong to the open drawer. Applied filters are the values
+   * currently used by API requests, so closing the drawer does not apply
+   * incomplete or unwanted edits.
    */
-  const searchName = ref('')
-  const categoryFilter = ref<'all' | TournamentCategory>('all')
-  const statusFilter = ref<'all' | TournamentStatus>('all')
-  const dateRangeFilter = ref<Date[] | null>(null)
-  const organizationFilter = ref<OrganizationFilterValue>('mine')
-  const filtersTimer = ref<ReturnType<typeof setTimeout> | null>(null)
-  const filtersOpen = ref(false)
-  const skeletonItems = Array.from({ length: 6 }, (_, index) => index)
+  const filtersOpen = ref(false);
+  const searchName = ref('');
+  const draftFilters = ref<TournamentFilters>(createDefaultFilters());
+  const appliedFilters = ref<TournamentFilters>(createDefaultFilters());
 
   /**
-   * Constants
+   * Filter options
    */
-  const statusOptions: FilterOption<TournamentStatus>[] = [
-    { label: 'Tutti', value: 'all' },
-    { label: 'In programma', value: 'upcoming' },
-    { label: 'In corso', value: 'ongoing' },
-    { label: 'Completati', value: 'completed' },
-  ]
+  const statusOptions: TournamentFilterOption<TournamentStatus>[] = [
+    { label: 'Tutti', value: 'all', icon: 'mdi:format-list-bulleted' },
+    { label: 'In programma', value: 'upcoming', icon: 'mdi:calendar-clock-outline' },
+    { label: 'In corso', value: 'ongoing', icon: 'mdi:progress-clock' },
+    { label: 'Completati', value: 'completed', icon: 'mdi:check-circle-outline' },
+  ];
 
-  const categoryOptions: FilterOption<TournamentCategory>[] = [
-    { label: 'Tutte le categorie', value: 'all' },
-    { label: 'Maschile', value: 'maschile' },
-    { label: 'Femminile', value: 'femminile' },
-  ]
+  const categoryOptions: TournamentFilterOption<TournamentCategory>[] = [
+    { label: 'Tutte le categorie', value: 'all', icon: 'mdi:gender-male-female' },
+    { label: 'Maschile', value: 'maschile', icon: 'mdi:gender-male' },
+    { label: 'Femminile', value: 'femminile', icon: 'mdi:gender-female' },
+  ];
 
-  const categoryLabels: Record<string, string> = {
-    maschile: 'Maschile',
-    femminile: 'Femminile',
-    singles: 'Maschile',
-    doubles: 'Femminile',
-  }
+  /**
+   * Derived state
+   */
+  const canViewAdmin = computed(() => auth.isAdmin);
+  const hasMoreTournaments = computed(() => store.tournaments.length < store.total);
 
-  const canViewAdmin = computed(() => auth.isAdmin)
-  const hasMoreTournaments = computed(() => store.tournaments.length < store.total)
+  // A date range is sent to the API only when both endpoints are selected.
   const completedDateRange = computed(() => {
-    const [from, to] = dateRangeFilter.value ?? []
-    return from && to ? [from, to] as const : null
-  })
-  const activeFiltersCount = computed(() => [
-    searchName.value.trim() !== '',
-    categoryFilter.value !== 'all',
-    statusFilter.value !== 'all',
-    completedDateRange.value !== null,
-    organizationFilter.value !== 'mine',
-  ].filter(Boolean).length)
+    const [from, to] = appliedFilters.value.dateRange ?? [];
+    return from && to ? ([from, to] as const) : null;
+  });
+
+  const activeFiltersCount = computed(
+    () =>
+      [
+        appliedFilters.value.category !== 'all',
+        appliedFilters.value.status !== 'all',
+        completedDateRange.value !== null,
+        appliedFilters.value.organizationId !== 'mine',
+      ].filter(Boolean).length
+  );
+
+  // Converts applied filter values into the presentation model used by PrimeVue chips.
+  const activeFilterChips = computed<ActiveTournamentFilter[]>(() => {
+    const filters = appliedFilters.value;
+    const chips: ActiveTournamentFilter[] = [];
+
+    if (filters.category !== 'all') {
+      const option = categoryOptions.find((item) => item.value === filters.category);
+      if (option) chips.push({ key: 'category', label: option.label });
+    }
+    if (filters.status !== 'all') {
+      const option = statusOptions.find((item) => item.value === filters.status);
+      if (option) chips.push({ key: 'status', label: option.label });
+    }
+    if (completedDateRange.value) {
+      const [from, to] = completedDateRange.value;
+      chips.push({
+        key: 'dateRange',
+        label: `${moment(from).locale('it').format('L')} – ${moment(to).locale('it').format('L')}`,
+      });
+    }
+    if (filters.organizationId !== 'mine') {
+      const label =
+        filters.organizationId === 'global'
+          ? 'Contenuti globali'
+          : (organizationsStore.organizations.find(
+              (organization) => organization.id === filters.organizationId
+            )?.name ?? 'Organizzazione');
+      chips.push({ key: 'organizationId', label });
+    }
+
+    return chips;
+  });
 
   /**
-   * Function: Map status to label
+   * Filter and query helpers
    */
-  function statusLabel(status: TournamentStatus): string {
-    return { upcoming: 'In programma', ongoing: 'In corso', completed: 'Completato' }[status]
+
+  // Returns a fresh object so draft and applied filters never share mutable state.
+  function createDefaultFilters(): TournamentFilters {
+    return {
+      category: 'all',
+      status: 'all',
+      dateRange: null,
+      organizationId: 'mine',
+    };
   }
 
-  /**
-   * Function: Format a date
-   */
-  function formatDate(date: string | null | undefined): string {
-    if (!date) return '—'
-    return new Date(date).toLocaleDateString('it-IT', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-  }
-
+  // Moment formats the local calendar date without introducing a UTC day shift.
   function toDateQuery(date: Date | null | undefined): string | undefined {
-    if (!date) return undefined
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
+    if (!date) return undefined;
+    return moment(date).format('YYYY-MM-DD');
   }
 
+  // Normalizes UI-only values such as "all" into the optional API query fields.
   function currentFilters() {
+    const filters = appliedFilters.value;
     return {
       name: searchName.value.trim() || undefined,
-      category: categoryFilter.value === 'all' ? undefined : categoryFilter.value,
-      status: statusFilter.value === 'all' ? undefined : statusFilter.value,
+      category: filters.category === 'all' ? undefined : filters.category,
+      status: filters.status === 'all' ? undefined : filters.status,
       dateFrom: toDateQuery(completedDateRange.value?.[0]),
       dateTo: toDateQuery(completedDateRange.value?.[1]),
-      organizationId: organizationFilter.value,
-    }
-  }
-
-  function scheduleFiltersLoad(): void {
-    if (filtersTimer.value) clearTimeout(filtersTimer.value)
-    filtersTimer.value = setTimeout(() => {
-      void loadTournaments(0, store.perPage)
-    }, 300)
+      organizationId: filters.organizationId,
+    };
   }
 
   /**
-   * Function: Open create form
+   * Navigation actions
    */
   function openCreate(): void {
-    if (auth.isGuest) return
-    void router.push({ name: 'tournament-create' })
+    if (auth.isGuest) return;
+    void router.push({ name: 'tournament-create' });
   }
 
   /**
-   * Function: Load tournaments from the server
+   * Data loading
    */
   async function loadTournaments(page = 0, perPage = store.perPage): Promise<void> {
     await store.fetchAll({
       ...currentFilters(),
       page,
       perPage,
-    })
+    });
   }
 
-  /**
-   * Function: Load the next page and append it to the grid
-   */
+  // Loads the following page without replacing tournaments already displayed.
   async function loadMore(): Promise<void> {
-    if (store.loadingMore || !hasMoreTournaments.value) return
+    if (store.loadingMore || !hasMoreTournaments.value) return;
 
     await store.fetchAll(
       {
@@ -154,398 +191,215 @@
         page: store.page + 1,
         perPage: store.perPage,
       },
-      { append: true },
-    )
+      { append: true }
+    );
   }
 
   /**
-   * Function: Reset filters
+   * Filter actions
    */
+
+  // Starts each drawer session from the filters currently applied to the list.
+  function openFilters(): void {
+    const dateRange = appliedFilters.value.dateRange;
+    draftFilters.value = {
+      ...appliedFilters.value,
+      dateRange: dateRange ? [...dateRange] : null,
+    };
+    filtersOpen.value = true;
+  }
+
+  // Commits the drawer draft and reloads the first page with the new query.
+  function applyFilters(): void {
+    const dateRange = draftFilters.value.dateRange;
+    appliedFilters.value = {
+      ...draftFilters.value,
+      dateRange: dateRange ? [...dateRange] : null,
+    };
+    filtersOpen.value = false;
+    void loadTournaments(0, store.perPage);
+  }
+
+  // Removing a chip updates the applied filters immediately and refreshes the list.
+  function removeFilter(key: TournamentFilterKey): void {
+    const filters = { ...appliedFilters.value };
+    if (key === 'category') filters.category = 'all';
+    if (key === 'status') filters.status = 'all';
+    if (key === 'dateRange') filters.dateRange = null;
+    if (key === 'organizationId') filters.organizationId = 'mine';
+    appliedFilters.value = filters;
+    void loadTournaments(0, store.perPage);
+  }
+
+  // Resets only the drawer draft; the reset takes effect when the user applies it.
   function clearFilters(): void {
-    searchName.value = ''
-    categoryFilter.value = 'all'
-    statusFilter.value = 'all'
-    dateRangeFilter.value = null
-    organizationFilter.value = 'mine'
-    void loadTournaments(0, store.perPage)
+    draftFilters.value = createDefaultFilters();
   }
 
   /**
-   * Hooks
+   * Lifecycle and reactive effects
    */
+
+  // Performs the initial request when the route view becomes active.
   onMounted(() => {
-    void loadTournaments()
-  })
+    void loadTournaments();
+  });
 
-  watch([searchName, categoryFilter, statusFilter], scheduleFiltersLoad)
-  watch(organizationFilter, () => void loadTournaments(0, store.perPage))
-
-  watch(dateRangeFilter, (range, previousRange) => {
-    const isComplete = Boolean(range?.[0] && range?.[1])
-    const wasSelected = Boolean(previousRange?.length)
-    if (isComplete || (!range?.length && wasSelected)) scheduleFiltersLoad()
-  })
-
-  onBeforeUnmount(() => {
-    if (filtersTimer.value) clearTimeout(filtersTimer.value)
-  })
+  // Waits until typing pauses before querying, avoiding one request per keystroke.
+  // VueUse also disposes the pending watcher automatically on component unmount.
+  watchDebounced(
+    searchName,
+    () => {
+      void loadTournaments(0, store.perPage);
+    },
+    { debounce: 300 }
+  );
 </script>
 
 <template>
-  <div class="tournaments-page">
-    <header class="page-header">
-      <div>
-        <p class="eyebrow">GESTIONE TORNEI</p>
-        <h1>Il campo è pronto.</h1>
-        <p class="page-subtitle">Organizza, monitora e porta a termine ogni competizione.</p>
-      </div>
-    </header>
+  <!------------------------------>
+  <!-- Page layout -->
+  <!------------------------------>
+  <div class="mx-auto flex max-w-screen-2xl flex-col gap-3 text-(--color-text) sm:gap-6">
+    <!------------------------------>
+    <!-- Section: Header -->
+    <!------------------------------>
+    <PageHeader
+      eyebrow="GESTIONE TORNEI"
+      title="Il campo è pronto."
+      description="Organizza, monitora e porta a termine ogni competizione."
+    />
 
-    <section class="summary-strip">
-      <div class="summary-icon"><IconifyIcon icon="mdi:trophy-outline" /></div>
-      <div><strong>{{ store.total }}</strong><span>Tornei totali</span></div>
-      <button
+    <!------------------------------>
+    <!-- Section: Search and create tournament -->
+    <!------------------------------>
+    <div class="flex items-center gap-2.5">
+      <span class="relative min-w-0 max-w-lg flex-1">
+        <IconifyIcon
+          icon="mdi:magnify"
+          class="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-(--color-text-subtle)"
+        />
+        <InputText
+          v-model="searchName"
+          class="h-11 w-full rounded-none border-(--color-border) bg-(--color-surface-card) pl-10 text-sm"
+          aria-label="Cerca torneo per nome"
+          placeholder="Cerca torneo per nome"
+        />
+      </span>
+      <Button
         v-if="canViewAdmin"
-        class="create-button"
-        type="button"
-        aria-label="Aggiungi torneo"
-        title="Aggiungi torneo"
+        class="h-11 shrink-0 rounded-none font-bold"
+        label="Crea"
+        icon="pi pi-plus"
+        aria-label="Crea torneo"
+        title="Crea torneo"
         :disabled="auth.isGuest"
         @click="openCreate"
+      />
+    </div>
+
+    <!------------------------------>
+    <!-- Section: Tournament list heading -->
+    <!------------------------------>
+    <div class="mt-1 flex items-center justify-between">
+      <div class="flex items-baseline gap-2.5">
+        <h2 class="text-lg font-bold tracking-tight sm:text-xl">I tuoi tornei</h2>
+        <span class="text-xs text-(--color-text-subtle)">{{ store.total }} risultati</span>
+      </div>
+
+      <Button
+        class="relative size-10 shrink-0 rounded-none p-0!"
+        text
+        plain
+        aria-label="Apri filtri tornei"
+        title="Filtra tornei"
+        @click="openFilters"
       >
-        <IconifyIcon icon="mdi:calendar-plus-outline" />
-        <span>Aggiungi</span>
-      </button>
-    </section>
-
-    <div class="section-heading">
-      <div><h2>I tuoi tornei</h2><span>{{ store.total }} risultati</span></div>
-      <div class="heading-actions">
-        <button class="open-filters-button" type="button" @click="filtersOpen = true">
-          <IconifyIcon icon="mdi:tune-variant" />
-          <span>Filtri</span>
-          <strong v-if="activeFiltersCount">{{ activeFiltersCount }}</strong>
-        </button>
-        <span class="view-label"><IconifyIcon icon="mdi:view-grid-outline" /> Vista griglia</span>
-      </div>
+        <i class="pi pi-filter" aria-hidden="true" />
+        <Badge
+          v-if="activeFiltersCount"
+          :value="activeFiltersCount"
+          class="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full! bg-primary-600! px-1! text-[0.65rem]! font-bold! text-white! shadow-sm"
+        />
+      </Button>
     </div>
 
-    <Drawer v-model:visible="filtersOpen" position="right" header="Filtra tornei" class="filters-drawer" :style="{ width: 'min(26rem, 100vw)' }">
-      <div class="drawer-filters">
-        <div class="filter-field search-field">
-          <label for="tournament-name-filter" class="text-sm font-medium">Cerca per nome</label>
-          <span class="search-wrap"><IconifyIcon icon="mdi:magnify" /><InputText id="tournament-name-filter" v-model="searchName" placeholder="Es. Open 2026" fluid /></span>
-        </div>
-
-        <div class="filter-field">
-          <label for="tournament-organization-filter">Organizzazione</label>
-          <OrganizationFilter id="tournament-organization-filter" v-model="organizationFilter" />
-        </div>
-
-        <div class="filter-field">
-          <label for="tournament-category-filter" class="text-sm font-medium">Categoria</label>
-          <Select id="tournament-category-filter" v-model="categoryFilter" :options="categoryOptions" option-label="label" option-value="value" fluid />
-        </div>
-
-        <div class="filter-field">
-          <label for="tournament-status-filter" class="text-sm font-medium">Stato</label>
-          <Select id="tournament-status-filter" v-model="statusFilter" :options="statusOptions" option-label="label" option-value="value" fluid />
-        </div>
-
-        <div class="filter-field date-filter">
-          <label for="tournament-date-range-filter">Periodo</label>
-          <DatePicker id="tournament-date-range-filter" v-model="dateRangeFilter" selection-mode="range" date-format="dd/mm/yy" placeholder="Dal — Al" show-icon show-button-bar fluid />
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="drawer-actions">
-          <Button label="Azzera" icon="pi pi-refresh" severity="secondary" outlined @click="clearFilters" />
-          <Button :label="`Mostra ${store.total} risultati`" icon="pi pi-check" @click="filtersOpen = false" />
-        </div>
-      </template>
-    </Drawer>
-
-    <div v-if="store.loading" class="tournaments-grid">
-      <div v-for="item in skeletonItems" :key="item" class="tournament-card skeleton-card">
-        <Skeleton class="skeleton-title" width="60%" height="1rem" />
-        <Skeleton class="skeleton-status" width="4.5rem" height="0.8rem" />
-        <div class="skeleton-date"><Skeleton width="1rem" height="1rem" /><Skeleton width="11rem" height="0.8rem" /></div>
-        <div class="skeleton-meta"><Skeleton width="7rem" height="0.8rem" /><Skeleton width="5rem" height="0.8rem" /></div>
-      </div>
+    <!------------------------------>
+    <!-- Section: Active filters -->
+    <!------------------------------>
+    <div v-if="activeFilterChips.length" class="flex min-w-0 flex-wrap gap-2">
+      <Chip
+        v-for="chip in activeFilterChips"
+        :key="chip.key"
+        :label="chip.label"
+        removable
+        class="rounded-none! border border-(--color-border) bg-white!"
+        :aria-label="`Filtro ${chip.label}`"
+        @remove="removeFilter(chip.key)"
+      />
     </div>
 
-    <div v-else-if="store.tournaments.length === 0" class="empty-state">
-      <span><IconifyIcon icon="mdi:trophy-outline" /></span>
-      <h3>Nessun torneo in campo</h3>
-      <p>Modifica i filtri oppure crea una nuova competizione.</p>
+    <!------------------------------>
+    <!-- Section: Loading tournaments -->
+    <!------------------------------>
+    <TournamentListSkeleton v-if="store.loading" />
+
+    <!------------------------------>
+    <!-- Section: No tournaments -->
+    <!------------------------------>
+    <TournamentEmptyState v-else-if="store.tournaments.length === 0" />
+
+    <!------------------------------>
+    <!-- Section: Tournament list -->
+    <!------------------------------>
+    <div v-else class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+      <TournamentListItem
+        v-for="tournament in store.tournaments"
+        :key="tournament.id"
+        :tournament="tournament"
+        @open="router.push({ name: 'tournament-detail', params: { id: tournament.id } })"
+      />
     </div>
 
-    <div v-else class="tournaments-grid">
-      <article
-        v-for="t in store.tournaments"
-        :key="t.id"
-        class="tournament-card"
-        :class="`status-${t.status}`"
-        tabindex="0"
-        @click="router.push({ name: 'tournament-detail', params: { id: t.id } })"
-        @keydown.enter="router.push({ name: 'tournament-detail', params: { id: t.id } })"
-      >
-        <div class="card-topline">
-          <span class="status-pill"><i />{{ statusLabel(t.status) }}</span>
-          <span v-if="!t.published" class="draft-pill">Bozza</span>
-        </div>
-
-        <div class="card-title-row">
-          <div>
-            <h3>{{ t.name }}</h3>
-            <span v-if="t.location" class="location"><IconifyIcon icon="mdi:map-marker-outline" />{{ t.location }}</span>
-          </div>
-          <span class="card-arrow"><IconifyIcon icon="mdi:arrow-top-right" /></span>
-        </div>
-
-        <div class="date-panel">
-          <span class="date-icon"><IconifyIcon icon="mdi:calendar-month-outline" /></span>
-          <div><small>PERIODO</small><strong>{{ formatDate(t.start_date) }}<template v-if="t.end_date"> — {{ formatDate(t.end_date) }}</template></strong></div>
-        </div>
-
-        <div class="card-meta">
-          <div><IconifyIcon icon="mdi:account-tree-outline" /><span><small>FORMATO</small>{{ tournamentFormatLabels[t.format] ?? t.format }}</span></div>
-          <div><IconifyIcon icon="mdi:account-group-outline" /><span><small>CATEGORIA</small>{{ categoryLabels[t.category] ?? t.category }}</span></div>
-        </div>
-
-        <footer class="card-footer">
-          <span><IconifyIcon icon="mdi:account-plus-outline" /> Fino a {{ t.participant_limit ?? '∞' }} giocatori</span>
-          <span>Apri torneo <IconifyIcon icon="mdi:chevron-right" /></span>
-        </footer>
-      </article>
-    </div>
-
-    <div v-if="!store.loading && store.tournaments.length > 0" class="load-more-area">
-      <div v-if="store.loadingMore" class="tournaments-grid loading-more-grid">
-        <div v-for="item in 3" :key="`more-${item}`" class="tournament-card skeleton-card"><Skeleton width="70%" height="1.8rem" /><Skeleton width="100%" height="7rem" /></div>
-      </div>
+    <!------------------------------>
+    <!-- Section: Pagination -->
+    <!------------------------------>
+    <div
+      v-if="!store.loading && store.tournaments.length > 0"
+      class="flex flex-col items-center gap-4"
+    >
+      <TournamentListSkeleton v-if="store.loadingMore" :count="3" />
 
       <Button
         v-if="hasMoreTournaments"
         label="Carica altro"
         icon="pi pi-chevron-down"
+        class="w-full sm:w-auto"
         severity="secondary"
         outlined
         :loading="store.loadingMore"
         @click="loadMore"
       />
 
-      <p v-if="!hasMoreTournaments" class="all-loaded"><IconifyIcon icon="mdi:check-circle-outline" /> Hai visualizzato tutti i tornei</p>
+      <p
+        v-if="!hasMoreTournaments"
+        class="flex items-center gap-1.5 text-xs text-(--color-text-subtle)"
+      >
+        <IconifyIcon icon="mdi:check-circle-outline" class="size-4 text-primary-500" />
+        Hai visualizzato tutti i tornei
+      </p>
     </div>
   </div>
+
+  <!------------------------------>
+  <!-- Section: Filters sidebar -->
+  <!------------------------------>
+  <TournamentFiltersDrawer
+    v-model:visible="filtersOpen"
+    v-model:filters="draftFilters"
+    :category-options="categoryOptions"
+    :status-options="statusOptions"
+    @reset="clearFilters"
+    @apply="applyFilters"
+  />
 </template>
-
-<style scoped>
-  .tournaments-page { --green: var(--color-primary-700); --lime: var(--color-accent); display: flex; flex-direction: column; gap: 1.5rem; max-width: 1480px; margin: 0 auto; color: var(--color-text); }
-  .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; padding-top: 0.4rem; }
-  .eyebrow { margin: 0 0 0.5rem; color: var(--green); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; }
-  .page-header h1 { margin: 0; font-size: clamp(2rem, 3vw, 3rem); line-height: 1; letter-spacing: -0.055em; }
-  .page-subtitle { margin: 0.75rem 0 0; color: var(--color-text-muted); font-size: 0.95rem; }
-  .create-button { display: inline-flex; align-items: center; gap: 0.45rem; min-width: auto; height: 3rem; margin-left: auto; padding-inline: 0.35rem; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: var(--green); font-weight: 700; cursor: pointer; }
-  .create-button :deep(svg) { width: 1rem; height: 1rem; }
-  .create-button:hover { background: rgb(var(--color-primary-rgb) / 8%) !important; color: var(--color-primary-800) !important; }
-  .summary-strip { display: flex; align-items: center; gap: 0.9rem; padding: 0.85rem 1rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); }
-  .summary-icon { display: grid; place-items: center; width: 2.65rem; height: 2.65rem; border-radius: 0; background: var(--color-primary-soft-surface); color: var(--green); }
-  .summary-strip div:nth-child(2) { display: grid; min-width: 100px; }
-  .summary-strip strong { font-size: 1.15rem; line-height: 1; }
-  .summary-strip div span { margin-top: 0.25rem; color: var(--color-text-muted); font-size: 0.68rem; }
-  .filters-panel { padding: 1rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); box-shadow: 0 8px 30px rgb(var(--color-shadow-rgb) / 5%); }
-  .filters-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.8rem; }
-  .filter-toolbar { display: flex; min-width: 0; align-items: center; gap: .35rem; }
-  .filter-title { display: flex; min-width: 0; flex: 1; align-items: center; gap: 0.5rem; padding: 0; border: 0; background: transparent; color: var(--color-text-muted); font-size: 0.75rem; font-weight: 800; text-align: left; }
-  .filter-title :deep(svg) { color: var(--green); width: 1rem; height: 1rem; }
-  .mobile-filter-count { display: none; }
-  .filters-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
-  .filter-field { display: flex; min-width: 0; flex-direction: column; gap: 0.4rem; }
-  .filter-field label { color: var(--color-text-muted); font-size: 0.68rem; font-weight: 700; }
-  .search-wrap { position: relative; }
-  .search-wrap > :deep(svg) { position: absolute; z-index: 2; top: 50%; left: 0.9rem; transform: translateY(-50%); color: var(--color-text-subtle); width: 0.85rem; height: 0.85rem; }
-  .search-wrap :deep(.p-inputtext) { padding-left: 2.4rem; }
-  .filter-field :deep(.p-inputtext), .filter-field :deep(.p-select) { height: 2.75rem; border-color: var(--color-border); border-radius: 0; background: var(--color-surface-soft); color: var(--color-text); font-size: 0.82rem; }
-  .date-filter :deep(.p-datepicker) { width: 100%; }
-  .date-filter :deep(.p-datepicker-dropdown) { border-color: var(--color-border); background: var(--color-surface-soft); color: var(--color-text-muted); }
-  .filter-field :deep(.p-inputtext::placeholder), .filter-field :deep(.p-select-label.p-placeholder), .filter-field :deep(.p-select-dropdown) { color: var(--color-text-subtle); }
-  .filter-field :deep(.p-inputtext:focus), .filter-field :deep(.p-select.p-focus) { border-color: var(--color-primary-500); box-shadow: 0 0 0 3px rgb(var(--color-primary-500-rgb) / 10%); }
-  .filter-action { display: flex; align-items: flex-end; }
-  .filter-action :deep(.p-button) { height: 2.75rem; color: var(--color-text-muted); font-size: 0.78rem; }
-  .section-heading { display: flex; align-items: center; justify-content: space-between; margin-top: 0.25rem; }
-  .section-heading > div { display: flex; align-items: baseline; gap: 0.65rem; }
-  .section-heading h2 { margin: 0; font-size: 1.2rem; letter-spacing: -0.025em; }
-  .section-heading span { color: var(--color-text-subtle); font-size: 0.72rem; }
-  .heading-actions { display: flex; align-items: center !important; gap: .75rem !important; }
-  .open-filters-button { display: inline-flex; height: 2.35rem; align-items: center; gap: .45rem; padding: 0 .75rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); color: var(--color-text); font-size: .78rem; font-weight: 700; cursor: pointer; }
-  .open-filters-button:hover { border-color: var(--color-primary-500); color: var(--green); }
-  .open-filters-button strong { display: grid; min-width: 1.2rem; height: 1.2rem; place-items: center; border-radius: 999px; background: var(--green); color: var(--color-white); font-size: .65rem; }
-  .filters-drawer { width: min(26rem, 100vw) !important; }
-  .drawer-filters { display: flex; flex-direction: column; gap: 1.15rem; }
-  .drawer-filters .filter-field { gap: .45rem; }
-  .drawer-filters .filter-field label { color: var(--color-text-muted); font-size: .7rem; font-weight: 750; letter-spacing: .02em; }
-  .drawer-actions { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .65rem; }
-  .drawer-actions :deep(.p-button) { justify-content: center; border-radius: 0; }
-  .view-label { display: flex; align-items: center; gap: 0.4rem; }
-  .view-label :deep(svg) { width: 0.95rem; height: 0.95rem; }
-  .tournaments-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(350px, 100%), 1fr)); gap: 1rem; }
-  .tournament-card { position: relative; overflow: hidden; padding: 1.25rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); box-shadow: 0 8px 24px rgb(var(--color-shadow-rgb) / 6%); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
-  .tournament-card::before { position: absolute; inset: 0 0 auto; height: 3px; background: var(--color-primary-500); content: ''; }
-  .tournament-card:hover, .tournament-card:focus-visible { transform: translateY(-3px); border-color: var(--color-primary-300); box-shadow: 0 16px 36px rgb(var(--color-shadow-rgb) / 11%); outline: none; }
-  .card-topline { display: flex; align-items: center; justify-content: space-between; min-height: 1.6rem; }
-  .status-pill, .draft-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.55rem; border-radius: 99px; background: var(--color-surface-muted); color: var(--color-text-muted); font-size: 0.65rem; font-weight: 800; }
-  .status-pill i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-  .status-ongoing .status-pill i { background: var(--color-primary-500); box-shadow: 0 0 0 0 rgb(var(--color-primary-500-rgb) / 30%); animation: live-pulse 1.8s ease-out infinite; }
-  .draft-pill { background: var(--color-surface-muted); color: var(--color-text-muted); }
-  @keyframes live-pulse {
-    0% { box-shadow: 0 0 0 0 rgb(var(--color-primary-500-rgb) / 30%); }
-    70%, 100% { box-shadow: 0 0 0 5px rgb(var(--color-primary-500-rgb) / 0%); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .status-ongoing .status-pill i { animation: none; }
-  }
-  .card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin: 1.15rem 0; }
-  .card-title-row h3 { margin: 0; font-size: 1.2rem; letter-spacing: -0.03em; }
-  .location { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.4rem; color: var(--color-text-muted); font-size: 0.7rem; }
-  .location :deep(svg) { width: 0.8rem; height: 0.8rem; }
-  .card-arrow { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border-radius: 50%; background: var(--color-surface-muted); color: var(--green); font-size: 0.75rem; transition: 180ms; }
-  .card-arrow :deep(svg) { width: 0.95rem; height: 0.95rem; }
-  .tournament-card:hover .card-arrow { background: var(--green); color: var(--color-white); }
-  .date-panel { display: flex; align-items: center; gap: 0.75rem; padding: 0.8rem; border-radius: 0; background: var(--color-surface-soft); }
-  .date-icon { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; flex: 0 0 auto; border-radius: 0; background: var(--color-surface-card); color: var(--green); box-shadow: 0 3px 9px rgb(var(--color-shadow-rgb) / 8%); }
-  .date-icon :deep(svg) { width: 1rem; height: 1rem; }
-  .date-panel div { display: grid; gap: 0.2rem; }
-  .date-panel small, .card-meta small { color: var(--color-text-subtle); font-size: 0.56rem; font-weight: 800; letter-spacing: 0.1em; }
-  .date-panel strong { font-size: 0.75rem; }
-  .card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1rem 0; }
-  .card-meta > div { display: flex; align-items: center; gap: 0.55rem; min-width: 0; color: var(--color-text-muted); font-size: 0.7rem; }
-  .card-meta > div :deep(svg) { width: 0.95rem; height: 0.95rem; color: var(--color-primary-300); }
-  .card-meta span { display: grid; gap: 0.15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .card-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 0.8rem; border-top: 1px solid var(--color-surface-muted); color: var(--color-text-muted); font-size: 0.65rem; }
-  .card-footer span { display: flex; align-items: center; gap: 0.35rem; }
-  .card-footer span:last-child { color: var(--green); font-weight: 750; }
-  .skeleton-card { display: flex; min-height: 300px; flex-direction: column; gap: 1rem; cursor: default; }
-  .skeleton-status { align-self: flex-start; }
-  .skeleton-date, .skeleton-meta { display: flex; align-items: center; gap: 0.65rem; }
-  .empty-state { display: flex; min-height: 280px; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed var(--color-border); border-radius: 0; background: var(--color-surface-soft); text-align: center; }
-  .empty-state > span { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; background: var(--color-primary-soft-surface); color: var(--green); font-size: 1.3rem; }
-  .empty-state > span :deep(svg) { width: 1.35rem; height: 1.35rem; }
-  .empty-state h3 { margin: 1rem 0 0.3rem; }
-  .empty-state p { margin: 0; color: var(--color-text-muted); font-size: 0.8rem; }
-  .load-more-area { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-  .loading-more-grid { width: 100%; }
-  .all-loaded { display: flex; align-items: center; gap: 0.4rem; margin: 0; color: var(--color-text-subtle); font-size: 0.72rem; }
-  .all-loaded :deep(svg) { width: 1rem; height: 1rem; color: var(--color-primary-500); }
-  .filter-action-mobile { display: none; }
-
-  @media (max-width: 1100px) {
-    .filters-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
-
-  @media (max-width: 800px) {
-    .page-header { align-items: flex-start; }
-    .page-subtitle, .view-label { display: none; }
-  }
-
-  @media (max-width: 520px) {
-    .tournaments-page { gap: 0.8rem; }
-    .page-header { align-items: center; flex-direction: row; gap: 0.75rem; padding-top: 0; }
-    .page-header > div { min-width: 0; flex: 1; }
-    .eyebrow { display: none; }
-    .page-header h1 { overflow: hidden; font-size: 1.7rem; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
-    .create-button { min-width: auto; height: 2.4rem; padding-inline: 0.2rem; }
-    .summary-strip { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.8rem; }
-    .summary-icon { width: 2.2rem; height: 2.2rem; }
-    .summary-strip strong { font-size: 1rem; }
-    .summary-strip div:nth-child(2) span { font-size: 0.72rem; }
-    .filters-panel { padding: 0.65rem; border-radius: 0; box-shadow: none; }
-    .filters-header { align-items: center; gap: 0.5rem; margin-bottom: 0; }
-    .filter-title { min-height: 2rem; padding-inline: 0.2rem; font-size: 0.875rem; }
-    .filters-header .filter-action { display: none; }
-    .mobile-filter-count { display: inline-flex; align-items: center; gap: 0.45rem; margin-left: auto; color: var(--green); }
-    .mobile-filter-count > i { transition: transform 160ms; }
-    .mobile-open .mobile-filter-count > i { transform: rotate(180deg); }
-    .filters-grid { grid-template-columns: 1fr; }
-    .filters-grid > :not(.search-field) { display: none; }
-    .mobile-open .filters-grid > * { display: flex; }
-    .filters-grid { margin-top: 0.55rem; }
-    .filter-action-mobile { display: flex; margin-top: 0.65rem; }
-    .filter-action-mobile :deep(.p-button) { width: 100%; height: 2.2rem; padding-inline: 0.35rem; }
-    .section-heading { margin-top: 0.2rem; }
-    .heading-actions { gap: .35rem !important; }
-    .open-filters-button { height: 2.2rem; padding-inline: .65rem; }
-    .filters-drawer { width: 100vw !important; }
-    .drawer-actions { grid-template-columns: 1fr; }
-    .section-heading h2 { font-size: 1.05rem; }
-    .section-heading span { font-size: 0.75rem; }
-    .tournaments-grid { display: flex; flex-direction: column; gap: 0.65rem; }
-    .tournament-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.35rem 0.65rem; padding: 0.55rem 0.65rem; border-radius: 0; box-shadow: 0 2px 8px rgb(var(--color-shadow-rgb) / 5%); }
-    .tournament-card::before { width: 3px; height: auto; inset: 0 auto 0 0; }
-    .tournament-card:hover { transform: none; }
-    .card-topline { grid-column: 2; grid-row: 1; min-height: auto; }
-    .status-pill { padding: 0.2rem 0.4rem; background: transparent; font-size: 0.75rem; }
-    .status-upcoming .status-pill, .status-completed .status-pill { background: transparent; }
-    .status-pill i { box-shadow: none; }
-    .draft-pill { display: none; }
-    .card-title-row { grid-column: 1; grid-row: 1; min-width: 0; margin: 0; }
-    .card-title-row > div { min-width: 0; }
-    .card-title-row h3 { overflow: hidden; font-size: 0.98rem; text-overflow: ellipsis; white-space: nowrap; }
-    .location { display: none; }
-    .card-arrow { display: none; }
-    .date-panel { grid-column: 1 / -1; grid-row: 2; gap: 0.35rem; padding: 0; background: transparent; }
-    .date-icon { display: inline-grid; width: 1rem; height: 1rem; background: transparent; box-shadow: none; font-size: 0.75rem; }
-    .date-panel div { display: block; }
-    .date-panel small, .card-meta small { display: none; }
-    .date-panel strong { color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 600; }
-    .card-meta { grid-column: 1 / -1; grid-row: 3; display: flex; gap: 0.8rem; padding: 0; }
-    .card-meta > div { gap: 0.35rem; font-size: 0.8125rem; }
-    .card-meta span { display: block; }
-    .card-footer { display: none; }
-    .skeleton-card { display: grid; min-height: 6rem; }
-    .skeleton-title { grid-column: 1; grid-row: 1; width: min(11rem, 70%) !important; }
-    .skeleton-status { grid-column: 2; grid-row: 1; justify-self: end; align-self: center; }
-    .skeleton-date { grid-column: 1 / -1; grid-row: 2; gap: 0.35rem; }
-    .skeleton-meta { grid-column: 1 / -1; grid-row: 3; gap: 0.8rem; }
-    .load-more-area :deep(.p-button) { width: 100%; }
-  }
-
-  /* Tournament collections always use compact list items. */
-  .tournaments-grid { display: grid; grid-template-columns: 1fr; gap: 0.45rem; }
-  .tournament-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.35rem 0.65rem; min-height: 6rem; padding: 0.55rem 0.65rem; box-shadow: none; }
-  .tournament-card::before { width: 3px; height: auto; inset: 0 auto 0 0; }
-  .tournament-card:hover { transform: none; }
-  .card-topline { grid-column: 2; grid-row: 1; min-height: auto; }
-  .status-pill { padding: 0.2rem 0.4rem; background: transparent; font-size: 0.75rem; }
-  .status-upcoming .status-pill, .status-completed .status-pill { background: transparent; }
-  .status-pill i { box-shadow: none; }
-  .draft-pill { display: none; }
-  .card-title-row { grid-column: 1; grid-row: 1; min-width: 0; margin: 0; }
-  .card-title-row > div { min-width: 0; }
-  .card-title-row h3 { overflow: hidden; font-size: 0.98rem; text-overflow: ellipsis; white-space: nowrap; }
-  .location, .card-arrow { display: none; }
-  .date-panel { grid-column: 1 / -1; grid-row: 2; gap: 0.35rem; padding: 0; background: transparent; }
-  .date-icon { display: inline-grid; width: 1rem; height: 1rem; background: transparent; box-shadow: none; font-size: 0.75rem; }
-  .date-panel div { display: block; }
-  .date-panel small, .card-meta small { display: none; }
-  .date-panel strong { color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 600; }
-  .card-meta { grid-column: 1 / -1; grid-row: 3; display: flex; gap: 0.8rem; padding: 0; }
-  .card-meta > div { gap: 0.35rem; font-size: 0.8125rem; }
-  .card-meta span { display: block; }
-  .card-footer { display: none; }
-
-  .skeleton-card { display: grid; min-height: 6rem; }
-  .skeleton-title { grid-column: 1; grid-row: 1; width: min(11rem, 70%) !important; }
-  .skeleton-status { grid-column: 2; grid-row: 1; justify-self: end; align-self: center; }
-  .skeleton-date { grid-column: 1 / -1; grid-row: 2; gap: 0.35rem; }
-  .skeleton-meta { grid-column: 1 / -1; grid-row: 3; gap: 0.8rem; }
-
-  @media (min-width: 768px) {
-    .tournaments-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
-
-  @media (min-width: 1200px) {
-    .tournaments-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  }
-</style>

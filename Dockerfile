@@ -3,7 +3,7 @@ FROM node:22-alpine
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN HUSKY=0 npm ci
 
 COPY . .
 RUN npx prisma generate --schema server/prisma/schema.prisma

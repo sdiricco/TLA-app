@@ -78,6 +78,30 @@ Generate the Prisma client with:
 npm run prisma:generate
 ```
 
+## Releases
+
+Commit messages and pull request titles follow
+[Conventional Commits](https://www.conventionalcommits.org/):
+
+```text
+feat(tournaments): add doubles brackets
+fix(auth): refresh expired sessions
+docs: explain the release workflow
+```
+
+Husky and Commitlint validate new commits locally, while GitHub Actions validates
+pull request titles and commits. Pushes to `master` run a full build and then
+Semantic Release determines the next version:
+
+- `fix` produces a patch release.
+- `feat` produces a minor release.
+- `BREAKING CHANGE` in the footer, or `!` after the type/scope, produces a major
+  release.
+
+Releases are published as Git tags and GitHub Releases with generated notes.
+This private application is not published to npm. Run `npm run release:dry-run`
+with a suitable GitHub token when release analysis must be tested locally.
+
 ## Documentation
 
 | Document | Description |
