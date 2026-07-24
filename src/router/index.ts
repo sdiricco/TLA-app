@@ -97,6 +97,12 @@ const router = createRouter({
           meta: { requiresAuth: true, requiresAdmin: true },
         },
         {
+          path: 'tournaments/phases/configure',
+          name: 'tournament-phases-builder',
+          component: () => import('../views/TournamentPhasesBuilderView.vue'),
+          meta: { requiresAuth: true, requiresAdmin: true },
+        },
+        {
           path: 'tournaments/:id/edit',
           name: 'tournament-edit',
           component: () => import('../views/TournamentFormView.vue'),

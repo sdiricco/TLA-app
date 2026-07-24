@@ -111,7 +111,7 @@ watchDebounced(search, loadOrganizations, { debounce: 250 })
     <!------------------------------>
     <section class="absolute inset-x-3 bottom-3 z-20 grid max-h-[54dvh] gap-3 overflow-y-auto border border-(--color-border) bg-(--color-surface-card) p-3 shadow-xl backdrop-blur-md md:right-auto md:w-full md:max-w-sm md:max-h-[72dvh]" aria-label="Ricerca e lista organizzazioni">
       <div class="mx-auto h-1 w-9 bg-(--color-border-strong) md:hidden" aria-hidden="true" />
-      <div class="flex items-end justify-between gap-3"><div><p class="mb-1 text-[0.65rem] font-extrabold tracking-[0.14em] text-primary-700">TROVA LA TUA COMMUNITY</p><h1 class="text-xl font-bold tracking-tight">Organizzazioni pubbliche</h1></div><span class="whitespace-nowrap text-xs text-(--color-text-muted)">{{ organizations.length }} mostrate</span></div>
+      <div class="flex items-end justify-between gap-3"><div><p class="mb-1 text-[0.65rem] font-extrabold tracking-[0.14em] text-primary">TROVA LA TUA COMMUNITY</p><h1 class="text-xl font-bold tracking-tight">Organizzazioni pubbliche</h1></div><span class="whitespace-nowrap text-xs text-(--color-text-muted)">{{ organizations.length }} mostrate</span></div>
       <InputText v-model="search" placeholder="Cerca per nome, città o sport" aria-label="Cerca organizzazioni" fluid />
       <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
 
@@ -127,7 +127,7 @@ watchDebounced(search, loadOrganizations, { debounce: 250 })
         <div class="flex items-baseline justify-between gap-2"><strong id="my-organizations-title" class="text-sm">Le tue organizzazioni</strong><small class="text-xs text-(--color-text-muted)">seleziona per cambiare spazio</small></div>
         <div class="grid gap-2">
           <button v-for="organization in myOrganizations" :key="`mine-${organization.id}`" type="button" class="flex w-full items-center gap-3 border bg-(--color-surface-card) p-3 text-left" :class="organization.id === selectedId ? 'border-primary-500 bg-primary-50' : 'border-(--color-border)'" @click="selectOrganization(organization)">
-            <span class="grid size-8 shrink-0 place-items-center bg-primary-50 text-primary-700"><i class="pi pi-building" /></span><span class="grid min-w-0 flex-1"><strong class="truncate">{{ organization.name }}</strong><small class="truncate text-xs text-(--color-text-muted)">{{ organization.visibility === 'public' ? 'Pubblica' : 'Privata' }} · {{ organization.role === 'owner' ? 'Proprietario' : organization.role === 'admin' ? 'Amministratore' : 'Membro' }}</small></span><i class="pi pi-chevron-right" aria-hidden="true" />
+            <span class="grid size-8 shrink-0 place-items-center bg-primary-50 text-primary"><i class="pi pi-building" /></span><span class="grid min-w-0 flex-1"><strong class="truncate">{{ organization.name }}</strong><small class="truncate text-xs text-(--color-text-muted)">{{ organization.visibility === 'public' ? 'Pubblica' : 'Privata' }} · {{ organization.role === 'owner' ? 'Proprietario' : organization.role === 'admin' ? 'Amministratore' : 'Membro' }}</small></span><i class="pi pi-chevron-right" aria-hidden="true" />
           </button>
         </div>
       </section>
@@ -135,7 +135,7 @@ watchDebounced(search, loadOrganizations, { debounce: 250 })
       <!-- Discovery results -->
       <div class="grid gap-2">
         <button v-for="organization in organizations" :key="organization.id" type="button" class="flex w-full items-center gap-3 border bg-(--color-surface-card) p-3 text-left" :class="organization.id === selectedId ? 'border-primary-500 bg-primary-50' : 'border-(--color-border)'" @click="selectOrganization(organization)">
-          <span class="grid size-8 shrink-0 place-items-center bg-primary-50 text-primary-700"><i class="pi pi-building" /></span><span class="grid min-w-0 flex-1"><strong class="truncate">{{ organization.name }}</strong><small class="truncate text-xs text-(--color-text-muted)">{{ [organization.city, organization.sport].filter(Boolean).join(' · ') || 'Community sportiva' }} · {{ organization.member_count }} membri</small></span><i class="pi pi-chevron-right" aria-hidden="true" />
+          <span class="grid size-8 shrink-0 place-items-center bg-primary-50 text-primary"><i class="pi pi-building" /></span><span class="grid min-w-0 flex-1"><strong class="truncate">{{ organization.name }}</strong><small class="truncate text-xs text-(--color-text-muted)">{{ [organization.city, organization.sport].filter(Boolean).join(' · ') || 'Community sportiva' }} · {{ organization.member_count }} membri</small></span><i class="pi pi-chevron-right" aria-hidden="true" />
         </button>
       </div>
       <Button v-if="hasMore" label="Carica altre" icon="pi pi-plus" text :loading="loading" @click="loadOrganizations(false)" />

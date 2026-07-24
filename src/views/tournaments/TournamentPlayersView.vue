@@ -261,7 +261,7 @@ onMounted(loadPlayers)
 
   <div v-else class="flex flex-col gap-4 py-2">
     <!-- Player filters -->
-    <div class="grid gap-3 border border-surface-200 bg-surface-0 p-4 lg:grid-cols-[1fr_1fr_auto]">
+    <div class="grid gap-3 rounded-lg border border-surface-200 bg-surface-0 p-4 lg:grid-cols-[1fr_1fr_auto]">
       <div class="flex flex-col gap-1.5">
         <label for="enrolled-player-name" class="text-sm font-medium">Cerca per nome</label>
         <InputText id="enrolled-player-name" v-model="enrolledNameFilter" placeholder="Mario Rossi" fluid />
@@ -287,7 +287,7 @@ onMounted(loadPlayers)
         </span>
       </div>
 
-      <div class="border border-surface-200 bg-surface-50 p-4">
+      <div class="rounded-lg border border-surface-200 bg-surface-50 p-4">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div class="font-semibold text-color">Aggiungi giocatori</div>
@@ -320,7 +320,7 @@ onMounted(loadPlayers)
           <template #option="{ option }">
             <div class="flex w-full items-center gap-3 py-1">
               <Avatar
-                class="size-11! bg-primary-50! text-sm! font-bold! text-primary-700!"
+                class="size-11!"
                 :label="getPlayerInitials(option)"
                 :image="option.photo_url ?? undefined"
                 shape="circle"
@@ -328,7 +328,7 @@ onMounted(loadPlayers)
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
                   <span class="truncate font-medium text-color">{{ option.name }}</span>
-                  <Tag :value="`#${option.ranking}`" severity="secondary" class="text-[0.65rem]" />
+              <Tag :value="`#${option.ranking}`" severity="secondary" />
                 </div>
                 <div class="text-xs text-muted-color">
                   <template v-if="option.club">{{ option.club }} · </template>{{ formatAge(option.birth_date) }}
@@ -338,7 +338,7 @@ onMounted(loadPlayers)
           </template>
           <template #chip="{ value }">
             <div class="flex items-center gap-2">
-              <span class="inline-flex size-5 items-center justify-center rounded-full bg-primary-100 text-[0.65rem] font-bold text-primary-700">
+              <span class="inline-flex size-5 items-center justify-center rounded-full bg-primary-100 text-[0.65rem] font-bold text-primary">
                 {{ getPlayerInitialsById(value) }}
               </span>
               <span>{{ getPlayerName(value) }}</span>
@@ -356,7 +356,7 @@ onMounted(loadPlayers)
         <p>Nessun iscritto corrisponde ai filtri.</p>
       </div>
       <div v-else class="flex flex-col gap-4">
-        <div class="flex flex-col items-stretch justify-between gap-3 border border-(--color-border) bg-(--color-surface-soft) p-3 sm:flex-row sm:items-center">
+        <div class="flex flex-col items-stretch justify-between gap-3 rounded-lg border border-(--color-border) bg-(--color-surface-soft) p-3 sm:flex-row sm:items-center">
           <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-bold text-muted-color">
             <Checkbox
               :binary="true"
@@ -416,7 +416,7 @@ onMounted(loadPlayers)
             @click="handleWithdraw"
           />
         </div>
-        <div v-if="!canAddMorePlayers && tournament.participant_limit" class="border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <div v-if="!canAddMorePlayers && tournament.participant_limit" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           Torneo al completo: raggiunto il limite di {{ tournament.participant_limit }} partecipanti.
         </div>
         <div v-if="filteredEnrolledPlayers.length === 0" class="flex flex-col items-center gap-3 py-10 text-center text-muted-color">

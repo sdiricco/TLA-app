@@ -71,14 +71,13 @@ async function createOrganization(): Promise<void> {
     <!-- Section: Header -->
     <header class="mb-4">
       <Button
-        class="-ml-3"
         icon="pi pi-arrow-left"
         label="Organizzazioni"
         text
         severity="secondary"
         @click="router.push({ name: 'organizations' })"
       />
-      <p class="mb-2 mt-4 text-xs font-extrabold tracking-[0.15em] text-primary-700">NUOVO SPAZIO</p>
+      <p class="mb-2 mt-4 text-xs font-extrabold tracking-[0.15em] text-primary">NUOVO SPAZIO</p>
       <h1 class="text-3xl font-bold tracking-tight sm:text-5xl">Crea un’organizzazione</h1>
       <p class="mt-3 leading-relaxed text-(--color-text-muted)">Configura il tuo spazio e diventa il suo proprietario.</p>
     </header>
@@ -86,7 +85,7 @@ async function createOrganization(): Promise<void> {
     <!------------------------------>
     <!-- Section: Organization form -->
     <!------------------------------>
-    <form class="grid gap-3 border border-(--color-border) bg-(--color-surface-card) p-4 shadow-sm sm:p-6" @submit.prevent="createOrganization">
+    <form class="grid gap-3 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6" @submit.prevent="createOrganization">
       <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
 
       <label for="organization-name" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">
@@ -119,6 +118,6 @@ async function createOrganization(): Promise<void> {
     </form>
 
     <!-- Section: Explorer navigation -->
-    <Button class="mt-3" label="Esplora organizzazioni" icon="pi pi-map" text @click="router.push({ name: 'organizations-explore' })" />
+    <Button label="Esplora organizzazioni" icon="pi pi-map" text @click="router.push({ name: 'organizations-explore' })" />
   </section>
 </template>

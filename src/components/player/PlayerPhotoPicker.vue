@@ -219,7 +219,6 @@
             <span class="photo-hint">JPG, PNG o WEBP · ritaglio 1:1</span>
             <div class="photo-actions">
               <Button
-                class="upload-button"
                 type="button"
                 label="Carica immagine"
                 icon="pi pi-upload"
@@ -284,9 +283,7 @@
 .photo-copy > p { max-width: 540px; margin: 0; color: var(--color-text-muted); font-size: 0.72rem; line-height: 1.55; }
 .photo-hint { display: block; margin-top: 0.3rem; color: var(--color-text-subtle); font-size: 0.55rem; font-weight: 700; letter-spacing: 0.05em; }
 .photo-actions { display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 0.8rem; }
-.photo-actions :deep(.p-button) { height: 2.45rem; border-radius: 0; font-size: 0.68rem; }
-.upload-button { border-color: var(--color-primary-700); background: var(--color-primary-700); }
-.crop-editor { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); box-shadow: 0 8px 24px rgb(var(--color-shadow-rgb) / 7%); }
+.crop-editor { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); }
 .crop-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .crop-header > div > div { font-size: 0.82rem; font-weight: 750; }
 .crop-header p { margin: 0.25rem 0 0; color: var(--color-text-muted); font-size: 0.62rem; }
@@ -296,10 +293,9 @@
 
 @media (max-width: 620px) {
   .empty-preview span, .photo-hint, .crop-header p, .crop-meta { font-size: 0.75rem; }
-  .photo-copy > p, .photo-actions :deep(.p-button) { font-size: 0.8125rem; }
+  .photo-copy > p { font-size: 0.8125rem; }
 }
 .crop-actions { display: flex; justify-content: flex-end; gap: 0.55rem; }
-.crop-actions :deep(.p-button) { border-radius: 0; }
 
 @media (max-width: 520px) {
   .photo-picker { grid-template-columns: 1fr; justify-items: center; text-align: center; }

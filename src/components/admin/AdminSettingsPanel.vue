@@ -79,7 +79,7 @@ function toggleCategory(category: TournamentCategory, enabled: boolean): void {
         <Tag value="Bloccato su verde" severity="success" />
       </div>
 
-      <Card class="overflow-hidden border-primary-200 bg-primary-50/40">
+      <Card>
         <template #content>
           <div class="flex items-start gap-4">
             <div class="flex h-12 w-12 shrink-0 items-center justify-center bg-primary-100 text-primary-600">
@@ -126,11 +126,6 @@ function toggleCategory(category: TournamentCategory, enabled: boolean): void {
         <Card
           v-for="item in formatCards"
           :key="item.format"
-          class="overflow-hidden"
-          :class="{
-            'border-primary-200 bg-primary-50/40': item.enabled,
-            'opacity-90': !item.enabled,
-          }"
         >
           <template #content>
             <div class="flex items-start gap-4">
@@ -192,11 +187,6 @@ function toggleCategory(category: TournamentCategory, enabled: boolean): void {
         <Card
           v-for="item in categoryCards"
           :key="item.category"
-          class="overflow-hidden"
-          :class="{
-            'border-primary-200 bg-primary-50/40': item.enabled,
-            'opacity-90': !item.enabled,
-          }"
         >
           <template #content>
             <div class="flex items-start gap-4">
@@ -245,12 +235,5 @@ function toggleCategory(category: TournamentCategory, enabled: boolean): void {
 <style scoped>
 @media (max-width: 640px) {
   h2 { font-size: 1.65rem; }
-  :deep(.p-card-body), :deep(.p-card-content) { padding: 0.75rem; }
-  :deep(.p-card) { border-radius: 0; box-shadow: none; }
-  :deep(.p-card-content > div) { gap: 0.7rem; }
-  :deep(.p-card-content .h-12) { width: 2.5rem; height: 2.5rem; border-radius: 0; }
-  :deep(.p-card-content p) { display: none; }
-  :deep(.p-card-content .mt-5) { margin-top: 0.65rem; }
-  :deep(.p-card-content .mt-5 > span:first-child) { display: none; }
 }
 </style>

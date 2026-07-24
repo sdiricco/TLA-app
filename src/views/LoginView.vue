@@ -42,7 +42,7 @@ async function handleGuestLogin(): Promise<void> {
     class="grid min-h-svh place-items-center bg-(--color-surface-soft) text-(--color-text) md:p-8 xl:p-10"
   >
     <section
-      class="grid min-h-svh w-full max-w-6xl overflow-hidden bg-(--color-surface-card) md:min-h-[calc(100svh-4rem)] md:grid-cols-2 md:border md:border-(--color-border) md:shadow-[0_28px_70px_rgb(var(--color-shadow-rgb)/14%)] xl:min-h-[calc(100svh-5rem)]"
+      class="grid min-h-svh w-full max-w-6xl overflow-hidden bg-(--color-surface-card) md:min-h-[calc(100svh-4rem)] md:grid-cols-2 md:rounded-lg md:border md:border-(--color-border) xl:min-h-[calc(100svh-5rem)]"
       aria-label="Accesso a TLA App"
     >
       <!------------------------------>
@@ -72,7 +72,7 @@ async function handleGuestLogin(): Promise<void> {
           <!-- Section: Login introduction -->
           <!------------------------------>
           <header class="mb-7 sm:mb-8">
-            <p class="mb-2 text-xs font-extrabold tracking-[0.16em] text-primary-700">BENTORNATO</p>
+            <p class="mb-2 text-xs font-extrabold tracking-[0.16em] text-primary">BENTORNATO</p>
             <h1 class="text-3xl font-bold leading-tight tracking-tight xl:text-4xl">
               Accedi al tuo account
             </h1>
@@ -90,49 +90,34 @@ async function handleGuestLogin(): Promise<void> {
             <!-- Email field -->
             <div class="flex flex-col gap-2">
               <label for="email" class="text-sm font-bold text-(--color-text-muted)">Email</label>
-              <span class="relative block">
-                <i
-                  class="pi pi-envelope pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-sm text-(--color-text-subtle)"
-                  aria-hidden="true"
-                />
-                <InputText
-                  id="email"
-                  v-model="email"
-                  class="h-13 w-full rounded-none border-(--color-border) bg-(--color-surface-soft) pl-11 text-sm focus:border-primary-500 focus:bg-(--color-surface-card) focus:ring-4 focus:ring-primary-500/10"
-                  type="email"
-                  placeholder="nome@esempio.it"
-                  autocomplete="email"
-                  fluid
-                  required
-                />
-              </span>
+              <InputText
+                id="email"
+                v-model="email"
+                type="email"
+                placeholder="nome@esempio.it"
+                autocomplete="email"
+                fluid
+                required
+              />
             </div>
 
             <!-- Password field -->
             <div class="flex flex-col gap-2">
               <label for="password" class="text-sm font-bold text-(--color-text-muted)">Password</label>
-              <span class="relative block">
-                <i
-                  class="pi pi-lock pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-sm text-(--color-text-subtle)"
-                  aria-hidden="true"
-                />
-                <Password
-                  id="password"
-                  v-model="password"
-                  class="w-full [&_.p-inputtext]:h-13 [&_.p-inputtext]:w-full [&_.p-inputtext]:rounded-none [&_.p-inputtext]:border-(--color-border) [&_.p-inputtext]:bg-(--color-surface-soft) [&_.p-inputtext]:pl-11 [&_.p-inputtext]:pr-12 [&_.p-inputtext]:text-sm [&_.p-inputtext:focus]:border-primary-500 [&_.p-inputtext:focus]:bg-(--color-surface-card) [&_.p-inputtext:focus]:ring-4 [&_.p-inputtext:focus]:ring-primary-500/10"
-                  placeholder="Inserisci la password"
-                  autocomplete="current-password"
-                  :feedback="false"
-                  fluid
-                  toggle-mask
-                  required
-                />
-              </span>
+              <Password
+                id="password"
+                v-model="password"
+                placeholder="Inserisci la password"
+                autocomplete="current-password"
+                :feedback="false"
+                fluid
+                toggle-mask
+                required
+              />
             </div>
 
             <!-- Primary login action -->
             <Button
-              class="mt-1 h-13 rounded-none font-bold shadow-[0_10px_24px_rgb(var(--color-primary-rgb)/20%)]"
               type="submit"
               label="Accedi"
               icon="pi pi-arrow-right"
@@ -149,7 +134,6 @@ async function handleGuestLogin(): Promise<void> {
             </div>
 
             <Button
-              class="h-12.5 rounded-none border-(--color-border) font-semibold text-(--color-text-muted)"
               type="button"
               label="Entra come ospite"
               icon="pi pi-eye"
@@ -164,7 +148,6 @@ async function handleGuestLogin(): Promise<void> {
             <div class="flex flex-wrap items-center justify-center gap-1 text-sm text-(--color-text-muted)">
               <span>Non hai ancora un account?</span>
               <Button
-                class="px-1! text-primary-700!"
                 type="button"
                 label="Registrati"
                 variant="link"

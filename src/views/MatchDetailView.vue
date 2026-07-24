@@ -117,12 +117,12 @@ watch(() => [route.params['id'], route.params['matchId']], loadPage, { immediate
     <!-- Section: Header -->
     <header class="flex items-end justify-between gap-4">
       <div>
-        <Button class="-ml-3 mb-2" label="Torna al torneo" icon="pi pi-arrow-left" text severity="secondary" @click="router.push({ name: 'tournament-detail', params: { id: route.params['id'] } })" />
-        <p class="mb-2 hidden text-xs font-extrabold tracking-[0.16em] text-primary-700 sm:block">MATCH CENTER</p>
+        <Button label="Torna al torneo" icon="pi pi-arrow-left" text severity="secondary" @click="router.push({ name: 'tournament-detail', params: { id: route.params['id'] } })" />
+        <p class="mb-2 hidden text-xs font-extrabold tracking-[0.16em] text-primary sm:block">MATCH CENTER</p>
         <h1 class="text-3xl font-bold tracking-tight sm:text-5xl">Dettaglio incontro</h1>
         <p v-if="tournament && match" class="mt-3 hidden text-(--color-text-muted) sm:block">{{ tournament.name }} · {{ roundLabel }}</p>
       </div>
-      <span v-if="match" class="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-extrabold uppercase" :class="match.status === 'completed' ? 'bg-primary-50 text-primary-700' : 'bg-(--color-surface-muted) text-(--color-text-muted)'"><i class="size-1.5 rounded-full bg-current" />{{ match.status === 'completed' ? 'Completato' : 'Da giocare' }}</span>
+      <span v-if="match" class="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-extrabold uppercase" :class="match.status === 'completed' ? 'bg-primary-50 text-primary' : 'bg-(--color-surface-muted) text-(--color-text-muted)'"><i class="size-1.5 rounded-full bg-current" />{{ match.status === 'completed' ? 'Completato' : 'Da giocare' }}</span>
     </header>
 
     <div v-if="loading" class="flex min-h-90 flex-col items-center justify-center gap-3 text-xs text-(--color-text-muted)" role="status"><ProgressSpinner class="size-9" stroke-width="4" /><span>Prepariamo il match…</span></div>
@@ -131,14 +131,14 @@ watch(() => [route.params['id'], route.params['matchId']], loadPage, { immediate
       <!------------------------------>
       <!-- Section: Match arena -->
       <!------------------------------>
-      <section class="overflow-hidden bg-linear-to-br from-primary-900 to-primary-800 p-4 text-white shadow-xl sm:p-8">
+      <section class="overflow-hidden bg-linear-to-br from-primary-900 to-primary-800 p-4 text-white sm:p-8">
         <div class="flex items-center justify-between gap-4 border-b border-white/10 pb-4 text-xs font-bold text-white/50"><span class="flex items-center gap-2"><i class="pi pi-calendar" /> {{ roundLabel }}</span><strong v-if="match.result" class="rounded-full bg-(--color-accent) px-3 py-1.5 text-(--color-sidebar-on-accent)">{{ match.result }}</strong><span v-else>Risultato da inserire</span></div>
 
         <div class="grid items-center gap-4 py-5 md:grid-cols-[1fr_auto_1fr] md:gap-8">
           <template v-for="(slot, index) in arenaPlayers" :key="index">
             <article class="relative flex min-w-0 flex-col items-center text-center">
               <span v-if="effectiveWinnerId === slot.id && slot.id" class="mb-3 inline-flex items-center gap-1 rounded-full bg-(--color-accent) px-2 py-1 text-xs font-extrabold text-(--color-sidebar-on-accent)"><i class="pi pi-trophy" /> VINCITORE</span>
-              <Avatar :label="slot.player ? getPlayerInitials(slot.player) : 'TBD'" :image="slot.player?.photo_url ?? undefined" shape="circle" class="size-20! border-4! border-white/15! bg-surface-100! text-xl! text-(--color-text-muted)! shadow-xl sm:size-32!" :class="effectiveWinnerId === slot.id && slot.id ? 'ring-4 ring-(--color-accent)' : ''" />
+              <Avatar :label="slot.player ? getPlayerInitials(slot.player) : 'TBD'" :image="slot.player?.photo_url ?? undefined" shape="circle" class="size-20! sm:size-32!" :class="effectiveWinnerId === slot.id && slot.id ? 'ring-4 ring-(--color-accent)' : ''" />
               <h2 class="mt-4 max-w-full truncate text-xl font-bold tracking-tight sm:text-3xl">{{ getSlotName(slot.id) }}</h2>
               <p class="mt-2 flex items-center gap-2 text-xs text-white/50"><i class="pi pi-building-columns" /> {{ slot.player?.club ?? 'Club non disponibile' }}</p>
               <div class="mt-4 grid w-full max-w-sm grid-cols-3 gap-1">
@@ -158,9 +158,9 @@ watch(() => [route.params['id'], route.params['matchId']], loadPage, { immediate
       <!-- Section: Match management -->
       <!------------------------------>
       <section v-if="canModify && !hasBye" class="flex flex-col gap-4">
-        <header class="flex items-center gap-3"><span class="grid size-10 place-items-center bg-primary-50 text-primary-700"><i class="pi pi-sliders-h" /></span><div><p class="text-[0.65rem] font-extrabold tracking-[0.12em] text-primary-700">GESTIONE INCONTRO</p><h2 class="mt-1 font-bold">Aggiorna il match</h2></div></header>
-        <form class="flex max-w-2xl flex-col gap-4 border border-(--color-border) bg-(--color-surface-card) p-4 shadow-sm sm:p-5" @submit.prevent="saveResult">
-          <header class="flex items-center gap-3 border-b border-(--color-surface-muted) pb-4"><span class="grid size-9 place-items-center bg-(--color-surface-muted) text-primary-700"><i class="pi pi-flag" /></span><div><h3 class="font-bold">Risultato finale</h3><p class="mt-1 text-xs text-(--color-text-subtle)">Inserisci il punteggio e indica chi ha vinto.</p></div></header>
+        <header class="flex items-center gap-3"><span class="grid size-10 place-items-center bg-primary-50 text-primary"><i class="pi pi-sliders-h" /></span><div><p class="text-[0.65rem] font-extrabold tracking-[0.12em] text-primary">GESTIONE INCONTRO</p><h2 class="mt-1 font-bold">Aggiorna il match</h2></div></header>
+        <form class="flex max-w-2xl flex-col gap-4 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-5" @submit.prevent="saveResult">
+          <header class="flex items-center gap-3 border-b border-(--color-surface-muted) pb-4"><span class="grid size-9 place-items-center bg-(--color-surface-muted) text-primary"><i class="pi pi-flag" /></span><div><h3 class="font-bold">Risultato finale</h3><p class="mt-1 text-xs text-(--color-text-subtle)">Inserisci il punteggio e indica chi ha vinto.</p></div></header>
           <label for="match-result" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Risultato<InputText id="match-result" v-model="resultValue" placeholder="es. 6-3 6-4" fluid /></label>
           <label for="match-winner" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Vincitore<Select id="match-winner" v-model="winnerId" :options="[player1, player2].filter(Boolean)" option-label="name" option-value="id" placeholder="Seleziona vincitore" fluid /></label>
           <footer class="flex flex-col items-stretch justify-between gap-3 border-t border-(--color-surface-muted) pt-4 sm:flex-row sm:items-center"><span class="text-xs text-(--color-text-subtle)">Il vincitore avanzerà automaticamente</span><Button type="submit" label="Salva risultato" icon="pi pi-trophy" :loading="savingResult" :disabled="!resultValue || !winnerId" /></footer>

@@ -120,7 +120,7 @@ watch([statusFilter, typeFilter], loadRequests)
     <!------------------------------>
     <!-- Section: Request filters -->
     <!------------------------------>
-    <div class="flex flex-col gap-3 border border-(--color-border) bg-(--color-surface-card) p-4 shadow-sm sm:flex-row sm:items-end">
+    <div class="flex flex-col gap-3 border border-(--color-border) bg-(--color-surface-card) p-4 sm:flex-row sm:items-end">
       <label for="request-status-filter" class="grid min-w-0 flex-1 gap-2 text-sm font-bold text-(--color-text-muted)">
         Stato
         <Select id="request-status-filter" v-model="statusFilter" :options="statusFilterOptions" option-label="label" option-value="value" fluid />
@@ -139,10 +139,9 @@ watch([statusFilter, typeFilter], loadRequests)
       <article
         v-for="request in requests"
         :key="request.id"
-        class="grid min-h-22 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border border-(--color-border) bg-(--color-surface-card) p-3 shadow-sm sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-4 sm:p-4"
+        class="grid min-h-22 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border border-(--color-border) bg-(--color-surface-card) p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-4 sm:p-4"
       >
         <Button
-          class="min-w-17 rounded-full"
           :label="String(request.important_count)"
           icon="pi pi-arrow-up"
           size="small"
@@ -153,11 +152,11 @@ watch([statusFilter, typeFilter], loadRequests)
         />
 
         <RouterLink :to="{ name: 'request-detail', params: { id: request.id } }" class="group flex min-w-0 items-center gap-3 text-inherit no-underline sm:gap-4">
-          <span class="grid size-12 shrink-0 place-items-center bg-(--color-surface-soft) text-lg text-primary-700 sm:size-13">
+          <span class="grid size-12 shrink-0 place-items-center bg-(--color-surface-soft) text-lg text-primary sm:size-13">
             <i :class="typeIcon(request.type)" />
           </span>
           <span class="grid min-w-0 gap-1">
-            <strong class="truncate text-base transition-colors group-hover:text-primary-700">{{ request.title }}</strong>
+            <strong class="truncate text-base transition-colors group-hover:text-primary">{{ request.title }}</strong>
             <small class="truncate text-xs text-(--color-text-muted)"><span class="font-semibold text-(--color-text)">{{ request.created_by.name }}</span> · {{ formatDate(request.created_at) }} · {{ typeLabel(request.type) }}</small>
           </span>
         </RouterLink>
@@ -168,7 +167,6 @@ watch([statusFilter, typeFilter], loadRequests)
           <Select
             v-if="organizations.isAdmin"
             :id="`request-status-${request.id}`"
-            class="w-full max-w-48 sm:w-42"
             :model-value="request.status"
             :options="statusOptions"
             option-label="label"

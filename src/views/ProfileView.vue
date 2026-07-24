@@ -22,6 +22,7 @@ const loadingPlayer = ref(true)
 const editOpen = ref(false)
 const editName = ref('')
 const saving = ref(false)
+const loggingOut = ref(false)
 const error = ref<string | null>(null)
 
 const displayName = computed(() => auth.user?.name || auth.user?.email || 'Il tuo profilo')
@@ -57,6 +58,16 @@ async function saveProfile(): Promise<void> {
   }
 }
 
+async function logout(): Promise<void> {
+  loggingOut.value = true
+  try {
+    await auth.logout()
+    await router.replace({ name: 'login' })
+  } finally {
+    loggingOut.value = false
+  }
+}
+
 // The player card is optional because not every account is linked to a player.
 async function loadPlayerCard(): Promise<void> {
   loadingPlayer.value = true
@@ -78,11 +89,11 @@ onMounted(loadPlayerCard)
   <!------------------------------>
   <main class="mx-auto grid w-full max-w-270 gap-4 text-(--color-text)">
     <!-- Section: Account hero -->
-    <header class="flex flex-col items-start justify-between gap-4 border border-(--color-border) bg-(--color-surface-card) p-4 shadow-sm md:flex-row md:items-center sm:p-6">
+    <header class="flex flex-col items-start justify-between gap-4 border border-(--color-border) bg-(--color-surface-card) p-4 md:flex-row md:items-center sm:p-6">
       <div class="flex items-center gap-4">
-        <Avatar :label="initials(displayName)" shape="circle" class="size-18! shrink-0 bg-primary-700! text-xl! font-extrabold! text-white!" />
+        <Avatar :label="initials(displayName)" shape="circle" class="size-18! shrink-0" />
         <div class="min-w-0">
-          <p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary-700">IL TUO ACCOUNT</p>
+          <p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary">IL TUO ACCOUNT</p>
           <h1 class="truncate text-3xl font-bold tracking-tight sm:text-4xl">{{ displayName }}</h1>
           <p class="mt-1 text-(--color-text-muted)">{{ email }}</p>
         </div>
@@ -90,20 +101,21 @@ onMounted(loadPlayerCard)
       <div class="flex flex-wrap gap-2">
         <Button label="Le mie organizzazioni" icon="pi pi-building" severity="secondary" outlined @click="router.push({ name: 'organizations' })" />
         <Button label="Modifica profilo" icon="pi pi-pencil" @click="openEdit" />
+        <Button label="Esci" icon="pi pi-sign-out" severity="secondary" text :loading="loggingOut" @click="logout" />
       </div>
     </header>
 
     <!-- Section: Account overview -->
     <section class="grid gap-3 md:grid-cols-3" aria-label="Riepilogo account">
       <article v-for="item in [{ icon: 'pi pi-shield', label: 'RUOLO', value: roleLabel }, { icon: 'pi pi-building', label: 'LE MIE ORGANIZZAZIONI', value: `${organizationCount} ${organizationCount === 1 ? 'organizzazione' : 'organizzazioni'}` }, { icon: 'pi pi-calendar', label: 'ACCESSO', value: 'Account attivo' }]" :key="item.label" class="flex min-w-0 items-center gap-3 border border-(--color-border) bg-(--color-surface-card) p-4">
-        <i :class="item.icon" class="text-lg text-primary-700" />
+        <i :class="item.icon" class="text-lg text-primary" />
         <div><small class="block text-[0.6rem] font-extrabold tracking-wider text-(--color-text-subtle)">{{ item.label }}</small><strong class="mt-1 block text-sm">{{ item.value }}</strong></div>
       </article>
     </section>
 
     <!-- Section: Player card heading -->
     <section class="mt-2">
-      <p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary-700">ATTIVITÀ SPORTIVA</p>
+      <p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary">ATTIVITÀ SPORTIVA</p>
       <h2 class="text-2xl font-bold tracking-tight">La mia scheda giocatore</h2>
       <p class="mt-2 max-w-2xl text-(--color-text-muted)">Risultati e statistiche personali collegati all’organizzazione selezionata.</p>
     </section>
@@ -113,27 +125,27 @@ onMounted(loadPlayerCard)
     <!------------------------------>
     <!-- Section: Linked player -->
     <!------------------------------>
-    <section v-else-if="player" class="grid gap-5 border border-(--color-border) bg-(--color-surface-card) p-4 shadow-sm sm:p-6">
+    <section v-else-if="player" class="grid gap-5 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
       <div class="flex flex-wrap items-start gap-4">
-        <Avatar :label="initials(player.name)" :image="player.photo_url ?? undefined" shape="circle" class="size-20! shrink-0 bg-(--color-surface-soft)! text-xl! font-extrabold! text-primary-700!" />
-        <div class="min-w-0 flex-1"><p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary-700">GIOCATORE COLLEGATO</p><h3 class="text-xl font-bold tracking-tight">{{ player.name }}</h3><p class="mt-1 text-(--color-text-muted)">{{ player.club ?? 'Club non specificato' }} · Ranking #{{ player.ranking || '—' }}</p></div>
-        <Button class="w-full sm:w-auto" label="Apri scheda" icon="pi pi-arrow-right" icon-pos="right" text @click="router.push({ name: 'player-detail', params: { id: player.id } })" />
+        <Avatar :label="initials(player.name)" :image="player.photo_url ?? undefined" shape="circle" class="size-20! shrink-0" />
+        <div class="min-w-0 flex-1"><p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary">GIOCATORE COLLEGATO</p><h3 class="text-xl font-bold tracking-tight">{{ player.name }}</h3><p class="mt-1 text-(--color-text-muted)">{{ player.club ?? 'Club non specificato' }} · Ranking #{{ player.ranking || '—' }}</p></div>
+        <Button label="Apri scheda" icon="pi pi-arrow-right" icon-pos="right" text @click="router.push({ name: 'player-detail', params: { id: player.id } })" />
       </div>
       <div class="grid grid-cols-2 border-t border-(--color-border) md:grid-cols-4">
         <div v-for="stat in [{ label: 'PARTITE GIOCATE', value: history.stats.played }, { label: 'VITTORIE', value: history.stats.wins }, { label: 'SCONFITTE', value: history.stats.losses }, { label: 'VITTORIE %', value: `${history.stats.win_rate}%` }]" :key="stat.label" class="py-4 md:pr-4"><small class="block text-[0.6rem] font-extrabold tracking-wider text-(--color-text-subtle)">{{ stat.label }}</small><strong class="mt-1 block text-2xl tracking-tight">{{ stat.value }}</strong></div>
       </div>
     </section>
 
-    <section v-else class="flex flex-col items-start gap-4 border border-(--color-border) bg-(--color-surface-card) p-5 shadow-sm md:flex-row md:items-center">
-      <span class="grid size-11 shrink-0 place-items-center bg-(--color-surface-soft) text-primary-700"><i class="pi pi-user-plus" /></span>
+    <section v-else class="flex flex-col items-start gap-4 border border-(--color-border) bg-(--color-surface-card) p-5 md:flex-row md:items-center">
+      <span class="grid size-11 shrink-0 place-items-center bg-(--color-surface-soft) text-primary"><i class="pi pi-user-plus" /></span>
       <div class="flex-1"><h3 class="text-xl font-bold">La tua scheda giocatore non è ancora collegata</h3><p class="mt-2 text-(--color-text-muted)">Quando verrai associato a un giocatore, qui vedrai partite, vittorie e andamento.</p></div>
       <Button label="Vai ai giocatori" icon="pi pi-users" severity="secondary" outlined @click="router.push({ name: 'players' })" />
     </section>
 
     <!-- Section: Permissions -->
     <section class="flex items-start justify-between gap-4 border border-(--color-border) bg-(--color-surface-soft) p-5">
-      <div><p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary-700">ACCESSO</p><h2 class="text-xl font-bold">Permessi del tuo account</h2><p class="mt-2 text-(--color-text-muted)">{{ auth.isAdmin ? 'Puoi gestire tornei, giocatori e configurazioni della tua organizzazione.' : 'Puoi consultare tornei, richieste e la tua attività sportiva.' }}</p></div>
-      <i :class="auth.isAdmin ? 'pi pi-verified' : 'pi pi-check-circle'" class="text-3xl text-primary-700" />
+      <div><p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary">ACCESSO</p><h2 class="text-xl font-bold">Permessi del tuo account</h2><p class="mt-2 text-(--color-text-muted)">{{ auth.isAdmin ? 'Puoi gestire tornei, giocatori e configurazioni della tua organizzazione.' : 'Puoi consultare tornei, richieste e la tua attività sportiva.' }}</p></div>
+      <i :class="auth.isAdmin ? 'pi pi-verified' : 'pi pi-check-circle'" class="text-3xl text-primary" />
     </section>
 
     <!-- Section: Edit dialog -->

@@ -61,8 +61,9 @@ export const useFeatureFlagsStore = defineStore('featureFlags', () => {
   const enabledTournamentFormats = computed<TournamentFormat[]>(() => [
     'single_elimination',
     'round_robin',
+    'round_robin_elimination',
     ...(Object.entries(tournamentFormats.value.formats)
-      .filter(([, enabled]) => enabled)
+      .filter(([format, enabled]) => format !== 'round_robin_elimination' && enabled)
       .map(([format]) => format) as LockedTournamentFormat[]),
   ])
 
@@ -73,7 +74,10 @@ export const useFeatureFlagsStore = defineStore('featureFlags', () => {
   )
 
   function isTournamentFormatEnabled(format: TournamentFormat): boolean {
-    return format === 'single_elimination' || format === 'round_robin' || tournamentFormats.value.formats[format]
+    return format === 'single_elimination'
+      || format === 'round_robin'
+      || format === 'round_robin_elimination'
+      || tournamentFormats.value.formats[format]
   }
 
   function setTournamentFormatEnabled(format: LockedTournamentFormat, enabled: boolean): void {

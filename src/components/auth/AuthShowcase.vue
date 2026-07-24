@@ -23,7 +23,7 @@
 </template>
 
 <style scoped>
-.auth-showcase { --showcase-main: var(--color-showcase-grass); --showcase-deep: var(--color-showcase-grass-deep); --showcase-accent: var(--color-showcase-grass-accent); position: relative; display: flex; flex-direction: column; overflow: hidden; padding: clamp(2rem, 4vw, 3.5rem); background: var(--showcase-deep); color: var(--color-white); }
+.auth-showcase { --showcase-main: var(--color-showcase-grass); --showcase-deep: var(--color-sidebar-start); --showcase-accent: var(--color-showcase-grass-accent); position: relative; flex-direction: column; overflow: hidden; padding: clamp(2rem, 4vw, 3.5rem); background: linear-gradient(180deg, var(--color-sidebar-start) 0%, var(--color-sidebar-end) 100%); color: var(--color-white); }
 .brand { display: flex; align-items: center; gap: 0.7rem; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.04em; }
 .brand-ball { position: relative; width: 2rem; height: 2rem; overflow: hidden; border-radius: 50%; background: var(--showcase-accent); box-shadow: 0 5px 15px rgb(var(--color-black-rgb) / 16%); }
 .brand-ball::before, .brand-ball::after { position: absolute; width: 1.5rem; height: 2.25rem; border: 1.5px solid var(--showcase-deep); border-radius: 50%; content: ''; }
@@ -34,7 +34,7 @@
 .showcase-copy h1 { margin: 0; font-size: clamp(2.7rem, 5vw, 4.4rem); line-height: 0.98; letter-spacing: -0.06em; }
 .showcase-copy h1 span { color: var(--showcase-accent); }
 .showcase-copy > p:last-child { max-width: 430px; margin: 1.5rem 0 0; color: rgb(var(--color-white-rgb) / 72%); line-height: 1.65; }
-.court-card { width: min(390px, 100%); padding: 0.7rem; border: 1px solid rgb(var(--color-white-rgb) / 16%); background: rgb(var(--color-white-rgb) / 9%); box-shadow: 0 20px 40px rgb(var(--color-black-rgb) / 16%); }
+.court-card { width: min(390px, 100%); padding: 0.7rem; border: 1px solid rgb(var(--color-white-rgb) / 16%); background: rgb(var(--color-white-rgb) / 9%); }
 .court { position: relative; height: 105px; overflow: hidden; border: 1px solid rgb(var(--color-white-rgb) / 55%); background: var(--showcase-main); }
 .court::before { position: absolute; inset: 18px 0; border-block: 1px solid rgb(var(--color-white-rgb) / 55%); content: ''; }
 .court::after { position: absolute; top: 18px; bottom: 18px; left: 50%; border-left: 1px solid rgb(var(--color-white-rgb) / 55%); content: ''; }

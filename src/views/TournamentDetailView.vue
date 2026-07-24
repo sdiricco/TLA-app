@@ -29,6 +29,7 @@ const toast = useToast()
 const tournament = ref<TournamentWithPlayers | null>(null)
 const loading = ref(true)
 const updatingStatus = ref(false)
+const downloadingRegulation = ref(false)
 
 const enrolledPlayersCount = computed(() => {
   if (!tournament.value) return 0
@@ -36,23 +37,52 @@ const enrolledPlayersCount = computed(() => {
 })
 const canViewAdmin = computed(() => auth.isAdmin)
 const canModify = computed(() => !auth.isGuest)
+const activeSection = computed(() =>
+  route.name === 'tournament-players'
+    ? {
+        title: 'Giocatori iscritti',
+        description: 'Consulta e gestisci i partecipanti iscritti al torneo.',
+      }
+    : {
+        title: 'Tabellone e incontri',
+        description: 'Gestisci turni, incontri e risultati della competizione.',
+      },
+)
 
 // PrimeVue Menu consumes a declarative list. Commands remain here because they
 // modify the shared tournament and therefore affect both subpages.
-const tournamentActions = computed(() => [
-  {
-    label: tournament.value?.published ? 'Nascondi torneo' : 'Pubblica torneo',
-    icon: tournament.value?.published ? 'pi pi-eye-slash' : 'pi pi-eye',
-    command: publishToggle,
-  },
-  { separator: true },
-  {
-    label: 'Elimina torneo',
-    icon: 'pi pi-trash',
-    class: 'text-red-600',
-    command: confirmDelete,
-  },
-])
+const tournamentActions = computed(() => {
+  const actions = []
+
+  if (tournament.value?.status === 'ongoing') {
+    actions.push(
+      {
+        label: 'Chiudi torneo',
+        icon: 'pi pi-check-circle',
+        disabled: updatingStatus.value,
+        command: confirmCloseTournament,
+      },
+      { separator: true },
+    )
+  }
+
+  actions.push(
+    {
+      label: tournament.value?.published ? 'Nascondi torneo' : 'Pubblica torneo',
+      icon: tournament.value?.published ? 'pi pi-eye-slash' : 'pi pi-eye',
+      command: publishToggle,
+    },
+    { separator: true },
+    {
+      label: 'Elimina torneo',
+      icon: 'pi pi-trash',
+      class: 'text-red-600',
+      command: confirmDelete,
+    },
+  )
+
+  return actions
+})
 
 // -----------------------------------------------------------------------------
 // Loading and synchronization
@@ -83,6 +113,26 @@ function openEdit(): void {
   void router.push({ name: 'tournament-edit', params: { id: tournament.value.id } })
 }
 
+async function downloadRegulation(): Promise<void> {
+  if (!tournament.value?.regulation_name) return
+  downloadingRegulation.value = true
+  try {
+    const blob = await tournamentsStore.downloadRegulation(tournament.value.id)
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = tournament.value.regulation_name
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Download non riuscito', detail: (error as Error).message, life: 4000 })
+  } finally {
+    downloadingRegulation.value = false
+  }
+}
+
 function confirmDelete(): void {
   if (!tournament.value) return
   const currentTournament = tournament.value
@@ -102,6 +152,19 @@ function confirmDelete(): void {
         toast.add({ severity: 'error', summary: 'Errore', detail: (error as Error).message, life: 4000 })
       }
     },
+  })
+}
+
+function confirmCloseTournament(): void {
+  if (!tournament.value) return
+  confirm.require({
+    message: `Chiudere il torneo "${tournament.value.name}"? Il torneo verrà segnato come completato.`,
+    header: 'Chiudi torneo',
+    icon: 'pi pi-check-circle',
+    rejectLabel: 'Annulla',
+    acceptLabel: 'Chiudi torneo',
+    acceptSeverity: 'danger',
+    accept: () => void setTournamentStatus('completed'),
   })
 }
 
@@ -170,8 +233,10 @@ provide(tournamentDetailKey, {
         :can-view-admin="canViewAdmin"
         :guest="auth.isGuest"
         :updating-status="updatingStatus"
+        :downloading-regulation="downloadingRegulation"
         :actions="tournamentActions"
         @back="router.push({ name: 'tournaments' })"
+        @download-regulation="downloadRegulation"
         @edit="openEdit"
         @status-change="setTournamentStatus"
       />
@@ -179,26 +244,30 @@ provide(tournamentDetailKey, {
       <!------------------------------>
       <!-- Section: Tournament subpages -->
       <!------------------------------>
-      <nav class="flex overflow-x-auto border border-(--color-border) bg-(--color-surface-card) p-1" aria-label="Sezioni torneo">
+      <nav class="flex max-w-full self-start overflow-x-auto rounded-lg border border-(--color-border) bg-(--color-surface-card)" aria-label="Sezioni torneo">
         <RouterLink
           :to="{ name: 'tournament-draw', params: { id: tournament.id } }"
           class="flex min-w-max items-center gap-2 px-4 py-2.5 text-sm font-semibold text-muted-color transition-colors hover:bg-surface-50 hover:text-color"
-          active-class="bg-primary-50 text-primary-700"
+          active-class="bg-primary text-white"
         >
           <i class="pi pi-sitemap" />
           Tabellone e incontri
         </RouterLink>
         <RouterLink
           :to="{ name: 'tournament-players', params: { id: tournament.id } }"
-          class="flex min-w-max items-center gap-2 px-4 py-2.5 text-sm font-semibold text-muted-color transition-colors hover:bg-surface-50 hover:text-color"
-          active-class="bg-primary-50 text-primary-700"
+          class="flex min-w-max items-center gap-2 border-l border-(--color-border) px-4 py-2.5 text-sm font-semibold text-muted-color transition-colors hover:bg-surface-50 hover:text-color"
+          active-class="bg-primary text-white"
         >
           <i class="pi pi-users" />
           Giocatori iscritti ({{ enrolledPlayersCount }})
         </RouterLink>
       </nav>
 
-      <main class="border border-(--color-border) bg-(--color-surface-card) p-3 shadow-sm sm:p-5">
+      <main class="rounded-lg border border-(--color-border) bg-(--color-surface-card) p-3 sm:p-5">
+        <header class="mb-4 border-b border-(--color-border) pb-4">
+          <h2 class="text-lg font-bold tracking-tight text-color">{{ activeSection.title }}</h2>
+          <p class="mt-1 text-sm text-muted-color">{{ activeSection.description }}</p>
+        </header>
         <RouterView />
       </main>
     </template>

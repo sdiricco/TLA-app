@@ -42,7 +42,6 @@ const selectedStatusOption = computed(() =>
         <Select
           id="tournament-category-filter"
           v-model="filters.category"
-          class="h-11 rounded-none border-(--color-border) bg-(--color-surface-soft) text-sm"
           :options="categoryOptions"
           option-label="label"
           option-value="value"
@@ -50,13 +49,13 @@ const selectedStatusOption = computed(() =>
         >
           <template #value>
             <span v-if="selectedCategoryOption" class="flex items-center gap-2">
-              <IconifyIcon :icon="selectedCategoryOption.icon" class="shrink-0 text-primary" />
+              <IconifyIcon :icon="selectedCategoryOption.icon" class="shrink-0" />
               <span>{{ selectedCategoryOption.label }}</span>
             </span>
           </template>
           <template #option="{ option }">
             <span class="flex items-center gap-2">
-              <IconifyIcon :icon="option.icon" class="shrink-0 text-primary" />
+              <IconifyIcon :icon="option.icon" class="shrink-0" />
               <span>{{ option.label }}</span>
             </span>
           </template>
@@ -70,7 +69,6 @@ const selectedStatusOption = computed(() =>
         <Select
           id="tournament-status-filter"
           v-model="filters.status"
-          class="h-11 rounded-none border-(--color-border) bg-(--color-surface-soft) text-sm"
           :options="statusOptions"
           option-label="label"
           option-value="value"
@@ -78,13 +76,13 @@ const selectedStatusOption = computed(() =>
         >
           <template #value>
             <span v-if="selectedStatusOption" class="flex items-center gap-2">
-              <IconifyIcon :icon="selectedStatusOption.icon" class="shrink-0 text-primary" />
+              <IconifyIcon :icon="selectedStatusOption.icon" class="shrink-0" />
               <span>{{ selectedStatusOption.label }}</span>
             </span>
           </template>
           <template #option="{ option }">
             <span class="flex items-center gap-2">
-              <IconifyIcon :icon="option.icon" class="shrink-0 text-primary" />
+              <IconifyIcon :icon="option.icon" class="shrink-0" />
               <span>{{ option.label }}</span>
             </span>
           </template>
@@ -98,8 +96,6 @@ const selectedStatusOption = computed(() =>
         <DatePicker
           id="tournament-date-range-filter"
           v-model="filters.dateRange"
-          class="w-full"
-          input-class="h-11 rounded-none border-[var(--color-border)] bg-[var(--color-surface-soft)] text-sm"
           selection-mode="range"
           date-format="dd/mm/yy"
           placeholder="Dal — Al"
@@ -113,7 +109,6 @@ const selectedStatusOption = computed(() =>
     <template #footer>
       <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-[auto_minmax(0,1fr)]">
         <Button
-          class="justify-center rounded-none"
           label="Azzera"
           icon="pi pi-refresh"
           severity="secondary"
@@ -121,7 +116,6 @@ const selectedStatusOption = computed(() =>
           @click="$emit('reset')"
         />
         <Button
-          class="justify-center rounded-none"
           label="Mostra risultati"
           icon="pi pi-check"
           @click="$emit('apply')"

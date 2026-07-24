@@ -10,8 +10,13 @@ const organizations = useOrganizationsStore()
 const isOrganizationFlow = computed(() => route.name === 'organizations-explore' || route.name === 'organization-create' || route.name === 'organization-edit')
 
 const navItems = computed(() => {
+  const profileItem = { label: 'Profilo', icon: 'mdi:account-outline', to: '/profile' }
+
   if (!organizations.activeOrganization) {
-    return [{ label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' }]
+    return [
+      { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
+      profileItem,
+    ]
   }
 
   if (auth.isGuest) {
@@ -19,6 +24,7 @@ const navItems = computed(() => {
       { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
       { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
       { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
+      profileItem,
     ]
   }
 
@@ -26,11 +32,13 @@ const navItems = computed(() => {
     return [
       { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
       { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
+      profileItem,
     ]
   }
 
   return [
     { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
+    profileItem,
   ]
 })
 

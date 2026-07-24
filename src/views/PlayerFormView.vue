@@ -112,8 +112,8 @@ watch(editingId, async (id) => {
   <div class="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 text-(--color-text) sm:gap-6">
     <!-- Section: Header -->
     <header>
-      <Button class="-ml-3 mb-2" :label="isEditing ? 'Torna al profilo' : 'Tutti i giocatori'" icon="pi pi-arrow-left" text severity="secondary" @click="cancel" />
-      <p class="mb-2 hidden text-xs font-extrabold tracking-[0.16em] text-primary-700 sm:block">{{ isEditing ? 'MODIFICA ATLETA' : 'NUOVO ATLETA' }}</p>
+      <Button :label="isEditing ? 'Torna al profilo' : 'Tutti i giocatori'" icon="pi pi-arrow-left" text severity="secondary" @click="cancel" />
+      <p class="mb-2 hidden text-xs font-extrabold tracking-[0.16em] text-primary sm:block">{{ isEditing ? 'MODIFICA ATLETA' : 'NUOVO ATLETA' }}</p>
       <h1 class="text-3xl font-bold tracking-tight sm:text-5xl">{{ isEditing ? 'Aggiorna il profilo.' : 'Aggiungi un giocatore.' }}</h1>
       <p class="mt-3 hidden text-(--color-text-muted) sm:block">{{ isEditing ? 'Mantieni aggiornati dati personali e informazioni sportive.' : 'Crea una nuova identità sportiva nel roster del circolo.' }}</p>
     </header>
@@ -126,9 +126,9 @@ watch(editingId, async (id) => {
     <!------------------------------>
     <form v-else class="grid items-start gap-4 lg:grid-cols-[minmax(15rem,0.32fr)_minmax(0,1fr)]" @submit.prevent="savePlayer">
       <!-- Live profile preview -->
-      <aside class="flex flex-col items-center overflow-hidden border border-(--color-border) bg-primary-800 p-4 text-center text-white shadow-sm lg:sticky lg:top-4 lg:min-h-107 lg:p-6">
+      <aside class="flex flex-col items-center overflow-hidden border border-(--color-border) bg-primary-800 p-4 text-center text-white lg:sticky lg:top-4 lg:min-h-107 lg:p-6">
         <p class="mb-5 hidden self-stretch text-left text-xs font-extrabold tracking-wider text-primary-300 sm:block">ANTEPRIMA PROFILO</p>
-        <div class="relative"><Avatar :label="previewInitials" :image="form.photo_url || undefined" shape="circle" class="size-16! bg-surface-100! text-lg! text-(--color-text-muted)! sm:size-32! sm:text-3xl!" /><span class="absolute bottom-1 right-1 size-4 rounded-full border-3 border-primary-800 bg-(--color-accent)" /></div>
+        <div class="relative"><Avatar :label="previewInitials" :image="form.photo_url || undefined" shape="circle" class="size-16! sm:size-32!" /><span class="absolute bottom-1 right-1 size-4 rounded-full border-3 border-primary-800 bg-(--color-accent)" /></div>
         <h2 class="mt-4 max-w-full truncate text-xl font-bold">{{ form.name || 'Nome giocatore' }}</h2>
         <p class="mt-2 flex items-center gap-2 text-sm text-primary-300"><i class="pi pi-building-columns" /> {{ form.club || 'Club non specificato' }}</p>
         <div class="mt-6 hidden w-full border-t border-primary-700 pt-4 sm:grid"><small class="text-[0.65rem] font-extrabold tracking-widest text-(--color-accent)">RANKING</small><strong class="mt-1 text-2xl">#{{ form.ranking || '—' }}</strong><span class="text-xs text-primary-300">Posizione nel club</span></div>
@@ -136,9 +136,9 @@ watch(editingId, async (id) => {
       </aside>
 
       <!-- Form fields -->
-      <section class="border border-(--color-border) bg-(--color-surface-card) p-4 shadow-sm sm:p-6 lg:p-8">
+      <section class="border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6 lg:p-8">
         <div class="flex flex-col gap-5">
-          <header class="flex items-center gap-3"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary-700"><i class="pi pi-user" /></span><div><h2 class="font-bold">Identità sportiva</h2><p class="mt-1 text-xs text-(--color-text-subtle)">Nome e posizione nel ranking</p></div></header>
+          <header class="flex items-center gap-3"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary"><i class="pi pi-user" /></span><div><h2 class="font-bold">Identità sportiva</h2><p class="mt-1 text-xs text-(--color-text-subtle)">Nome e posizione nel ranking</p></div></header>
           <div class="grid gap-4 sm:grid-cols-[minmax(0,1.8fr)_minmax(9rem,0.5fr)]">
             <label for="p-name" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Nome *<InputText id="p-name" v-model="form.name" placeholder="Mario Rossi" fluid required autofocus /></label>
             <label for="p-ranking" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Ranking<InputNumber id="p-ranking" v-model="form.ranking" placeholder="1" :min="1" :max="9999" fluid /></label>
@@ -148,7 +148,7 @@ watch(editingId, async (id) => {
         <div class="my-6 h-px bg-(--color-surface-muted)" />
 
         <div class="flex flex-col gap-5">
-          <header class="flex items-center gap-3"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary-700"><i class="pi pi-address-book" /></span><div><h2 class="font-bold">Anagrafica e contatti</h2><p class="mt-1 text-xs text-(--color-text-subtle)">Informazioni personali del giocatore</p></div></header>
+          <header class="flex items-center gap-3"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary"><i class="pi pi-address-book" /></span><div><h2 class="font-bold">Anagrafica e contatti</h2><p class="mt-1 text-xs text-(--color-text-subtle)">Informazioni personali del giocatore</p></div></header>
           <div class="grid gap-4 sm:grid-cols-2">
             <label for="p-birth-date" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Data nascita<DatePicker id="p-birth-date" v-model="form.birth_date" date-format="dd/mm/yy" placeholder="gg/mm/aaaa" fluid show-button-bar /></label>
             <label for="p-club" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Club<InputText id="p-club" v-model="form.club" placeholder="TC Milano" fluid /></label>
@@ -158,7 +158,7 @@ watch(editingId, async (id) => {
 
         <div class="my-6 h-px bg-(--color-surface-muted)" />
 
-        <div class="flex flex-col gap-5"><header class="flex items-center gap-3"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary-700"><i class="pi pi-camera" /></span><div><h2 class="font-bold">Foto profilo</h2><p class="mt-1 text-xs text-(--color-text-subtle)">Immagine quadrata per avatar e scheda atleta</p></div></header><PlayerPhotoPicker v-model="form.photo_url" /></div>
+        <div class="flex flex-col gap-5"><header class="flex items-center gap-3"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary"><i class="pi pi-camera" /></span><div><h2 class="font-bold">Foto profilo</h2><p class="mt-1 text-xs text-(--color-text-subtle)">Immagine quadrata per avatar e scheda atleta</p></div></header><PlayerPhotoPicker v-model="form.photo_url" /></div>
 
         <footer class="-mx-4 -mb-4 mt-7 flex flex-col items-stretch justify-between gap-3 border-t border-(--color-surface-muted) bg-(--color-surface-soft) p-4 sm:-mx-6 sm:-mb-6 sm:flex-row sm:items-center sm:px-6 lg:-mx-8 lg:-mb-8 lg:px-8"><span class="hidden items-center gap-2 text-xs text-(--color-text-subtle) sm:flex"><i class="pi pi-info-circle" /> I campi contrassegnati con * sono obbligatori.</span><div class="grid grid-cols-[1fr_1.3fr] gap-2"><Button type="button" label="Annulla" severity="secondary" outlined @click="cancel" /><Button type="submit" :label="isEditing ? 'Salva modifiche' : 'Crea giocatore'" icon="pi pi-check" :loading="saving" /></div></footer>
       </section>

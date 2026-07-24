@@ -21,6 +21,23 @@ export const tournamentsService: TournamentsService = {
   create: (data: TournamentCreate) => apiRequest<Tournament>(apiClient, { url: '/tournaments', method: 'POST', data }),
   update: (id, data: TournamentUpdate) =>
     apiRequest<Tournament>(apiClient, { url: `/tournaments/${id}`, method: 'PUT', data }),
+  uploadRegulation: (id, file) =>
+    apiRequest<Tournament>(apiClient, {
+      url: `/tournaments/${id}/regulation`,
+      method: 'POST',
+      data: file,
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-File-Name': encodeURIComponent(file.name),
+        'X-File-Type': file.type || 'application/octet-stream',
+      },
+    }),
+  downloadRegulation: (id) =>
+    apiRequest<Blob>(apiClient, {
+      url: `/tournaments/${id}/regulation`,
+      method: 'GET',
+      responseType: 'blob',
+    }),
   remove: (id) => apiRequest<null>(apiClient, { url: `/tournaments/${id}`, method: 'DELETE' }),
   addPlayer: (tournamentId, playerId) =>
     apiRequest<null>(apiClient, {

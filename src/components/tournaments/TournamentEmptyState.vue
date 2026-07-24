@@ -2,7 +2,7 @@
   <div
     class="flex min-h-72 flex-col items-center justify-center border border-dashed border-(--color-border) bg-(--color-surface-soft) text-center"
   >
-    <span class="grid size-14 place-items-center rounded-full bg-primary-50 text-primary-700">
+    <span class="grid size-14 place-items-center rounded-full bg-primary-50 text-primary">
       <IconifyIcon icon="mdi:trophy-outline" class="size-6" />
     </span>
     <h3 class="mb-1 mt-4 font-bold">Nessun torneo in campo</h3>

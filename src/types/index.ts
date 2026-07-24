@@ -154,6 +154,45 @@ export type TournamentFormat =
 export type TournamentCategory = 'maschile' | 'femminile'
 
 export type TournamentStatus = 'upcoming' | 'ongoing' | 'completed'
+export type TournamentPhaseFormat = 'round_robin' | 'single_elimination'
+export type TournamentPhaseStatus = 'pending' | 'active' | 'completed'
+
+export interface TournamentPhaseInput {
+  name: string
+  format: TournamentPhaseFormat
+  group_count: number
+  output_count: number
+  qualifiers_per_group?: number | null
+}
+
+export interface TournamentGroup {
+  id: string
+  phase_id: string
+  position: number
+  name: string
+}
+
+export interface TournamentPhasePlayer {
+  player_id: string
+  group_id?: string | null
+  seed?: number | null
+  source_rank?: number | null
+  qualified: boolean
+}
+
+export interface TournamentPhase {
+  id: string
+  tournament_id: string
+  position: number
+  name: string
+  format: TournamentPhaseFormat
+  status: TournamentPhaseStatus
+  group_count: number
+  output_count: number
+  qualifiers_per_group?: number | null
+  groups: TournamentGroup[]
+  players: TournamentPhasePlayer[]
+}
 
 export interface Tournament {
   id: string
@@ -172,12 +211,18 @@ export interface Tournament {
   participant_limit?: number | null
   group_count?: number | null
   qualifiers_per_group?: number | null
+  regulation_name?: string | null
+  regulation_content_type?: string | null
+  regulation_size?: number | null
   organization_id?: string | null
+  phases?: TournamentPhase[]
   created_at?: string
   updated_at?: string
 }
 
-export type TournamentCreate = Omit<Tournament, 'id' | 'created_at' | 'updated_at'>
+export type TournamentCreate = Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'phases'> & {
+  phases?: TournamentPhaseInput[]
+}
 export type TournamentUpdate = Partial<TournamentCreate>
 
 export interface TournamentListQuery {
@@ -211,6 +256,8 @@ export type MatchStatus = 'waiting' | 'ready' | 'completed'
 export interface Match {
   id: string
   tournament_id: string
+  phase_id?: string
+  group_id?: string | null
   round_index: number
   position: number
   player1_id: string | null
@@ -255,6 +302,7 @@ export interface MatchRound {
 
 export interface TournamentMatchesResponse {
   tournament: Pick<Tournament, 'id' | 'name' | 'format' | 'category' | 'status'>
+  phase?: TournamentPhase
   draw: {
     draw_size: number
     participants_count: number
@@ -339,6 +387,8 @@ export interface TournamentsService {
   getById(id: string): Promise<TournamentWithPlayers>
   create(data: TournamentCreate): Promise<Tournament>
   update(id: string, data: TournamentUpdate): Promise<Tournament>
+  uploadRegulation(id: string, file: File): Promise<Tournament>
+  downloadRegulation(id: string): Promise<Blob>
   remove(id: string): Promise<null>
   addPlayer(tournamentId: string, playerId: string): Promise<null>
   removePlayer(tournamentId: string, playerId: string): Promise<null>
@@ -349,10 +399,11 @@ export interface TournamentsService {
 }
 
 export interface MatchesService {
-  getByTournament(tournamentId: string): Promise<TournamentMatchesResponse>
-  downloadDrawPdf(tournamentId: string): Promise<Blob>
-  createEmptyBracket(tournamentId: string, numPlayers: number): Promise<Match[]>
+  getByTournament(tournamentId: string, phaseId?: string): Promise<TournamentMatchesResponse>
+  downloadDrawPdf(tournamentId: string, phaseId?: string): Promise<Blob>
+  createEmptyBracket(tournamentId: string, numPlayers: number, phaseId?: string): Promise<Match[]>
+  completePhase(tournamentId: string, phaseId: string): Promise<TournamentWithPlayers>
   assignPlayer(matchId: string, data: MatchAssignInput): Promise<Match>
   enterResult(matchId: string, data: MatchResultInput): Promise<Match>
-  reset(tournamentId: string): Promise<void>
+  reset(tournamentId: string, phaseId?: string): Promise<void>
 }

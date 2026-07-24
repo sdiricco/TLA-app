@@ -86,7 +86,6 @@ function formatDate(date: string): string {
       <Button
         v-for="filter in filters"
         :key="filter.value"
-        class="rounded-none"
         :label="filter.label"
         size="small"
         :severity="activeFilter === filter.value ? 'primary' : 'secondary'"
@@ -126,7 +125,7 @@ function formatDate(date: string): string {
 
         <!-- Change card -->
         <div
-          class="border border-(--color-border) bg-(--color-surface-card) p-4 shadow-[0_12px_28px_rgb(var(--color-shadow-rgb)/5%)] sm:px-5 sm:py-4.5"
+          class="border border-(--color-border) bg-(--color-surface-card) p-4 sm:px-5 sm:py-4.5"
         >
           <div class="flex items-center justify-between gap-3">
             <Tag :value="kindLabel(entry.kind)" :severity="kindSeverity(entry.kind)" />

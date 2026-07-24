@@ -165,7 +165,7 @@ function toggleProfileMenu(event: Event): void {
         </div>
       </button>
 
-      <Menu ref="profileMenu" :model="profileItems" popup class="sidebar-profile-menu" />
+      <Menu ref="profileMenu" :model="profileItems" popup />
 
     </div>
   </aside>
@@ -187,7 +187,7 @@ function toggleProfileMenu(event: Event): void {
 .organization-header > span { color: rgb(var(--color-white-rgb) / 45%); font-size: .58rem; font-weight: 800; letter-spacing: .11em; }
 .organization-header a { color: rgb(var(--color-white-rgb) / 58%); font-size: .66rem; text-decoration: none; }
 .organization-switcher a:hover { color: var(--color-accent); }
-.organization-current { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .55rem; width: 100%; padding: .35rem 0; border: 0; background: transparent; color: var(--color-white); text-align: left; cursor: pointer; }
+.organization-current { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .55rem; width: 100%; padding: .35rem 0; border: 0; border-radius: var(--p-navigation-item-border-radius); background: transparent; color: var(--color-white); text-align: left; cursor: pointer; }
 .organization-current:disabled { cursor: default; }
 .organization-current-icon { display: grid; place-items: center; width: 1.55rem; height: 1.55rem; color: var(--color-accent); font-size: .72rem; }
 .organization-current-icon :deep(svg) { width: 1em; height: 1em; }
@@ -198,30 +198,25 @@ function toggleProfileMenu(event: Event): void {
 .organization-chevron :deep(svg) { width: 1em; height: 1em; }
 .organization-chevron.open { transform: rotate(180deg); }
 .organization-list { display: grid; gap: .16rem; margin-left: 2.1rem; padding-top: .1rem; }
-.organization-option { display: grid; gap: .08rem; padding: .28rem 0; border: 0; background: transparent; color: rgb(var(--color-white-rgb) / 80%); text-align: left; cursor: pointer; }
+.organization-option { display: grid; gap: .08rem; padding: .28rem 0; border: 0; border-radius: var(--p-navigation-item-border-radius); background: transparent; color: rgb(var(--color-white-rgb) / 80%); text-align: left; cursor: pointer; }
 .organization-option:hover { color: var(--color-white); }
 .organization-option-name { overflow: hidden; font-size: .72rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .organization-option small { color: rgb(var(--color-white-rgb) / 48%); font-size: .6rem; }
 .sidebar-nav > p { margin: 0 0.5rem 0.45rem; color: rgb(var(--color-white-rgb) / 50%); font-size: 0.64rem; font-weight: 800; letter-spacing: 0.12em; }
 .sidebar-nav ul { display: flex; flex-direction: column; gap: 0.2rem; margin: 0; padding: 0; list-style: none; }
-.nav-link { display: flex; align-items: center; gap: 0.65rem; min-height: 2.6rem; padding: 0.35rem 0.55rem; border-radius: 0; color: rgb(var(--color-white-rgb) / 67%); font-size: 0.8rem; font-weight: 550; text-decoration: none; transition: 160ms ease; }
+.nav-link { display: flex; align-items: center; gap: 0.65rem; min-height: 2.6rem; padding: 0.35rem 0.55rem; border-radius: var(--p-navigation-item-border-radius); color: rgb(var(--color-white-rgb) / 67%); font-size: 0.8rem; font-weight: 550; text-decoration: none; transition: 160ms ease; }
 .nav-link:hover { background: rgb(var(--color-white-rgb) / 6%); color: var(--color-white); }
 .nav-link.active { background: rgb(var(--color-accent-rgb) / 13%); color: var(--color-accent-soft); font-weight: 750; }
-.nav-icon { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; flex: 0 0 auto; border-radius: 0; background: rgb(var(--color-white-rgb) / 7%); font-size: 0.8rem; }
+.nav-icon { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; flex: 0 0 auto; border-radius: var(--p-content-border-radius); background: rgb(var(--color-white-rgb) / 7%); font-size: 0.8rem; }
 .active .nav-icon { background: var(--color-accent); color: var(--color-primary-800); }
 .nav-arrow { margin-left: auto; font-size: 0.6rem; }
 .nav-arrow :deep(svg) { width: 1em; height: 1em; }
 .sidebar-footer { display: flex; flex-direction: column; gap: 0.65rem; padding: 0.85rem; border-top: 1px solid rgb(var(--color-white-rgb) / 9%); background: rgb(var(--color-black-rgb) / 6%); }
-.profile-row { display: flex; align-items: center; gap: 0.6rem; min-width: 0; padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.profile-row { display: flex; align-items: center; gap: 0.6rem; min-width: 0; padding: 0; border: 0; border-radius: var(--p-navigation-item-border-radius); background: transparent; text-align: left; cursor: pointer; }
 .profile-row:hover .profile-copy span { color: var(--color-accent-soft); }
-.profile-avatar { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border: 1px solid rgb(var(--color-accent-rgb) / 28%); border-radius: 0; background: rgb(var(--color-accent-rgb) / 12%); color: var(--color-accent); font-size: 0.72rem; }
+.profile-avatar { display: grid; place-items: center; width: 2rem; height: 2rem; flex: 0 0 auto; border: 1px solid rgb(var(--color-accent-rgb) / 28%); border-radius: var(--p-content-border-radius); background: rgb(var(--color-accent-rgb) / 12%); color: var(--color-accent); font-size: 0.72rem; }
 .profile-avatar :deep(svg) { width: 1em; height: 1em; }
 .profile-copy { display: grid; min-width: 0; }
 .profile-copy span { overflow: hidden; color: rgb(var(--color-white-rgb) / 88%); font-size: 0.8rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .profile-copy small { margin-top: 0.12rem; color: rgb(var(--color-white-rgb) / 55%); font-size: 0.68rem; }
-.sidebar-profile-menu :deep(.p-menu) { min-width: 14rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); box-shadow: 0 16px 34px rgb(var(--color-shadow-rgb) / 12%); }
-.sidebar-profile-menu :deep(.p-menu-list) { padding: .35rem 0; }
-.sidebar-profile-menu :deep(.p-menu-item-link) { gap: .7rem; padding: .75rem .9rem; }
-.sidebar-profile-menu :deep(.p-menu-item-icon) { color: var(--color-text-muted); }
-.sidebar-profile-menu :deep(.p-menu-item-label) { color: var(--color-text); font-weight: 500; }
 </style>

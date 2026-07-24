@@ -22,28 +22,27 @@ export const tournamentFormatDefinitions: TournamentFormatDefinition[] = [
   {
     format: 'single_elimination',
     title: 'Eliminazione diretta',
-    description: 'Formato supportato subito. Tabellone classico a eliminazione singola.',
+    description: 'Tabellone classico: chi perde viene eliminato dal torneo.',
     icon: 'pi pi-sitemap',
   },
   {
     format: 'double_elimination',
     title: 'Doppia eliminazione',
-    description: 'Formato previsto in futuro con bracket dei vincenti e dei ripescati.',
+    description: 'Tabelloni separati per vincenti e ripescati.',
     icon: 'pi pi-replay',
     locked: true,
   },
   {
     format: 'round_robin',
     title: "Girone all'italiana",
-    description: 'Tutti contro tutti, organizzati per giornate, con classifica aggiornata dai risultati.',
+    description: 'Tutti contro tutti, con calendario e classifica aggiornata.',
     icon: 'pi pi-list',
   },
   {
     format: 'round_robin_elimination',
-    title: 'Gironi + finale',
-    description: 'Formato previsto per le fasi a gironi seguite dal tabellone finale.',
+    title: 'Torneo a fasi',
+    description: 'Una sequenza libera di fasi, ognuna con ingresso e qualificati definiti.',
     icon: 'pi pi-objects-column',
-    locked: true,
   },
 ]
 
@@ -51,7 +50,7 @@ export const tournamentFormatLabels: Record<TournamentFormat, string> = {
   single_elimination: 'Eliminazione diretta',
   double_elimination: 'Doppia eliminazione',
   round_robin: "Girone all'italiana",
-  round_robin_elimination: 'Gironi + finale',
+  round_robin_elimination: 'Torneo a fasi',
 }
 
 export const tournamentCategoryDefinitions: TournamentCategoryDefinition[] = [
@@ -77,7 +76,7 @@ export const tournamentCategoryLabels: Record<TournamentCategory, string> = {
 export const defaultTournamentFeatureFlags = {
   formats: {
     double_elimination: false,
-    round_robin_elimination: false,
+    round_robin_elimination: true,
   },
   categories: {
     maschile: true,

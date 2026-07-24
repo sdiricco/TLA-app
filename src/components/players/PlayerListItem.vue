@@ -19,7 +19,7 @@ defineEmits<{ open: [] }>()
     @keydown.space.prevent="$emit('open')"
   >
     <Avatar
-      class="size-11! rounded-none! bg-surface-100! text-sm! text-muted-color!"
+      class="size-11!"
       :label="getPlayerInitials(player)"
       :image="player.photo_url ?? undefined"
       shape="square"
@@ -29,6 +29,6 @@ defineEmits<{ open: [] }>()
       <span class="block truncate text-xs text-(--color-text-muted)">{{ player.club || 'Club non specificato' }}</span>
     </div>
     <strong v-if="player.ranking" class="text-sm text-(--color-text-muted)">#{{ player.ranking }}</strong>
-    <i class="pi pi-chevron-right text-xs text-primary-700" aria-hidden="true" />
+    <i class="pi pi-chevron-right text-xs text-primary" aria-hidden="true" />
   </article>
 </template>

@@ -61,6 +61,17 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     return updated
   }
 
+  async function uploadRegulation(id: string, file: File): Promise<Tournament> {
+    const updated = await tournamentsService.uploadRegulation(id, file)
+    const index = tournaments.value.findIndex((tournament) => tournament.id === id)
+    if (index !== -1) tournaments.value[index] = updated
+    return updated
+  }
+
+  async function downloadRegulation(id: string): Promise<Blob> {
+    return tournamentsService.downloadRegulation(id)
+  }
+
   async function remove(id: string): Promise<void> {
     await tournamentsService.remove(id)
     tournaments.value = tournaments.value.filter((tournament) => tournament.id !== id)
@@ -107,6 +118,8 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     getById,
     create,
     update,
+    uploadRegulation,
+    downloadRegulation,
     remove,
     addPlayer,
     removePlayer,

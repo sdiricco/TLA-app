@@ -11,7 +11,7 @@ defineProps<{
     <div class="min-w-0 flex-1">
       <p
         v-if="eyebrow"
-        class="mb-2 hidden text-xs font-extrabold tracking-[0.16em] text-primary-700 sm:block"
+        class="mb-2 hidden text-xs font-extrabold tracking-[0.16em] text-primary sm:block"
       >
         {{ eyebrow }}
       </p>

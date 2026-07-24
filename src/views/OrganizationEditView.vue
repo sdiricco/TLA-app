@@ -91,8 +91,8 @@ watch(() => store.activeOrganization?.id, syncForm, { immediate: true })
   <section class="mx-auto w-full max-w-155 py-3 sm:py-8">
     <!-- Section: Header -->
     <header class="mb-4">
-      <Button class="-ml-3" icon="pi pi-arrow-left" label="Organizzazione" text severity="secondary" @click="router.push({ name: 'organizations' })" />
-      <p class="mb-2 mt-4 text-xs font-extrabold tracking-[0.15em] text-primary-700">MODIFICA SPAZIO</p>
+      <Button icon="pi pi-arrow-left" label="Organizzazione" text severity="secondary" @click="router.push({ name: 'organizations' })" />
+      <p class="mb-2 mt-4 text-xs font-extrabold tracking-[0.15em] text-primary">MODIFICA SPAZIO</p>
       <h1 class="text-3xl font-bold tracking-tight sm:text-5xl">{{ store.activeOrganization?.name || 'Organizzazione' }}</h1>
       <p class="mt-3 leading-relaxed text-(--color-text-muted)">Aggiorna le informazioni che gli altri utenti vedono nella community.</p>
     </header>
@@ -100,7 +100,7 @@ watch(() => store.activeOrganization?.id, syncForm, { immediate: true })
     <!------------------------------>
     <!-- Section: Organization form -->
     <!------------------------------>
-    <form class="grid gap-3 border border-(--color-border) bg-(--color-surface-card) p-4 shadow-sm sm:p-6" @submit.prevent="save">
+    <form class="grid gap-3 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6" @submit.prevent="save">
       <Message v-if="message" :severity="message.includes('salvat') || message.includes('rigenerato') ? 'success' : 'error'" :closable="false">{{ message }}</Message>
       <label for="edit-visibility" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Visibilità<Select id="edit-visibility" v-model="visibility" :options="visibilityOptions" option-label="label" option-value="value" fluid /></label>
       <label v-if="visibility === 'private'" for="edit-discoverability" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Ricerca e richieste<Select id="edit-discoverability" v-model="discoverable" :options="discoverabilityOptions" option-label="label" option-value="value" fluid /></label>
@@ -116,12 +116,12 @@ watch(() => store.activeOrganization?.id, syncForm, { immediate: true })
     <!------------------------------>
     <!-- Section: Invitation code -->
     <!------------------------------>
-    <section class="mt-4 grid gap-3 border border-(--color-border) bg-(--color-surface-card) p-4 shadow-sm sm:p-6">
-      <p class="text-xs font-extrabold tracking-[0.15em] text-primary-700">ACCESSO</p>
+    <section class="mt-4 grid gap-3 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
+      <p class="text-xs font-extrabold tracking-[0.15em] text-primary">ACCESSO</p>
       <h2 class="text-xl font-bold tracking-tight">Codice invito</h2>
       <p class="leading-relaxed text-(--color-text-muted)">Condividi questo codice per permettere l’ingresso nell’organizzazione privata.</p>
       <div class="flex flex-col items-stretch justify-between gap-3 bg-(--color-surface-soft) p-3 sm:flex-row sm:items-center">
-        <strong class="truncate text-sm text-primary-700">{{ store.activeOrganization?.join_code || 'Nessun codice disponibile' }}</strong>
+        <strong class="truncate text-sm text-primary">{{ store.activeOrganization?.join_code || 'Nessun codice disponibile' }}</strong>
         <Button label="Rigenera" icon="pi pi-refresh" severity="secondary" outlined :loading="busy" @click="regenerateCode" />
       </div>
     </section>

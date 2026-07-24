@@ -5,13 +5,11 @@
   import { watchDebounced } from '@vueuse/core';
   import moment from 'moment';
   import 'moment/locale/it.js';
-  import Badge from 'primevue/badge';
   import Button from 'primevue/button';
   import Chip from 'primevue/chip';
   import InputText from 'primevue/inputtext';
 
   // Page components and tournament filter types
-  import PageHeader from '@/components/layout/PageHeader.vue';
   import TournamentEmptyState from '@/components/tournaments/TournamentEmptyState.vue';
   import TournamentFiltersDrawer from '@/components/tournaments/TournamentFiltersDrawer.vue';
   import TournamentListItem from '@/components/tournaments/TournamentListItem.vue';
@@ -79,6 +77,12 @@
    */
   const canViewAdmin = computed(() => auth.isAdmin);
   const hasMoreTournaments = computed(() => store.tournaments.length < store.total);
+  const draftTournaments = computed(() =>
+    store.tournaments.filter((tournament) => !tournament.published)
+  );
+  const publishedTournaments = computed(() =>
+    store.tournaments.filter((tournament) => tournament.published)
+  );
 
   // A date range is sent to the API only when both endpoints are selected.
   const completedDateRange = computed(() => {
@@ -90,7 +94,6 @@
     () =>
       [
         appliedFilters.value.category !== 'all',
-        appliedFilters.value.status !== 'all',
         completedDateRange.value !== null,
         appliedFilters.value.organizationId !== 'mine',
       ].filter(Boolean).length
@@ -104,10 +107,6 @@
     if (filters.category !== 'all') {
       const option = categoryOptions.find((item) => item.value === filters.category);
       if (option) chips.push({ key: 'category', label: option.label });
-    }
-    if (filters.status !== 'all') {
-      const option = statusOptions.find((item) => item.value === filters.status);
-      if (option) chips.push({ key: 'status', label: option.label });
     }
     if (completedDateRange.value) {
       const [from, to] = completedDateRange.value;
@@ -220,6 +219,14 @@
     void loadTournaments(0, store.perPage);
   }
 
+  // Status is exposed as a quick filter because it is the most common list operation.
+  function applyStatus(status: TournamentStatus | 'all'): void {
+    if (appliedFilters.value.status === status) return;
+
+    appliedFilters.value = { ...appliedFilters.value, status };
+    void loadTournaments(0, store.perPage);
+  }
+
   // Removing a chip updates the applied filters immediately and refreshes the list.
   function removeFilter(key: TournamentFilterKey): void {
     const filters = { ...appliedFilters.value };
@@ -234,6 +241,11 @@
   // Resets only the drawer draft; the reset takes effect when the user applies it.
   function clearFilters(): void {
     draftFilters.value = createDefaultFilters();
+  }
+
+  function clearAppliedFilters(): void {
+    appliedFilters.value = createDefaultFilters();
+    void loadTournaments(0, store.perPage);
   }
 
   /**
@@ -260,84 +272,127 @@
   <!------------------------------>
   <!-- Page layout -->
   <!------------------------------>
-  <div class="mx-auto flex max-w-screen-2xl flex-col gap-3 text-(--color-text) sm:gap-6">
+  <div class="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 text-(--color-text) sm:gap-5">
     <!------------------------------>
     <!-- Section: Header -->
     <!------------------------------>
-    <PageHeader
-      eyebrow="GESTIONE TORNEI"
-      title="Il campo è pronto."
-      description="Organizza, monitora e porta a termine ogni competizione."
-    />
-
-    <!------------------------------>
-    <!-- Section: Search and create tournament -->
-    <!------------------------------>
-    <div class="flex items-center gap-2.5">
-      <span class="relative min-w-0 max-w-lg flex-1">
-        <IconifyIcon
-          icon="mdi:magnify"
-          class="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-(--color-text-subtle)"
-        />
-        <InputText
-          v-model="searchName"
-          class="h-11 w-full rounded-none border-(--color-border) bg-(--color-surface-card) pl-10 text-sm"
-          aria-label="Cerca torneo per nome"
-          placeholder="Cerca torneo per nome"
-        />
-      </span>
+    <header class="flex items-start justify-between gap-4 pb-1">
+      <div class="min-w-0">
+        <h1 class="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">Tornei</h1>
+        <p class="mt-1 text-sm text-(--color-text-muted) sm:text-base">
+          Gestisci le competizioni della tua organizzazione.
+        </p>
+      </div>
       <Button
         v-if="canViewAdmin"
-        class="h-11 shrink-0 rounded-none font-bold"
-        label="Crea"
+        class="sm:hidden"
         icon="pi pi-plus"
-        aria-label="Crea torneo"
-        title="Crea torneo"
+        aria-label="Crea un nuovo torneo"
         :disabled="auth.isGuest"
         @click="openCreate"
       />
-    </div>
+      <Button
+        v-if="canViewAdmin"
+        class="hidden sm:inline-flex"
+        label="Nuovo torneo"
+        icon="pi pi-plus"
+        aria-label="Crea un nuovo torneo"
+        :disabled="auth.isGuest"
+        @click="openCreate"
+      />
+    </header>
 
     <!------------------------------>
-    <!-- Section: Tournament list heading -->
+    <!-- Section: Search and filters -->
     <!------------------------------>
-    <div class="mt-1 flex items-center justify-between">
-      <div class="flex items-baseline gap-2.5">
-        <h2 class="text-lg font-bold tracking-tight sm:text-xl">I tuoi tornei</h2>
-        <span class="text-xs text-(--color-text-subtle)">{{ store.total }} risultati</span>
+    <section class="rounded-lg border border-(--color-border) bg-(--color-surface-card) p-3 sm:p-4">
+      <header class="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <h2 class="text-base font-bold tracking-tight">Cerca e filtra</h2>
+          <p class="mt-1 text-sm text-(--color-text-muted)">
+            Trova rapidamente il torneo che vuoi gestire.
+          </p>
+        </div>
+        <p class="shrink-0 text-sm font-semibold text-(--color-text-muted)">
+          {{ store.total }} {{ store.total === 1 ? 'torneo' : 'tornei' }}
+        </p>
+      </header>
+
+      <div class="flex items-center gap-2">
+        <span class="min-w-0 flex-1">
+          <InputText
+            v-model="searchName"
+            aria-label="Cerca torneo per nome"
+            placeholder="Cerca torneo per nome"
+            fluid
+          />
+        </span>
+        <Button
+          label="Filtri"
+          icon="pi pi-sliders-h"
+          severity="secondary"
+          outlined
+          :badge="activeFiltersCount ? String(activeFiltersCount) : undefined"
+          aria-label="Apri filtri tornei"
+          title="Filtra tornei"
+          @click="openFilters"
+        />
       </div>
 
-      <Button
-        class="relative size-10 shrink-0 rounded-none p-0!"
-        text
-        plain
-        aria-label="Apri filtri tornei"
-        title="Filtra tornei"
-        @click="openFilters"
-      >
-        <i class="pi pi-filter" aria-hidden="true" />
-        <Badge
-          v-if="activeFiltersCount"
-          :value="activeFiltersCount"
-          class="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full! bg-primary-600! px-1! text-[0.65rem]! font-bold! text-white! shadow-sm"
-        />
-      </Button>
-    </div>
+      <div class="mt-3 min-w-0 overflow-x-auto pb-1">
+          <div
+            class="flex w-max gap-2"
+            role="group"
+            aria-label="Filtra tornei per stato"
+          >
+            <Button
+              v-for="option in statusOptions"
+              :key="option.value"
+              class="shrink-0"
+              :label="option.label"
+              size="small"
+              :severity="appliedFilters.status === option.value ? undefined : 'secondary'"
+              :outlined="appliedFilters.status !== option.value"
+              :aria-pressed="appliedFilters.status === option.value"
+              @click="applyStatus(option.value)"
+            />
+          </div>
+      </div>
 
-    <!------------------------------>
-    <!-- Section: Active filters -->
-    <!------------------------------>
-    <div v-if="activeFilterChips.length" class="flex min-w-0 flex-wrap gap-2">
-      <Chip
-        v-for="chip in activeFilterChips"
-        :key="chip.key"
-        :label="chip.label"
-        removable
-        class="rounded-none! border border-(--color-border) bg-white!"
-        :aria-label="`Filtro ${chip.label}`"
-        @remove="removeFilter(chip.key)"
-      />
-    </div>
+      <div
+        v-if="activeFilterChips.length"
+        class="mt-3 flex min-w-0 items-center gap-2 border-t border-(--color-border) pt-3"
+      >
+        <div class="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1">
+          <Chip
+            v-for="chip in activeFilterChips"
+            :key="chip.key"
+            class="shrink-0"
+            :label="chip.label"
+            removable
+            :aria-label="`Filtro ${chip.label}`"
+            @remove="removeFilter(chip.key)"
+          />
+        </div>
+        <Button
+          class="shrink-0 sm:hidden"
+          icon="pi pi-times"
+          severity="secondary"
+          text
+          size="small"
+          aria-label="Cancella tutti i filtri"
+          @click="clearAppliedFilters"
+        />
+        <Button
+          class="hidden shrink-0 sm:inline-flex"
+          label="Cancella filtri"
+          severity="secondary"
+          variant="link"
+          size="small"
+          @click="clearAppliedFilters"
+        />
+      </div>
+    </section>
 
     <!------------------------------>
     <!-- Section: Loading tournaments -->
@@ -352,13 +407,40 @@
     <!------------------------------>
     <!-- Section: Tournament list -->
     <!------------------------------>
-    <div v-else class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-      <TournamentListItem
-        v-for="tournament in store.tournaments"
-        :key="tournament.id"
-        :tournament="tournament"
-        @open="router.push({ name: 'tournament-detail', params: { id: tournament.id } })"
-      />
+    <div v-else class="flex flex-col gap-6">
+      <section v-if="draftTournaments.length" class="flex flex-col gap-2">
+        <header class="flex items-baseline gap-2.5">
+          <h2 class="text-lg font-bold tracking-tight sm:text-xl">Bozze</h2>
+          <span class="text-xs text-(--color-text-subtle)">
+            {{ draftTournaments.length }} da completare
+          </span>
+        </header>
+        <div class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+          <TournamentListItem
+            v-for="tournament in draftTournaments"
+            :key="tournament.id"
+            :tournament="tournament"
+            @open="router.push({ name: 'tournament-detail', params: { id: tournament.id } })"
+          />
+        </div>
+      </section>
+
+      <section v-if="publishedTournaments.length" class="flex flex-col gap-2">
+        <header class="flex items-baseline gap-2.5">
+          <h2 class="text-lg font-bold tracking-tight sm:text-xl">Tornei pubblicati</h2>
+          <span class="text-xs text-(--color-text-subtle)">
+            {{ publishedTournaments.length }}
+          </span>
+        </header>
+        <div class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+          <TournamentListItem
+            v-for="tournament in publishedTournaments"
+            :key="tournament.id"
+            :tournament="tournament"
+            @open="router.push({ name: 'tournament-detail', params: { id: tournament.id } })"
+          />
+        </div>
+      </section>
     </div>
 
     <!------------------------------>
@@ -374,20 +456,11 @@
         v-if="hasMoreTournaments"
         label="Carica altro"
         icon="pi pi-chevron-down"
-        class="w-full sm:w-auto"
         severity="secondary"
         outlined
         :loading="store.loadingMore"
         @click="loadMore"
       />
-
-      <p
-        v-if="!hasMoreTournaments"
-        class="flex items-center gap-1.5 text-xs text-(--color-text-subtle)"
-      >
-        <IconifyIcon icon="mdi:check-circle-outline" class="size-4 text-primary-500" />
-        Hai visualizzato tutti i tornei
-      </p>
     </div>
   </div>
 

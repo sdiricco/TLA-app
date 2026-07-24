@@ -35,7 +35,7 @@ const theme = useThemeStore()
           <h2 class="text-xl font-bold tracking-tight">Impostazioni account</h2>
           <p class="mt-2 text-sm text-(--color-text-muted)">Preferenze collegate al tuo accesso.</p>
         </div>
-        <i class="pi pi-cog text-xl text-primary-700" aria-hidden="true" />
+        <i class="pi pi-cog text-xl text-primary" aria-hidden="true" />
       </div>
 
       <dl class="mt-4 grid gap-3 text-sm">
@@ -60,7 +60,7 @@ const theme = useThemeStore()
     <section v-if="auth.isAdmin" class="grid gap-5 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
       <div class="flex items-start justify-between gap-4">
         <div>
-          <p class="mb-2 text-xs font-extrabold tracking-[0.14em] text-primary-700">AREA AMMINISTRATORE</p>
+          <p class="mb-2 text-xs font-extrabold tracking-[0.14em] text-primary">AREA AMMINISTRATORE</p>
           <h2 class="text-xl font-bold tracking-tight">Configurazione tornei</h2>
           <p class="mt-2 text-sm text-(--color-text-muted)">Gestisci aspetto app, formati e categorie disponibili.</p>
         </div>
@@ -75,7 +75,7 @@ const theme = useThemeStore()
           <h2 class="text-xl font-bold tracking-tight">Configurazione tornei</h2>
           <p class="mt-2 text-sm leading-relaxed text-(--color-text-muted)">Formati e categorie sono gestiti dagli amministratori dell’organizzazione.</p>
         </div>
-        <i class="pi pi-lock text-xl text-primary-700" aria-hidden="true" />
+        <i class="pi pi-lock text-xl text-primary" aria-hidden="true" />
       </div>
     </article>
   </section>

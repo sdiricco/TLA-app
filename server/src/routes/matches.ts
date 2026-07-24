@@ -57,7 +57,10 @@ matchesRouter.put('/:id', requireAdmin, async (req, res) => {
     const match = await prisma.$transaction(async (tx) => {
       const current = await tx.match.findUnique({
         where: { id: matchId },
-        include: { tournament: { select: { format: true, organizationId: true } } },
+        include: {
+          tournament: { select: { organizationId: true } },
+          phase: { select: { format: true } },
+        },
       })
       if (!current || (organizationId && current.tournament.organizationId !== organizationId && current.tournament.organizationId !== null) || (!organizationId && current.tournament.organizationId !== null)) throw new Error('NOT_FOUND')
       if (![current.player1Id, current.player2Id].includes(winner_id)) {
@@ -68,7 +71,7 @@ matchesRouter.put('/:id', requireAdmin, async (req, res) => {
         data: { result, winnerId: winner_id, status: 'completed' },
       })
 
-      if (current.tournament.format === 'single_elimination') {
+      if (current.phase.format === 'single_elimination') {
         await propagateMatchWinner(tx, matchId, winner_id)
       }
 

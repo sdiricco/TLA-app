@@ -1,5 +1,10 @@
 import type { TournamentFormatDefinition } from '@/config/tournamentFormats'
-import type { TournamentCategory, TournamentFormat, TournamentStatus } from '@/types'
+import type {
+  TournamentCategory,
+  TournamentFormat,
+  TournamentPhaseInput,
+  TournamentStatus,
+} from '@/types'
 
 export interface TournamentFormModel {
   name: string
@@ -16,6 +21,7 @@ export interface TournamentFormModel {
   participant_limit: number | null
   group_count: number | null
   qualifiers_per_group: number | null
+  phases: TournamentPhaseInput[]
 }
 
 export interface TournamentSelectOption<T> {

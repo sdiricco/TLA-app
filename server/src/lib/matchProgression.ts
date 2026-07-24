@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client'
 type MatchProgressionRecord = {
   id: string
   tournamentId: string
+  phaseId: string
   round: number
   position: number
   player1Id: string | null
@@ -31,6 +32,7 @@ async function advanceWinner(
   const nextMatch = await tx.match.findFirst({
     where: {
       tournamentId: match.tournamentId,
+      phaseId: match.phaseId,
       round: nextRound,
       position: nextPosition,
     },
@@ -59,9 +61,13 @@ export async function propagateMatchWinner(
   await advanceWinner(tx, currentMatch, winnerId)
 }
 
-export async function autoAdvanceByeMatches(tx: Prisma.TransactionClient, tournamentId: string): Promise<void> {
+export async function autoAdvanceByeMatches(
+  tx: Prisma.TransactionClient,
+  tournamentId: string,
+  phaseId?: string,
+): Promise<void> {
   const matches = await tx.match.findMany({
-    where: { tournamentId, round: 1 },
+    where: { tournamentId, ...(phaseId ? { phaseId } : {}), round: 1 },
     orderBy: [{ round: 'asc' }, { position: 'asc' }],
   })
 
@@ -85,9 +91,10 @@ export async function autoAdvanceByeMatches(tx: Prisma.TransactionClient, tourna
 export async function reconcileMatchProgression(
   tx: Prisma.TransactionClient,
   tournamentId: string,
+  phaseId?: string,
 ): Promise<void> {
   const matches = await tx.match.findMany({
-    where: { tournamentId },
+    where: { tournamentId, ...(phaseId ? { phaseId } : {}) },
     orderBy: [{ round: 'asc' }, { position: 'asc' }],
   })
   const byRoundAndPosition = new Map(matches.map((match) => [`${match.round}:${match.position}`, match]))

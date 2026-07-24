@@ -28,6 +28,36 @@ const playerSchema = {
 
 const tournamentCategoryEnum = ['maschile', 'femminile']
 
+const tournamentPhaseInputSchema = {
+  type: 'object',
+  required: ['name', 'format', 'group_count', 'output_count'],
+  properties: {
+    name: { type: 'string' },
+    format: { type: 'string', enum: ['round_robin', 'single_elimination'] },
+    group_count: { type: 'integer', minimum: 1 },
+    output_count: { type: 'integer', minimum: 1 },
+    qualifiers_per_group: { type: 'integer', minimum: 1, nullable: true },
+  },
+}
+
+const tournamentPhaseSchema = {
+  allOf: [
+    tournamentPhaseInputSchema,
+    {
+      type: 'object',
+      required: ['id', 'tournament_id', 'position', 'status', 'groups', 'players'],
+      properties: {
+        id: { type: 'string' },
+        tournament_id: { type: 'string' },
+        position: { type: 'integer', minimum: 1 },
+        status: { type: 'string', enum: ['pending', 'active', 'completed'] },
+        groups: { type: 'array', items: { type: 'object' } },
+        players: { type: 'array', items: { type: 'object' } },
+      },
+    },
+  ],
+}
+
 const tournamentSchema = {
   type: 'object',
   required: ['id', 'name', 'format', 'category', 'status', 'published'],
@@ -51,6 +81,13 @@ const tournamentSchema = {
     participant_limit: { type: 'integer', nullable: true },
     group_count: { type: 'integer', nullable: true },
     qualifiers_per_group: { type: 'integer', nullable: true },
+    regulation_name: { type: 'string', nullable: true },
+    regulation_content_type: { type: 'string', nullable: true },
+    regulation_size: { type: 'integer', nullable: true },
+    phases: {
+      type: 'array',
+      items: { $ref: '#/components/schemas/TournamentPhase' },
+    },
     created_at: { type: 'string', nullable: true },
     updated_at: { type: 'string', nullable: true },
   },
@@ -73,10 +110,12 @@ const tournamentWithPlayersSchema = {
 
 const matchSchema = {
   type: 'object',
-  required: ['id', 'tournament_id', 'round_index', 'position', 'status'],
+  required: ['id', 'tournament_id', 'phase_id', 'round_index', 'position', 'status'],
   properties: {
     id: { type: 'string' },
     tournament_id: { type: 'string' },
+    phase_id: { type: 'string' },
+    group_id: { type: 'string', nullable: true },
     round_index: { type: 'integer', minimum: 0 },
     position: { type: 'integer' },
     player1_id: { type: 'string', nullable: true },
@@ -161,6 +200,8 @@ export const openApiSpec = {
         },
       },
       Tournament: tournamentSchema,
+      TournamentPhase: tournamentPhaseSchema,
+      TournamentPhaseInput: tournamentPhaseInputSchema,
       TournamentWithPlayers: tournamentWithPlayersSchema,
       TournamentListResponse: {
         type: 'object',
@@ -192,6 +233,7 @@ export const openApiSpec = {
               status: { type: 'string' },
             },
           },
+          phase: { $ref: '#/components/schemas/TournamentPhase' },
           draw: {
             type: 'object',
             required: ['draw_size', 'participants_count', 'rounds_count'],
@@ -488,6 +530,10 @@ export const openApiSpec = {
                   participant_limit: { type: 'integer', nullable: true },
                   group_count: { type: 'integer', nullable: true },
                   qualifiers_per_group: { type: 'integer', nullable: true },
+                  phases: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/TournamentPhaseInput' },
+                  },
                 },
               },
             },
@@ -553,6 +599,10 @@ export const openApiSpec = {
                       participant_limit: { type: 'integer', nullable: true },
                       group_count: { type: 'integer', nullable: true },
                       qualifiers_per_group: { type: 'integer', nullable: true },
+                      phases: {
+                        type: 'array',
+                        items: { $ref: '#/components/schemas/TournamentPhaseInput' },
+                      },
                     },
                   },
                   {
@@ -588,6 +638,53 @@ export const openApiSpec = {
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: {
           204: { description: 'Torneo eliminato' },
+        },
+      },
+    },
+    '/tournaments/{id}/regulation': {
+      post: {
+        summary: 'Carica o sostituisce il regolamento del torneo',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'X-File-Name', in: 'header', required: true, schema: { type: 'string' } },
+          { name: 'X-File-Type', in: 'header', required: false, schema: { type: 'string' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/octet-stream': {
+              schema: { type: 'string', format: 'binary' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Regolamento caricato',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Tournament' },
+              },
+            },
+          },
+          400: { description: 'File mancante, non valido o superiore a 6 MB' },
+          404: { description: 'Torneo non trovato' },
+        },
+      },
+      get: {
+        summary: 'Scarica il regolamento del torneo',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: {
+            description: 'Contenuto binario del regolamento',
+            content: {
+              'application/octet-stream': {
+                schema: { type: 'string', format: 'binary' },
+              },
+            },
+          },
+          404: { description: 'Regolamento non disponibile' },
         },
       },
     },
@@ -663,7 +760,10 @@ export const openApiSpec = {
       get: {
         summary: 'Tabellone completo e match di un torneo',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'phaseId', in: 'query', required: false, schema: { type: 'string' } },
+        ],
         responses: {
           200: {
             description: 'Metadati del tabellone, turni e tutti i match inclusi quelli futuri',
@@ -676,11 +776,35 @@ export const openApiSpec = {
         },
       },
     },
+    '/tournaments/{id}/phases/{phaseId}/complete': {
+      post: {
+        summary: 'Conclude una fase, calcola i qualificati e genera la fase successiva',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'phaseId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          200: {
+            description: 'Fase conclusa e torneo aggiornato',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/TournamentWithPlayers' },
+              },
+            },
+          },
+          409: { description: 'La fase non è pronta per essere conclusa' },
+        },
+      },
+    },
     '/tournaments/{id}/draw.pdf': {
       get: {
         summary: 'Scarica il tabellone del torneo in PDF',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'phaseId', in: 'query', required: false, schema: { type: 'string' } },
+        ],
         responses: {
           200: {
             description: 'Tabellone PDF vettoriale',

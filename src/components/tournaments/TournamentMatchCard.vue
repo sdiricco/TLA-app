@@ -49,7 +49,7 @@ function isWinner(slot: MatchSlot): boolean {
   <!-- Section: Match card -->
   <!------------------------------>
   <article
-    class="flex min-h-32 cursor-pointer flex-col overflow-hidden border border-surface-200 bg-surface-0 outline-none transition-colors hover:border-primary-300 focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500/20"
+    class="flex min-h-32 cursor-pointer flex-col overflow-hidden rounded-lg border border-surface-200 bg-surface-0 outline-none transition-colors focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500/20"
     tabindex="0"
     @click="$emit('open')"
     @keydown.enter="$emit('open')"
@@ -57,7 +57,7 @@ function isWinner(slot: MatchSlot): boolean {
   >
     <header class="flex min-h-8 items-center justify-between gap-3 border-b border-surface-100 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-color">
       <span>{{ heading }}</span>
-      <span v-if="match.result" class="text-primary-700">{{ match.result }}</span>
+      <span v-if="match.result" class="text-primary">{{ match.result }}</span>
       <span v-else-if="showPendingStatus">Da giocare</span>
     </header>
 
@@ -73,12 +73,12 @@ function isWinner(slot: MatchSlot): boolean {
       <div class="flex min-w-0 items-center gap-2">
         <Avatar
           v-if="player(slot)"
-          class="size-8! shrink-0 rounded-none! bg-surface-50! text-xs! text-muted-color!"
+          class="size-8! shrink-0"
           :label="getPlayerInitials(player(slot)!)"
           :image="player(slot)?.photo_url ?? undefined"
           shape="square"
         />
-        <span v-else class="size-8 shrink-0 bg-surface-50" />
+        <span v-else class="size-8 shrink-0 rounded-md bg-surface-50" />
         <div class="flex min-w-0 flex-col">
           <span class="truncate text-sm" :class="{ 'font-bold': seed(slot) }">{{ slotLabel(slot) }}</span>
           <span v-if="seed(slot)" class="text-xs font-semibold uppercase tracking-wide text-muted-color">Seed {{ seed(slot) }}</span>

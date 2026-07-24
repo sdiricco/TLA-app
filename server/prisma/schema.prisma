@@ -124,23 +124,24 @@ model OrganizationMembership {
 }
 
 model Player {
-  id               String             @id @default(uuid())
+  id               String                  @id @default(uuid())
   name             String
   ranking          Int
-  birthDate        DateTime?          @map("birth_date")
-  photoUrl         String?            @map("photo_url")
+  birthDate        DateTime?               @map("birth_date")
+  photoUrl         String?                 @map("photo_url")
   club             String?
   phone            String?
-  organizationId   String?            @map("organization_id")
-  userId           String?            @map("user_id")
-  organization     Organization?      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  profile          Profile?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organizationId   String?                 @map("organization_id")
+  userId           String?                 @map("user_id")
+  organization     Organization?           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  profile          Profile?                @relation(fields: [userId], references: [id], onDelete: SetNull)
   entries          TournamentPlayer[]
-  matchesAsPlayer1 Match[]            @relation("MatchPlayer1")
-  matchesAsPlayer2 Match[]            @relation("MatchPlayer2")
-  wonMatches       Match[]            @relation("MatchWinner")
-  createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
+  phaseEntries     TournamentPhasePlayer[]
+  matchesAsPlayer1 Match[]                 @relation("MatchPlayer1")
+  matchesAsPlayer2 Match[]                 @relation("MatchPlayer2")
+  wonMatches       Match[]                 @relation("MatchWinner")
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
 
   @@unique([organizationId, userId])
   @@index([ranking])
@@ -165,9 +166,14 @@ model Tournament {
   participantLimit      Int?               @map("participant_limit")
   groupCount            Int?               @map("group_count")
   qualifiersPerGroup    Int?               @map("qualifiers_per_group")
+  regulationPath        String?            @map("regulation_path")
+  regulationName        String?            @map("regulation_name")
+  regulationContentType String?            @map("regulation_content_type")
+  regulationSize        BigInt?            @map("regulation_size")
   organizationId        String?            @map("organization_id")
   organization          Organization?      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   players               TournamentPlayer[]
+  phases                TournamentPhase[]
   matches               Match[]
   createdAt             DateTime           @default(now()) @map("created_at")
   updatedAt             DateTime           @updatedAt @map("updated_at")
@@ -190,23 +196,85 @@ model TournamentPlayer {
   @@map("tournament_players")
 }
 
+model TournamentPhase {
+  id                 String                  @id @default(uuid())
+  tournamentId       String                  @map("tournament_id")
+  position           Int
+  name               String
+  format             String
+  status             String                  @default("pending")
+  groupCount         Int                     @default(1) @map("group_count")
+  qualifiersPerGroup Int?                    @map("qualifiers_per_group")
+  outputCount        Int                     @default(1) @map("output_count")
+  tournament         Tournament              @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  groups             TournamentGroup[]
+  players            TournamentPhasePlayer[]
+  matches            Match[]
+  createdAt          DateTime                @default(now()) @map("created_at")
+  updatedAt          DateTime                @updatedAt @map("updated_at")
+
+  @@unique([tournamentId, position])
+  @@index([tournamentId, status, position])
+  @@map("tournament_phases")
+}
+
+model TournamentGroup {
+  id        String                  @id @default(uuid())
+  phaseId   String                  @map("phase_id")
+  position  Int
+  name      String
+  phase     TournamentPhase         @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  players   TournamentPhasePlayer[]
+  matches   Match[]
+  createdAt DateTime                @default(now()) @map("created_at")
+
+  @@unique([phaseId, position])
+  @@index([phaseId])
+  @@map("tournament_groups")
+}
+
+model TournamentPhasePlayer {
+  phaseId    String           @map("phase_id")
+  playerId   String           @map("player_id")
+  groupId    String?          @map("group_id")
+  seed       Int?
+  sourceRank Int?             @map("source_rank")
+  qualified  Boolean          @default(false)
+  phase      TournamentPhase  @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  player     Player           @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  group      TournamentGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  @@id([phaseId, playerId])
+  @@index([playerId])
+  @@index([groupId])
+  @@index([phaseId, seed])
+  @@map("tournament_phase_players")
+}
+
 model Match {
-  id           String     @id @default(uuid())
-  tournamentId String     @map("tournament_id")
+  id           String           @id @default(uuid())
+  tournamentId String           @map("tournament_id")
+  phaseId      String           @map("phase_id")
+  groupId      String?          @map("group_id")
   round        Int
   position     Int
-  player1Id    String?    @map("player1_id")
-  player2Id    String?    @map("player2_id")
+  player1Id    String?          @map("player1_id")
+  player2Id    String?          @map("player2_id")
   result       String?
-  winnerId     String?    @map("winner_id")
-  status       String     @default("pending")
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  player1      Player?    @relation("MatchPlayer1", fields: [player1Id], references: [id], onDelete: SetNull)
-  player2      Player?    @relation("MatchPlayer2", fields: [player2Id], references: [id], onDelete: SetNull)
-  winner       Player?    @relation("MatchWinner", fields: [winnerId], references: [id], onDelete: SetNull)
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+  winnerId     String?          @map("winner_id")
+  status       String           @default("pending")
+  tournament   Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  phase        TournamentPhase  @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  group        TournamentGroup? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  player1      Player?          @relation("MatchPlayer1", fields: [player1Id], references: [id], onDelete: SetNull)
+  player2      Player?          @relation("MatchPlayer2", fields: [player2Id], references: [id], onDelete: SetNull)
+  winner       Player?          @relation("MatchWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
 
   @@index([tournamentId, round, position])
+  @@index([phaseId, round, position])
+  @@index([groupId])
   @@map("matches")
 }

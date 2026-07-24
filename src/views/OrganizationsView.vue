@@ -131,22 +131,24 @@ async function copyInviteCode(organization: Organization): Promise<void> {
         <!------------------------------>
         <!-- Section: Active organization -->
         <!------------------------------>
-        <section class="overflow-hidden border border-(--color-border) bg-(--color-surface-card) shadow-sm" aria-labelledby="active-organization-title">
+        <section class="overflow-hidden border border-(--color-border) bg-(--color-surface-card)" aria-labelledby="active-organization-title">
           <div class="flex items-start gap-3 p-4 sm:gap-4 sm:p-6">
-            <span class="grid size-12 shrink-0 place-items-center bg-primary-50 text-xl text-primary-700 sm:size-13"><i class="pi pi-building" /></span>
+            <span class="grid size-12 shrink-0 place-items-center bg-primary-50 text-xl text-primary sm:size-13"><i class="pi pi-building" /></span>
             <div class="min-w-0 flex-1">
-              <div class="mb-1 flex items-center gap-2 text-xs font-extrabold tracking-wider text-primary-700"><span class="size-2 rounded-full bg-primary-500 ring-4 ring-primary-500/10" />{{ auth.isGuest ? 'STAI ESPLORANDO' : 'ORGANIZZAZIONE ATTIVA' }}</div>
+              <div class="mb-1 flex items-center gap-2 text-xs font-extrabold tracking-wider text-primary"><span class="size-2 rounded-full bg-primary-500 ring-4 ring-primary-500/10" />{{ auth.isGuest ? 'STAI ESPLORANDO' : 'ORGANIZZAZIONE ATTIVA' }}</div>
               <h2 id="active-organization-title" class="truncate text-2xl font-bold tracking-tight">{{ store.activeOrganization.name }}</h2>
               <p class="mb-3 mt-2 max-w-2xl text-sm leading-relaxed text-(--color-text-muted)">{{ store.activeOrganization.description || 'Community di tennis su TLA.' }}</p>
               <div class="flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-(--color-text-muted)">
-                <span class="flex items-center gap-1"><i class="pi pi-lock text-primary-700" />{{ visibilityLabel(store.activeOrganization) }}</span>
-                <span v-if="!auth.isGuest" class="flex items-center gap-1"><i class="pi pi-user text-primary-700" />{{ roleLabel(store.activeOrganization.role) }}</span>
-                <span v-if="store.activeOrganization.member_count !== undefined" class="flex items-center gap-1"><i class="pi pi-users text-primary-700" />{{ store.activeOrganization.member_count }} membri</span>
+                <span class="flex items-center gap-1"><i class="pi pi-lock text-primary" />{{ visibilityLabel(store.activeOrganization) }}</span>
+                <span v-if="!auth.isGuest" class="flex items-center gap-1"><i class="pi pi-user text-primary" />{{ roleLabel(store.activeOrganization.role) }}</span>
+                <span v-if="store.activeOrganization.member_count !== undefined" class="flex items-center gap-1"><i class="pi pi-users text-primary" />{{ store.activeOrganization.member_count }} membri</span>
               </div>
             </div>
           </div>
           <div class="grid gap-2 border-t border-(--color-border) bg-(--color-surface-soft) p-3 sm:flex sm:items-center">
-            <Button class="sm:mr-auto" label="Vai ai tornei" icon="pi pi-arrow-right" icon-pos="right" @click="router.push({ name: 'tournaments' })" />
+            <span class="sm:mr-auto">
+              <Button label="Vai ai tornei" icon="pi pi-arrow-right" icon-pos="right" @click="router.push({ name: 'tournaments' })" />
+            </span>
             <Button v-if="store.isAdmin" label="Modifica" icon="pi pi-pencil" severity="secondary" outlined @click="router.push({ name: 'organization-edit' })" />
             <Button v-if="store.isAdmin && store.activeOrganization.join_code" label="Codice invito" icon="pi pi-copy" severity="secondary" text @click="copyInviteCode(store.activeOrganization)" />
           </div>
@@ -159,7 +161,7 @@ async function copyInviteCode(organization: Organization): Promise<void> {
           <header class="mb-3 flex items-start justify-between gap-4"><div><h2 id="my-organizations-title" class="text-lg font-bold">Le tue organizzazioni</h2><p class="mt-1 text-sm text-(--color-text-muted)">Seleziona lo spazio su cui vuoi lavorare.</p></div><span class="grid min-w-7 place-items-center bg-(--color-surface-soft) px-2 py-1 text-xs font-extrabold text-(--color-text-muted)">{{ store.organizations.length }}</span></header>
           <div class="grid gap-2 md:grid-cols-2">
             <article v-for="organization in store.organizations" :key="organization.id" class="flex min-w-0 items-center border" :class="organization.id === store.activeOrganization.id ? 'border-primary-300 bg-primary-50' : 'border-(--color-border) bg-(--color-surface-card)'">
-              <button type="button" class="flex min-w-0 flex-1 items-center gap-3 p-3 text-left" @click="store.select(organization.id)"><span class="grid size-9 shrink-0 place-items-center bg-(--color-surface-soft) text-primary-700"><i class="pi pi-building" /></span><span class="grid min-w-0 flex-1"><strong class="truncate text-sm">{{ organization.name }}</strong><small class="truncate text-xs text-(--color-text-muted)">{{ visibilityLabel(organization) }} · {{ roleLabel(organization.role) }}</small></span><span v-if="organization.id === store.activeOrganization.id" class="text-xs font-extrabold text-primary-700"><i class="pi pi-check" /> Attiva</span><i v-else class="pi pi-chevron-right text-xs text-(--color-text-subtle)" /></button>
+              <button type="button" class="flex min-w-0 flex-1 items-center gap-3 p-3 text-left" @click="store.select(organization.id)"><span class="grid size-9 shrink-0 place-items-center bg-(--color-surface-soft) text-primary"><i class="pi pi-building" /></span><span class="grid min-w-0 flex-1"><strong class="truncate text-sm">{{ organization.name }}</strong><small class="truncate text-xs text-(--color-text-muted)">{{ visibilityLabel(organization) }} · {{ roleLabel(organization.role) }}</small></span><span v-if="organization.id === store.activeOrganization.id" class="text-xs font-extrabold text-primary"><i class="pi pi-check" /> Attiva</span><i v-else class="pi pi-chevron-right text-xs text-(--color-text-subtle)" /></button>
               <Button v-if="organization.join_code && ['owner', 'admin'].includes(organization.role)" icon="pi pi-copy" text rounded :aria-label="`Copia codice invito di ${organization.name}`" @click="copyInviteCode(organization)" />
             </article>
           </div>
@@ -169,18 +171,18 @@ async function copyInviteCode(organization: Organization): Promise<void> {
         <section class="mt-6" aria-labelledby="next-actions-title">
           <header class="mb-3"><h2 id="next-actions-title" class="text-lg font-bold">{{ auth.isGuest ? 'Scopri altre community' : 'Aggiungi uno spazio' }}</h2><p class="mt-1 text-sm text-(--color-text-muted)">{{ auth.isGuest ? 'Spostati sulla mappa per trovare altri circoli.' : 'Cerca una community esistente oppure creane una nuova.' }}</p></header>
           <div class="grid gap-2 md:grid-cols-3">
-            <button v-for="action in nextActions" :key="action.title" type="button" class="flex items-center gap-3 border border-(--color-border) p-3 text-left hover:border-primary-300 hover:bg-(--color-surface-card)" @click="action.run"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary-700"><i :class="action.icon" /></span><span class="grid min-w-0 flex-1"><strong class="text-sm">{{ action.title }}</strong><small class="text-xs text-(--color-text-muted)">{{ action.copy }}</small></span><i class="pi pi-arrow-right text-xs text-(--color-text-subtle)" /></button>
+            <button v-for="action in nextActions" :key="action.title" type="button" class="flex items-center gap-3 border border-(--color-border) p-3 text-left hover:border-primary-300 hover:bg-(--color-surface-card)" @click="action.run"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary"><i :class="action.icon" /></span><span class="grid min-w-0 flex-1"><strong class="text-sm">{{ action.title }}</strong><small class="text-xs text-(--color-text-muted)">{{ action.copy }}</small></span><i class="pi pi-arrow-right text-xs text-(--color-text-subtle)" /></button>
           </div>
         </section>
       </template>
 
       <!-- Section: Empty state -->
-      <section v-else class="grid justify-items-center gap-3 border border-(--color-border) bg-(--color-surface-card) px-4 py-12 text-center sm:py-16"><span class="grid size-14 place-items-center bg-primary-50 text-xl text-primary-700"><i class="pi pi-building" /></span><h2 class="text-xl font-bold">Nessuna organizzazione</h2><p class="max-w-lg text-(--color-text-muted)">{{ auth.isGuest ? 'Esplora la mappa per scegliere una community.' : 'Crea il tuo primo spazio oppure trovane uno sulla mappa.' }}</p><div class="mt-2 flex flex-col gap-2 sm:flex-row"><Button label="Esplora la mappa" icon="pi pi-map" severity="secondary" outlined @click="router.push({ name: 'organizations-explore' })" /><Button v-if="!auth.isGuest" label="Crea organizzazione" icon="pi pi-plus" @click="router.push({ name: 'organization-create' })" /></div></section>
+      <section v-else class="grid justify-items-center gap-3 border border-(--color-border) bg-(--color-surface-card) px-4 py-12 text-center sm:py-16"><span class="grid size-14 place-items-center bg-primary-50 text-xl text-primary"><i class="pi pi-building" /></span><h2 class="text-xl font-bold">Nessuna organizzazione</h2><p class="max-w-lg text-(--color-text-muted)">{{ auth.isGuest ? 'Esplora la mappa per scegliere una community.' : 'Crea il tuo primo spazio oppure trovane uno sulla mappa.' }}</p><div class="mt-2 flex flex-col gap-2 sm:flex-row"><Button label="Esplora la mappa" icon="pi pi-map" severity="secondary" outlined @click="router.push({ name: 'organizations-explore' })" /><Button v-if="!auth.isGuest" label="Crea organizzazione" icon="pi pi-plus" @click="router.push({ name: 'organization-create' })" /></div></section>
     </div>
 
     <!-- Section: Join dialog -->
     <Dialog v-model:visible="joinDialogVisible" modal header="Entra con codice" class="mx-4 w-full max-w-md">
-      <form class="grid gap-3" @submit.prevent="joinOrganization"><p class="leading-relaxed text-(--color-text-muted)">Inserisci il codice ricevuto dall’amministratore dell’organizzazione.</p><Message v-if="joinError" severity="error" :closable="false">{{ joinError }}</Message><label for="organization-join-code" class="text-sm font-bold text-(--color-text-muted)">Codice invito</label><InputText id="organization-join-code" v-model="joinCode" class="h-13 text-center font-mono font-extrabold uppercase tracking-widest" :class="joinCode.length > 5 ? 'text-sm normal-case tracking-normal' : 'text-xl'" placeholder="A1B2C" maxlength="64" autocomplete="off" fluid autofocus @input="normalizeJoinCode" /><small class="text-xs text-(--color-text-muted)">I nuovi codici hanno 5 caratteri: lettere maiuscole e numeri.</small><Button type="submit" label="Entra nell’organizzazione" icon="pi pi-sign-in" :loading="joining" :disabled="!joinCodeIsValid" fluid /></form>
+      <form class="grid gap-3" @submit.prevent="joinOrganization"><p class="leading-relaxed text-(--color-text-muted)">Inserisci il codice ricevuto dall’amministratore dell’organizzazione.</p><Message v-if="joinError" severity="error" :closable="false">{{ joinError }}</Message><label for="organization-join-code" class="text-sm font-bold text-(--color-text-muted)">Codice invito</label><InputText id="organization-join-code" v-model="joinCode" placeholder="A1B2C" maxlength="64" autocomplete="off" fluid autofocus @input="normalizeJoinCode" /><small class="text-xs text-(--color-text-muted)">I nuovi codici hanno 5 caratteri: lettere maiuscole e numeri.</small><Button type="submit" label="Entra nell’organizzazione" icon="pi pi-sign-in" :loading="joining" :disabled="!joinCodeIsValid" fluid /></form>
     </Dialog>
   </section>
 </template>

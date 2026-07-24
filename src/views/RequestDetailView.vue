@@ -99,7 +99,7 @@ onMounted(loadDetail)
   <!-- Page layout -->
   <!------------------------------>
   <section class="mx-auto grid w-full max-w-230 gap-4 py-4 sm:py-8">
-    <RouterLink to="/requests" class="text-sm font-bold text-primary-700 no-underline">← Torna alle richieste</RouterLink>
+    <RouterLink to="/requests" class="text-sm font-bold text-primary no-underline">← Torna alle richieste</RouterLink>
     <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
 
     <div v-if="loading" class="flex min-h-40 items-center justify-center gap-3 text-sm text-(--color-text-muted)" role="status">
@@ -111,7 +111,7 @@ onMounted(loadDetail)
       <!------------------------------>
       <!-- Section: Request detail -->
       <!------------------------------>
-      <article class="grid gap-4 border border-(--color-border) bg-(--color-surface-card) p-4 shadow-sm sm:p-7">
+      <article class="grid gap-4 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-7">
         <div class="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div class="flex flex-wrap gap-2">
             <Tag :value="typeLabel(request.type)" severity="info" />
@@ -123,7 +123,7 @@ onMounted(loadDetail)
         <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">{{ request.title }}</h1>
         <div
           v-if="request.description"
-          class="wrap-anywhere leading-relaxed text-(--color-text-muted) [&_.ql-align-center]:text-center [&_.ql-align-justify]:text-justify [&_.ql-align-right]:text-right [&_.ql-ui]:hidden [&_a]:text-primary-700 [&_blockquote]:my-4 [&_blockquote]:border-l-3 [&_blockquote]:border-primary-500 [&_blockquote]:pl-4 [&_h1]:my-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:my-3 [&_h2]:text-xl [&_h2]:font-bold [&_h3]:my-3 [&_h3]:text-lg [&_h3]:font-bold [&_img]:my-4 [&_img]:max-h-140 [&_img]:max-w-full [&_img]:object-contain [&_ol]:pl-6 [&_ul]:pl-6"
+          class="wrap-anywhere leading-relaxed text-(--color-text-muted) [&_.ql-align-center]:text-center [&_.ql-align-justify]:text-justify [&_.ql-align-right]:text-right [&_.ql-ui]:hidden [&_a]:text-primary [&_blockquote]:my-4 [&_blockquote]:border-l-3 [&_blockquote]:border-primary-500 [&_blockquote]:pl-4 [&_h1]:my-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:my-3 [&_h2]:text-xl [&_h2]:font-bold [&_h3]:my-3 [&_h3]:text-lg [&_h3]:font-bold [&_img]:my-4 [&_img]:max-h-140 [&_img]:max-w-full [&_img]:object-contain [&_ol]:pl-6 [&_ul]:pl-6"
           v-html="request.description"
         />
         <img v-if="request.image_url" class="max-h-110 w-full max-w-170 justify-self-start border border-(--color-border) bg-(--color-surface-soft) object-contain" :src="request.image_url" alt="Immagine allegata alla richiesta" />
@@ -133,10 +133,10 @@ onMounted(loadDetail)
       <!------------------------------>
       <!-- Section: Discussion -->
       <!------------------------------>
-      <section class="grid gap-4 border border-(--color-border) bg-(--color-surface-card) p-4 shadow-sm sm:p-7">
+      <section class="grid gap-4 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-7">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary-700">DISCUSSIONE</p>
+            <p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary">DISCUSSIONE</p>
             <h2 class="text-2xl font-bold tracking-tight">Commenti</h2>
           </div>
           <span class="text-xs font-bold text-(--color-text-muted)">{{ comments.length }}</span>
@@ -157,7 +157,9 @@ onMounted(loadDetail)
         <form v-if="!auth.isGuest" class="grid gap-2 border-t border-(--color-border) pt-4" @submit.prevent="addComment">
           <label for="comment" class="text-sm font-bold text-(--color-text-muted)">Aggiungi un commento</label>
           <Textarea id="comment" v-model="commentBody" rows="4" maxlength="2000" placeholder="Condividi un dettaglio o una proposta…" fluid required />
-          <Button class="justify-self-start" type="submit" label="Pubblica commento" icon="pi pi-send" :loading="savingComment" :disabled="!commentBody.trim()" />
+          <span class="justify-self-start">
+            <Button type="submit" label="Pubblica commento" icon="pi pi-send" :loading="savingComment" :disabled="!commentBody.trim()" />
+          </span>
         </form>
         <p v-else class="text-xs text-(--color-text-subtle)">Accedi o registrati per partecipare alla discussione.</p>
       </section>

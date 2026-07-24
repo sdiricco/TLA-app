@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { watchDebounced } from '@vueuse/core'
-import Badge from 'primevue/badge'
 import Button from 'primevue/button'
 import Chip from 'primevue/chip'
 import Drawer from 'primevue/drawer'
@@ -156,8 +155,8 @@ watchDebounced(searchName, () => { void loadPlayers(0, store.perPage) }, { debou
 
     <!-- Section: Search and creation -->
     <div class="flex items-center gap-2">
-      <span class="relative min-w-0 max-w-lg flex-1"><i class="pi pi-search pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-sm text-(--color-text-subtle)" /><InputText v-model="searchName" class="h-11 w-full rounded-none border-(--color-border) bg-(--color-surface-card) pl-11" aria-label="Cerca giocatore per nome" placeholder="Cerca giocatore per nome" fluid /></span>
-      <Button v-if="canViewAdmin" class="h-11 rounded-none" label="Crea" icon="pi pi-user-plus" :disabled="auth.isGuest" @click="router.push({ name: 'player-create' })" />
+      <span class="min-w-0 max-w-lg flex-1"><InputText v-model="searchName" aria-label="Cerca giocatore per nome" placeholder="Cerca giocatore per nome" fluid /></span>
+      <Button v-if="canViewAdmin" label="Crea" icon="pi pi-user-plus" :disabled="auth.isGuest" @click="router.push({ name: 'player-create' })" />
     </div>
 
     <!------------------------------>
@@ -165,11 +164,11 @@ watchDebounced(searchName, () => { void loadPlayers(0, store.perPage) }, { debou
     <!------------------------------>
     <div class="flex items-center justify-between gap-4">
       <div class="flex items-baseline gap-3"><h2 class="text-xl font-bold">Giocatori</h2><span class="text-xs text-(--color-text-subtle)">{{ store.total }} profili</span></div>
-      <Button class="relative size-10 rounded-none p-0!" text plain aria-label="Apri filtri giocatori" title="Filtra giocatori" @click="openFilters"><i class="pi pi-filter" /><Badge v-if="activeFiltersCount" :value="activeFiltersCount" class="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full! bg-primary-600! px-1! text-[0.65rem]! font-bold! text-white!" /></Button>
+      <Button label="Filtri" icon="pi pi-sliders-h" severity="secondary" outlined :badge="activeFiltersCount ? String(activeFiltersCount) : undefined" aria-label="Apri filtri giocatori" title="Filtra giocatori" @click="openFilters" />
     </div>
 
     <div v-if="activeFilterChips.length" class="flex flex-wrap gap-2">
-      <Chip v-for="chip in activeFilterChips" :key="chip.key" :label="chip.label" removable class="rounded-none! border border-(--color-border) bg-white!" @remove="removeFilter(chip.key)" />
+      <Chip v-for="chip in activeFilterChips" :key="chip.key" :label="chip.label" removable @remove="removeFilter(chip.key)" />
     </div>
 
     <!-- Section: Filters drawer -->
@@ -188,7 +187,7 @@ watchDebounced(searchName, () => { void loadPlayers(0, store.perPage) }, { debou
     <!------------------------------>
     <div v-if="store.loading" class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3"><div v-for="item in 8" :key="item" class="grid min-h-16 grid-cols-[auto_1fr_auto] items-center gap-3 border border-(--color-border) bg-(--color-surface-card) p-3"><Skeleton shape="square" size="2.75rem" /><div class="grid gap-2"><Skeleton width="65%" height="1rem" /><Skeleton width="40%" height="0.75rem" /></div><Skeleton width="1rem" height="1rem" /></div></div>
 
-    <div v-else-if="store.players.length === 0" class="flex min-h-70 flex-col items-center justify-center border border-dashed border-(--color-border) bg-(--color-surface-soft) text-center"><span class="grid size-14 place-items-center rounded-full bg-primary-50 text-xl text-primary-700"><i class="pi pi-users" /></span><h3 class="mt-4 text-xl font-bold">Nessun giocatore trovato</h3><p class="mt-2 text-sm text-(--color-text-muted)">Modifica i filtri oppure aggiungi il primo giocatore.</p></div>
+    <div v-else-if="store.players.length === 0" class="flex min-h-70 flex-col items-center justify-center border border-dashed border-(--color-border) bg-(--color-surface-soft) text-center"><span class="grid size-14 place-items-center rounded-full bg-primary-50 text-xl text-primary"><i class="pi pi-users" /></span><h3 class="mt-4 text-xl font-bold">Nessun giocatore trovato</h3><p class="mt-2 text-sm text-(--color-text-muted)">Modifica i filtri oppure aggiungi il primo giocatore.</p></div>
 
     <template v-else>
       <div class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3"><PlayerListItem v-for="player in store.players" :key="player.id" :player="player" @open="openDetail(player)" /></div>

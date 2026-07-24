@@ -104,11 +104,11 @@ function handleEditorLoad(event: EditorLoadEvent): void {
   <!-- Page layout -->
   <!------------------------------>
   <section class="mx-auto grid w-full max-w-225 gap-4 py-4 sm:py-8">
-    <Button class="w-fit" icon="pi pi-arrow-left" label="Torna alle richieste" text severity="secondary" @click="router.push({ name: 'requests' })" />
+    <Button icon="pi pi-arrow-left" label="Torna alle richieste" text severity="secondary" @click="router.push({ name: 'requests' })" />
 
     <!-- Section: Header -->
     <header>
-      <p class="mb-2 text-xs font-extrabold tracking-[0.14em] text-primary-700">BACKLOG ORGANIZZAZIONE</p>
+      <p class="mb-2 text-xs font-extrabold tracking-[0.14em] text-primary">BACKLOG ORGANIZZAZIONE</p>
       <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Nuova richiesta</h1>
       <p class="mt-2 leading-relaxed text-(--color-text-muted)">Racconta con chiarezza l’idea o il problema che vuoi condividere.</p>
     </header>
@@ -118,11 +118,11 @@ function handleEditorLoad(event: EditorLoadEvent): void {
     <!------------------------------>
     <!-- Section: Request form -->
     <!------------------------------>
-    <form class="overflow-hidden border border-(--color-border) bg-(--color-surface-card) shadow-sm" @submit.prevent="createRequest">
+    <form class="overflow-hidden border border-(--color-border) bg-(--color-surface-card)" @submit.prevent="createRequest">
       <!-- Content section -->
       <section class="grid gap-5 p-4 sm:p-7">
         <div class="flex items-start gap-3">
-          <span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary-100 text-xs font-extrabold text-primary-700">1</span>
+          <span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary-100 text-xs font-extrabold text-primary">1</span>
           <div><h2 class="font-bold">Contenuto</h2><p class="mt-1 text-sm text-(--color-text-muted)">Dai un titolo breve e aggiungi tutti i dettagli utili.</p></div>
         </div>
 
@@ -136,7 +136,6 @@ function handleEditorLoad(event: EditorLoadEvent): void {
           <Editor
             id="request-description"
             v-model="description"
-            class="overflow-hidden [&_.p-editor-content]:border-(--color-border) [&_.p-editor-toolbar]:border-(--color-border) [&_.p-editor-toolbar]:bg-(--color-surface-soft) [&_.ql-editor]:min-h-64 [&_.ql-editor]:p-4 [&_.ql-editor]:text-sm [&_.ql-editor]:leading-relaxed [&_.ql-editor_img]:max-h-105 [&_.ql-editor_img]:max-w-full [&_.ql-editor_img]:object-contain"
             placeholder="Descrivi il problema, il contesto e il risultato desiderato…"
             @load="handleEditorLoad"
           >
@@ -147,13 +146,13 @@ function handleEditorLoad(event: EditorLoadEvent): void {
               <span class="ql-formats"><button class="ql-link" type="button" aria-label="Inserisci link" /><button class="ql-image" type="button" aria-label="Inserisci immagine" /><button class="ql-clean" type="button" aria-label="Rimuovi formattazione" /></span>
             </template>
           </Editor>
-          <small v-if="uploadingImage" class="inline-flex items-center gap-2 text-xs font-bold text-primary-700"><i class="pi pi-spin pi-spinner" /> Caricamento immagine…</small>
+          <small v-if="uploadingImage" class="inline-flex items-center gap-2 text-xs font-bold text-primary"><i class="pi pi-spin pi-spinner" /> Caricamento immagine…</small>
         </div>
       </section>
 
       <!-- Classification section -->
       <section class="grid gap-5 border-t border-(--color-border) bg-(--color-surface-soft) p-4 sm:p-7">
-        <div class="flex items-start gap-3"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary-100 text-xs font-extrabold text-primary-700">2</span><div><h2 class="font-bold">Classificazione</h2><p class="mt-1 text-sm text-(--color-text-muted)">Aiuta l’organizzazione a valutare la richiesta.</p></div></div>
+        <div class="flex items-start gap-3"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary-100 text-xs font-extrabold text-primary">2</span><div><h2 class="font-bold">Classificazione</h2><p class="mt-1 text-sm text-(--color-text-muted)">Aiuta l’organizzazione a valutare la richiesta.</p></div></div>
         <div class="grid gap-4 sm:grid-cols-2">
           <label for="request-type" class="grid gap-2 text-sm font-bold">Tipo<Select id="request-type" v-model="type" :options="typeOptions" option-label="label" option-value="value" fluid /></label>
           <label for="request-priority" class="grid gap-2 text-sm font-bold">Priorità<Select id="request-priority" v-model="priority" :options="priorityOptions" option-label="label" option-value="value" fluid /></label>

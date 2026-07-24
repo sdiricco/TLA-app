@@ -24,14 +24,14 @@ const selectedOption = computed(() => options.value.find((option) => option.valu
   <Select v-model="model" :options="options" option-label="label" option-value="value" fluid>
     <template #value="{ placeholder }">
       <span v-if="selectedOption" class="flex items-center gap-2">
-        <IconifyIcon :icon="selectedOption.icon" class="shrink-0 text-primary" />
+        <IconifyIcon :icon="selectedOption.icon" class="shrink-0" />
         <span>{{ selectedOption.label }}</span>
       </span>
       <span v-else>{{ placeholder }}</span>
     </template>
     <template #option="{ option }">
       <span class="flex items-center gap-2">
-        <IconifyIcon :icon="option.icon" class="shrink-0 text-primary" />
+        <IconifyIcon :icon="option.icon" class="shrink-0" />
         <span>{{ option.label }}</span>
       </span>
     </template>
