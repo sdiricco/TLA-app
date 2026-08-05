@@ -433,14 +433,14 @@
     <!-- Section: Tournament list -->
     <!------------------------------>
     <div v-else class="flex flex-col gap-6">
-      <section v-if="draftTournaments.length" class="flex flex-col gap-2">
+      <section v-if="draftTournaments.length" class="flex flex-col gap-3">
         <header class="flex items-baseline gap-2.5">
           <h2 class="text-lg font-bold tracking-tight sm:text-xl">Bozze</h2>
           <span class="text-xs text-(--color-text-subtle)">
             {{ draftTournaments.length }} da completare
           </span>
         </header>
-        <div class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           <TournamentListItem
             v-for="tournament in draftTournaments"
             :key="tournament.id"
@@ -450,14 +450,14 @@
         </div>
       </section>
 
-      <section v-if="publishedTournaments.length" class="flex flex-col gap-2">
+      <section v-if="publishedTournaments.length" class="flex flex-col gap-3">
         <header class="flex items-baseline gap-2.5">
           <h2 class="text-lg font-bold tracking-tight sm:text-xl">Tornei pubblicati</h2>
           <span class="text-xs text-(--color-text-subtle)">
             {{ publishedTournaments.length }}
           </span>
         </header>
-        <div class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           <TournamentListItem
             v-for="tournament in publishedTournaments"
             :key="tournament.id"

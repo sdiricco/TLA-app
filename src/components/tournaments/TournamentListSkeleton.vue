@@ -7,11 +7,11 @@ withDefaults(defineProps<{ count?: number }>(), {
 </script>
 
 <template>
-  <div class="grid w-full grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+  <div class="grid w-full grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3" aria-busy="true">
     <div
       v-for="item in count"
       :key="item"
-      class="grid min-h-24 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 rounded-lg border border-(--color-border) bg-(--color-surface-card) px-3 py-2"
+      class="grid min-h-32 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2.5 rounded-lg border border-(--color-border) bg-(--color-surface-card) px-4 py-4 sm:px-5"
     >
       <Skeleton class="col-start-1 row-start-1 w-[min(11rem,70%)]!" height="1rem" />
       <Skeleton
@@ -20,7 +20,7 @@ withDefaults(defineProps<{ count?: number }>(), {
         height="0.8rem"
       />
       <div
-        class="col-span-full row-start-3 flex items-center gap-3"
+        class="col-span-full row-start-3 flex items-center gap-4"
       >
         <Skeleton width="7rem" height="0.8rem" />
         <Skeleton width="5rem" height="0.8rem" />

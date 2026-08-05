@@ -26,7 +26,7 @@ function formatDate(date: string | null | undefined): string {
 
 <template>
   <article
-    class="group relative grid min-h-24 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 overflow-hidden rounded-lg border border-(--color-border) bg-(--color-surface-card) px-3 py-2 transition-colors before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:content-[''] focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20"
+    class="group relative grid min-h-32 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2.5 overflow-hidden rounded-lg border border-(--color-border) bg-(--color-surface-card) px-4 py-4 transition-colors before:absolute before:inset-y-0 before:left-0 before:w-1 before:content-[''] focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 sm:px-5"
     :class="tournament.published ? 'before:bg-primary-500' : 'before:bg-amber-400'"
   >
     <button
@@ -58,7 +58,7 @@ function formatDate(date: string | null | undefined): string {
     </div>
 
     <div
-      class="col-span-full row-start-3 flex min-w-0 gap-3 text-sm text-(--color-text-muted)"
+      class="col-span-full row-start-3 flex min-w-0 gap-4 text-sm text-(--color-text-muted)"
     >
       <div class="flex min-w-0 items-center gap-1.5">
         <i class="pi pi-sitemap shrink-0 text-sm text-primary" aria-hidden="true" />
