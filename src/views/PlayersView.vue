@@ -4,29 +4,16 @@ import { useRouter } from 'vue-router'
 import { watchDebounced } from '@vueuse/core'
 import Button from 'primevue/button'
 import Chip from 'primevue/chip'
-import Drawer from 'primevue/drawer'
 import InputText from 'primevue/inputtext'
-import Select from 'primevue/select'
 import Skeleton from 'primevue/skeleton'
-import OrganizationFilter from '@/components/filters/OrganizationFilter.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import PlayerFiltersDrawer from '@/components/players/PlayerFiltersDrawer.vue'
 import PlayerListItem from '@/components/players/PlayerListItem.vue'
+import type { PlayerFilterOption, PlayerFilters } from '@/components/players/playerFilters'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationsStore } from '@/stores/organizations'
 import { usePlayersStore } from '@/stores/players'
-import type { OrganizationFilter as OrganizationFilterValue, Player, PlayerSortField, SortOrder } from '@/types'
-
-interface SelectOption<T> {
-  label: string
-  value: T
-}
-
-interface PlayerFilters {
-  club: string
-  sortBy: PlayerSortField
-  sortOrder: SortOrder
-  organizationId: OrganizationFilterValue
-}
+import type { Player, PlayerSortField, SortOrder } from '@/types'
 
 interface ActivePlayerFilter {
   key: keyof PlayerFilters
@@ -52,13 +39,13 @@ const activeFiltersCount = computed(() => [
   appliedFilters.value.organizationId !== 'mine',
 ].filter(Boolean).length)
 
-const sortFieldOptions: SelectOption<PlayerSortField>[] = [
+const sortFieldOptions: PlayerFilterOption<PlayerSortField>[] = [
   { label: 'Ranking', value: 'ranking' },
   { label: 'Nome', value: 'name' },
   { label: 'Club', value: 'club' },
   { label: 'Più recenti', value: 'created_at' },
 ]
-const sortOrderOptions: SelectOption<SortOrder>[] = [
+const sortOrderOptions: PlayerFilterOption<SortOrder>[] = [
   { label: 'Crescente', value: 'asc' },
   { label: 'Decrescente', value: 'desc' },
 ]
@@ -84,6 +71,10 @@ const activeFilterChips = computed<ActivePlayerFilter[]>(() => {
   }
   return chips
 })
+
+const hasQueryFilters = computed(() =>
+  searchName.value.trim() !== '' || activeFiltersCount.value > 0
+)
 
 function createDefaultFilters(): PlayerFilters {
   return { club: '', sortBy: 'ranking', sortOrder: 'asc', organizationId: 'mine' }
@@ -127,6 +118,22 @@ function applyFilters(): void {
   void loadPlayers(0, store.perPage)
 }
 
+function clearDraftFilters(): void {
+  draftFilters.value = createDefaultFilters()
+}
+
+function clearAppliedFilters(): void {
+  appliedFilters.value = createDefaultFilters()
+  void loadPlayers(0, store.perPage)
+}
+
+function clearAllQueryFilters(): void {
+  const hadSearch = searchName.value.trim() !== ''
+  appliedFilters.value = createDefaultFilters()
+  searchName.value = ''
+  if (!hadSearch) void loadPlayers(0, store.perPage)
+}
+
 function removeFilter(key: ActivePlayerFilter['key']): void {
   const filters = { ...appliedFilters.value }
   if (key === 'club') filters.club = ''
@@ -141,6 +148,11 @@ function openDetail(player: Player): void {
   void router.push({ name: 'player-detail', params: { id: player.id } })
 }
 
+function openCreate(): void {
+  if (auth.isGuest) return
+  void router.push({ name: 'player-create' })
+}
+
 onMounted(loadPlayers)
 watchDebounced(searchName, () => { void loadPlayers(0, store.perPage) }, { debounce: 300 })
 </script>
@@ -149,49 +161,122 @@ watchDebounced(searchName, () => { void loadPlayers(0, store.perPage) }, { debou
   <!------------------------------>
   <!-- Page layout -->
   <!------------------------------>
-  <div class="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 text-(--color-text) sm:gap-6">
+  <div class="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 text-(--color-text) sm:gap-5">
     <!-- Section: Header -->
-    <PageHeader eyebrow="ROSTER DEL CIRCOLO" title="I protagonisti del campo." description="Consulta profili, ranking e informazioni dei tuoi giocatori." />
-
-    <!-- Section: Search and creation -->
-    <div class="flex items-center gap-2">
-      <span class="min-w-0 max-w-lg flex-1"><InputText v-model="searchName" aria-label="Cerca giocatore per nome" placeholder="Cerca giocatore per nome" fluid /></span>
-      <Button v-if="canViewAdmin" label="Crea" icon="pi pi-user-plus" :disabled="auth.isGuest" @click="router.push({ name: 'player-create' })" />
-    </div>
+    <PageHeader eyebrow="ROSTER DEL CIRCOLO" title="I protagonisti del campo." description="Consulta profili, ranking e informazioni dei tuoi giocatori.">
+      <Button
+        v-if="canViewAdmin"
+        class="sm:hidden"
+        icon="pi pi-user-plus"
+        aria-label="Crea un nuovo giocatore"
+        :disabled="auth.isGuest"
+        @click="openCreate"
+      />
+      <Button
+        v-if="canViewAdmin"
+        class="hidden sm:inline-flex"
+        label="Nuovo giocatore"
+        icon="pi pi-user-plus"
+        aria-label="Crea un nuovo giocatore"
+        :disabled="auth.isGuest"
+        @click="openCreate"
+      />
+    </PageHeader>
 
     <!------------------------------>
-    <!-- Section: List heading and filters -->
+    <!-- Section: Search and filters -->
     <!------------------------------>
-    <div class="flex items-center justify-between gap-4">
-      <div class="flex items-baseline gap-3"><h2 class="text-xl font-bold">Giocatori</h2><span class="text-xs text-(--color-text-subtle)">{{ store.total }} profili</span></div>
-      <Button label="Filtri" icon="pi pi-sliders-h" severity="secondary" outlined :badge="activeFiltersCount ? String(activeFiltersCount) : undefined" aria-label="Apri filtri giocatori" title="Filtra giocatori" @click="openFilters" />
-    </div>
-
-    <div v-if="activeFilterChips.length" class="flex flex-wrap gap-2">
-      <Chip v-for="chip in activeFilterChips" :key="chip.key" :label="chip.label" removable @remove="removeFilter(chip.key)" />
-    </div>
-
-    <!-- Section: Filters drawer -->
-    <Drawer v-model:visible="filtersOpen" position="right" header="Filtra giocatori" class="w-full! sm:w-104!">
-      <div class="flex flex-col gap-5">
-        <label for="player-club-filter" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Cerca per club<InputText id="player-club-filter" v-model="draftFilters.club" placeholder="Es. TC Milano" fluid /></label>
-        <label for="player-organization-filter" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Organizzazione<OrganizationFilter id="player-organization-filter" v-model="draftFilters.organizationId" /></label>
-        <label for="player-sort-field" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Ordina per<Select id="player-sort-field" v-model="draftFilters.sortBy" :options="sortFieldOptions" option-label="label" option-value="value" fluid /></label>
-        <label for="player-sort-order" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Direzione<Select id="player-sort-order" v-model="draftFilters.sortOrder" :options="sortOrderOptions" option-label="label" option-value="value" fluid /></label>
+    <section class="rounded-lg border border-(--color-border) bg-(--color-surface-card) p-3 sm:p-4">
+      <div class="flex items-center gap-2">
+        <span class="min-w-0 flex-1">
+          <InputText
+            v-model="searchName"
+            aria-label="Cerca giocatore per nome"
+            placeholder="Cerca giocatore per nome"
+            fluid
+          />
+        </span>
+        <Button
+          label="Filtri"
+          icon="pi pi-sliders-h"
+          severity="secondary"
+          outlined
+          :badge="activeFiltersCount ? String(activeFiltersCount) : undefined"
+          aria-label="Apri filtri giocatori"
+          title="Filtra giocatori"
+          @click="openFilters"
+        />
       </div>
-      <template #footer><div class="grid gap-2 sm:grid-cols-[auto_1fr]"><Button label="Azzera" icon="pi pi-refresh" severity="secondary" outlined @click="draftFilters = createDefaultFilters()" /><Button label="Mostra risultati" icon="pi pi-check" @click="applyFilters" /></div></template>
-    </Drawer>
+
+      <div v-if="activeFilterChips.length" class="mt-4 border-t border-(--color-border) pt-3">
+        <div class="mb-2 flex items-center justify-between gap-3">
+          <p class="text-xs font-bold text-(--color-text-muted)">
+            Filtri attivi ({{ activeFiltersCount }})
+          </p>
+          <Button
+            label="Azzera tutti"
+            severity="secondary"
+            variant="link"
+            size="small"
+            @click="clearAppliedFilters"
+          />
+        </div>
+        <div class="flex min-w-0 flex-wrap gap-2">
+          <Chip
+            v-for="chip in activeFilterChips"
+            :key="chip.key"
+            class="max-w-full [&_.p-chip-label]:max-w-64 [&_.p-chip-label]:truncate"
+            :label="chip.label"
+            removable
+            :aria-label="`Filtro ${chip.label}`"
+            @remove="removeFilter(chip.key)"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: Results heading -->
+    <div class="flex items-baseline gap-3">
+      <h2 class="text-lg font-bold tracking-tight sm:text-xl">Risultati</h2>
+      <span class="text-xs text-(--color-text-subtle)">
+        {{ store.total }} {{ store.total === 1 ? 'profilo' : 'profili' }}
+      </span>
+    </div>
 
     <!------------------------------>
     <!-- Section: Players list -->
     <!------------------------------>
-    <div v-if="store.loading" class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3"><div v-for="item in 8" :key="item" class="grid min-h-16 grid-cols-[auto_1fr_auto] items-center gap-3 border border-(--color-border) bg-(--color-surface-card) p-3"><Skeleton shape="square" size="2.75rem" /><div class="grid gap-2"><Skeleton width="65%" height="1rem" /><Skeleton width="40%" height="0.75rem" /></div><Skeleton width="1rem" height="1rem" /></div></div>
+    <div v-if="store.loading" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div v-for="item in 8" :key="item" class="grid min-h-24 grid-cols-[auto_1fr_auto] items-center gap-4 rounded-lg border border-(--color-border) bg-(--color-surface-card) px-4 py-4 sm:px-5">
+        <Skeleton shape="square" size="3rem" />
+        <div class="grid gap-2"><Skeleton width="65%" height="1rem" /><Skeleton width="40%" height="0.875rem" /></div>
+        <Skeleton width="1rem" height="1rem" />
+      </div>
+    </div>
 
-    <div v-else-if="store.players.length === 0" class="flex min-h-70 flex-col items-center justify-center border border-dashed border-(--color-border) bg-(--color-surface-soft) text-center"><span class="grid size-14 place-items-center rounded-full bg-primary-50 text-xl text-primary"><i class="pi pi-users" /></span><h3 class="mt-4 text-xl font-bold">Nessun giocatore trovato</h3><p class="mt-2 text-sm text-(--color-text-muted)">Modifica i filtri oppure aggiungi il primo giocatore.</p></div>
+    <div v-else-if="store.players.length === 0" class="flex min-h-72 flex-col items-center justify-center border border-dashed border-(--color-border) bg-(--color-surface-card) px-5 py-10 text-center">
+      <span class="grid size-14 place-items-center rounded-full bg-primary-50 text-xl text-primary"><i class="pi pi-users" /></span>
+      <h3 class="mb-1 mt-4 text-lg font-bold">{{ hasQueryFilters ? 'Nessun giocatore corrisponde ai filtri selezionati' : 'Nessun giocatore disponibile' }}</h3>
+      <p class="max-w-md text-sm text-(--color-text-muted)">{{ hasQueryFilters ? 'Prova ad ampliare la ricerca o ad azzerare i filtri.' : 'Aggiungi il primo giocatore della tua organizzazione.' }}</p>
+      <div v-if="hasQueryFilters || (canViewAdmin && !auth.isGuest)" class="mt-5 flex flex-wrap justify-center gap-2">
+        <Button v-if="hasQueryFilters" label="Azzera filtri" icon="pi pi-filter-slash" severity="secondary" outlined @click="clearAllQueryFilters" />
+        <Button v-if="canViewAdmin && !auth.isGuest" label="Crea un giocatore" icon="pi pi-user-plus" @click="openCreate" />
+      </div>
+    </div>
 
     <template v-else>
-      <div class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3"><PlayerListItem v-for="player in store.players" :key="player.id" :player="player" @open="openDetail(player)" /></div>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"><PlayerListItem v-for="player in store.players" :key="player.id" :player="player" @open="openDetail(player)" /></div>
       <div class="flex flex-col items-center gap-3"><Button v-if="hasMorePlayers" label="Carica altro" icon="pi pi-chevron-down" severity="secondary" text :loading="store.loadingMore" @click="loadMore" /><p v-else class="flex items-center gap-2 text-xs text-(--color-text-subtle)"><i class="pi pi-check-circle text-primary-500" /> Hai visualizzato tutti i giocatori</p></div>
     </template>
   </div>
+
+  <!-- Section: Filters sidebar -->
+  <PlayerFiltersDrawer
+    v-model:visible="filtersOpen"
+    v-model:filters="draftFilters"
+    :sort-field-options="sortFieldOptions"
+    :sort-order-options="sortOrderOptions"
+    @reset="clearDraftFilters"
+    @apply="applyFilters"
+  />
 </template>
