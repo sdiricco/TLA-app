@@ -5,12 +5,11 @@ import DatePicker from 'primevue/datepicker'
 import Drawer from 'primevue/drawer'
 import Select from 'primevue/select'
 import OrganizationFilter from '@/components/filters/OrganizationFilter.vue'
-import type { TournamentCategory, TournamentStatus } from '@/types'
+import type { TournamentCategory } from '@/types'
 import type { TournamentFilterOption, TournamentFilters } from './tournamentFilters'
 
 const props = defineProps<{
   categoryOptions: TournamentFilterOption<TournamentCategory>[]
-  statusOptions: TournamentFilterOption<TournamentStatus>[]
 }>()
 
 const visible = defineModel<boolean>('visible', { required: true })
@@ -19,9 +18,6 @@ defineEmits<{ reset: []; apply: [] }>()
 
 const selectedCategoryOption = computed(() =>
   props.categoryOptions.find((option) => option.value === filters.value.category)
-)
-const selectedStatusOption = computed(() =>
-  props.statusOptions.find((option) => option.value === filters.value.status)
 )
 </script>
 
@@ -51,33 +47,6 @@ const selectedStatusOption = computed(() =>
             <span v-if="selectedCategoryOption" class="flex items-center gap-2">
               <IconifyIcon :icon="selectedCategoryOption.icon" class="shrink-0" />
               <span>{{ selectedCategoryOption.label }}</span>
-            </span>
-          </template>
-          <template #option="{ option }">
-            <span class="flex items-center gap-2">
-              <IconifyIcon :icon="option.icon" class="shrink-0" />
-              <span>{{ option.label }}</span>
-            </span>
-          </template>
-        </Select>
-      </div>
-
-      <div class="flex min-w-0 flex-col gap-2">
-        <label for="tournament-status-filter" class="text-xs font-bold text-(--color-text-muted)">
-          Stato
-        </label>
-        <Select
-          id="tournament-status-filter"
-          v-model="filters.status"
-          :options="statusOptions"
-          option-label="label"
-          option-value="value"
-          fluid
-        >
-          <template #value>
-            <span v-if="selectedStatusOption" class="flex items-center gap-2">
-              <IconifyIcon :icon="selectedStatusOption.icon" class="shrink-0" />
-              <span>{{ selectedStatusOption.label }}</span>
             </span>
           </template>
           <template #option="{ option }">

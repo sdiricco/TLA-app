@@ -8,6 +8,9 @@
   import Button from 'primevue/button';
   import Chip from 'primevue/chip';
   import InputText from 'primevue/inputtext';
+  import Tab from 'primevue/tab';
+  import TabList from 'primevue/tablist';
+  import Tabs from 'primevue/tabs';
 
   // Page components and tournament filter types
   import TournamentEmptyState from '@/components/tournaments/TournamentEmptyState.vue';
@@ -99,6 +102,18 @@
       ].filter(Boolean).length
   );
 
+  const hasQueryFilters = computed(
+    () =>
+      searchName.value.trim() !== '' ||
+      appliedFilters.value.status !== 'all' ||
+      activeFiltersCount.value > 0
+  );
+
+  const selectedStatus = computed({
+    get: () => appliedFilters.value.status,
+    set: (status: TournamentStatus | 'all') => applyStatus(status),
+  });
+
   // Converts applied filter values into the presentation model used by PrimeVue chips.
   const activeFilterChips = computed<ActiveTournamentFilter[]>(() => {
     const filters = appliedFilters.value;
@@ -112,7 +127,7 @@
       const [from, to] = completedDateRange.value;
       chips.push({
         key: 'dateRange',
-        label: `${moment(from).locale('it').format('L')} – ${moment(to).locale('it').format('L')}`,
+        label: `${moment(from).locale('it').format('D MMM YYYY')} – ${moment(to).locale('it').format('D MMM YYYY')}`,
       });
     }
     if (filters.organizationId !== 'mine') {
@@ -240,12 +255,28 @@
 
   // Resets only the drawer draft; the reset takes effect when the user applies it.
   function clearFilters(): void {
-    draftFilters.value = createDefaultFilters();
+    draftFilters.value = {
+      ...createDefaultFilters(),
+      status: appliedFilters.value.status,
+    };
   }
 
   function clearAppliedFilters(): void {
-    appliedFilters.value = createDefaultFilters();
+    appliedFilters.value = {
+      ...createDefaultFilters(),
+      status: appliedFilters.value.status,
+    };
     void loadTournaments(0, store.perPage);
+  }
+
+  // The empty-state action clears both the current scope and every refinement.
+  function clearAllQueryFilters(): void {
+    const hadSearch = searchName.value.trim() !== '';
+    appliedFilters.value = createDefaultFilters();
+    searchName.value = '';
+
+    // A changed search is reloaded by the debounced watcher.
+    if (!hadSearch) void loadTournaments(0, store.perPage);
   }
 
   /**
@@ -303,22 +334,25 @@
     </header>
 
     <!------------------------------>
-    <!-- Section: Search and filters -->
+    <!-- Section: Status, search and filters -->
     <!------------------------------>
     <section class="rounded-lg border border-(--color-border) bg-(--color-surface-card) p-3 sm:p-4">
-      <header class="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <h2 class="text-base font-bold tracking-tight">Cerca e filtra</h2>
-          <p class="mt-1 text-sm text-(--color-text-muted)">
-            Trova rapidamente il torneo che vuoi gestire.
-          </p>
-        </div>
-        <p class="shrink-0 text-sm font-semibold text-(--color-text-muted)">
-          {{ store.total }} {{ store.total === 1 ? 'torneo' : 'tornei' }}
-        </p>
-      </header>
+      <Tabs
+        v-model:value="selectedStatus"
+        scrollable
+        class="w-fit max-w-full bg-transparent [&_.p-tab]:border-t-0! [&_.p-tab]:border-b-2! [&_.p-tab]:bg-transparent! [&_.p-tablist]:bg-transparent! [&_.p-tablist-content]:bg-transparent! [&_.p-tablist-tab-list]:border-b! [&_.p-tablist-tab-list]:border-(--color-border)! [&_.p-tablist-tab-list]:bg-transparent!"
+      >
+        <TabList aria-label="Stato dei tornei">
+          <Tab v-for="option in statusOptions" :key="option.value" :value="option.value">
+            <span class="flex items-center gap-2">
+              <IconifyIcon :icon="option.icon" class="size-4 shrink-0" aria-hidden="true" />
+              <span>{{ option.label }}</span>
+            </span>
+          </Tab>
+        </TabList>
+      </Tabs>
 
-      <div class="flex items-center gap-2">
+      <div class="mt-3 flex items-center gap-2">
         <span class="min-w-0 flex-1">
           <InputText
             v-model="searchName"
@@ -339,60 +373,45 @@
         />
       </div>
 
-      <div class="mt-3 min-w-0 overflow-x-auto pb-1">
-          <div
-            class="flex w-max gap-2"
-            role="group"
-            aria-label="Filtra tornei per stato"
-          >
-            <Button
-              v-for="option in statusOptions"
-              :key="option.value"
-              class="shrink-0"
-              :label="option.label"
-              size="small"
-              :severity="appliedFilters.status === option.value ? undefined : 'secondary'"
-              :outlined="appliedFilters.status !== option.value"
-              :aria-pressed="appliedFilters.status === option.value"
-              @click="applyStatus(option.value)"
-            />
-          </div>
-      </div>
-
       <div
         v-if="activeFilterChips.length"
-        class="mt-3 flex min-w-0 items-center gap-2 border-t border-(--color-border) pt-3"
+        class="mt-4 border-t border-(--color-border) pt-3"
       >
-        <div class="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1">
+        <div class="mb-2 flex items-center justify-between gap-3">
+          <p class="text-xs font-bold text-(--color-text-muted)">
+            Filtri attivi ({{ activeFiltersCount }})
+          </p>
+          <Button
+            label="Azzera tutti"
+            severity="secondary"
+            variant="link"
+            size="small"
+            @click="clearAppliedFilters"
+          />
+        </div>
+        <div class="flex min-w-0 flex-wrap gap-2">
           <Chip
             v-for="chip in activeFilterChips"
             :key="chip.key"
-            class="shrink-0"
+            class="max-w-full [&_.p-chip-label]:max-w-64 [&_.p-chip-label]:truncate"
             :label="chip.label"
             removable
             :aria-label="`Filtro ${chip.label}`"
             @remove="removeFilter(chip.key)"
           />
         </div>
-        <Button
-          class="shrink-0 sm:hidden"
-          icon="pi pi-times"
-          severity="secondary"
-          text
-          size="small"
-          aria-label="Cancella tutti i filtri"
-          @click="clearAppliedFilters"
-        />
-        <Button
-          class="hidden shrink-0 sm:inline-flex"
-          label="Cancella filtri"
-          severity="secondary"
-          variant="link"
-          size="small"
-          @click="clearAppliedFilters"
-        />
       </div>
     </section>
+
+    <!------------------------------>
+    <!-- Section: Results heading -->
+    <!------------------------------>
+    <div class="flex items-baseline gap-3">
+      <h2 class="text-lg font-bold tracking-tight sm:text-xl">Risultati</h2>
+      <span class="text-xs text-(--color-text-subtle)">
+        {{ store.total }} {{ store.total === 1 ? 'torneo' : 'tornei' }}
+      </span>
+    </div>
 
     <!------------------------------>
     <!-- Section: Loading tournaments -->
@@ -402,7 +421,13 @@
     <!------------------------------>
     <!-- Section: No tournaments -->
     <!------------------------------>
-    <TournamentEmptyState v-else-if="store.tournaments.length === 0" />
+    <TournamentEmptyState
+      v-else-if="store.tournaments.length === 0"
+      :filtered="hasQueryFilters"
+      :can-create="canViewAdmin && !auth.isGuest"
+      @reset="clearAllQueryFilters"
+      @create="openCreate"
+    />
 
     <!------------------------------>
     <!-- Section: Tournament list -->
@@ -471,7 +496,6 @@
     v-model:visible="filtersOpen"
     v-model:filters="draftFilters"
     :category-options="categoryOptions"
-    :status-options="statusOptions"
     @reset="clearFilters"
     @apply="applyFilters"
   />
