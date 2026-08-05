@@ -14,7 +14,7 @@ defineEmits<{
 
 <template>
   <div
-    class="flex min-h-72 flex-col items-center justify-center border border-dashed border-(--color-border) bg-(--color-surface-soft) px-5 py-10 text-center"
+    class="flex min-h-72 flex-col items-center justify-center border border-dashed border-(--color-border) bg-(--color-surface-card) px-5 py-10 text-center"
   >
     <span class="grid size-14 place-items-center rounded-full bg-primary-50 text-primary">
       <IconifyIcon icon="mdi:trophy-outline" class="size-6" />
