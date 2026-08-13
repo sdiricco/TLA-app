@@ -24,26 +24,24 @@ const matchHistory = ref<PlayerMatchHistory>({ stats: { played: 0, wins: 0, loss
 const loading = ref(true)
 
 const fullName = computed(() => player.value?.name ?? '')
-const personalDetails = computed(() => player.value ? [
-  { icon: 'pi pi-calendar', label: 'DATA DI NASCITA', value: formatDate(player.value.birth_date) },
-  { icon: 'pi pi-clock', label: 'ETÀ', value: formatAge(player.value.birth_date) },
-  { icon: 'pi pi-building-columns', label: 'CLUB', value: player.value.club ?? '—' },
-  { icon: 'pi pi-phone', label: 'CONTATTO', value: player.value.phone ?? '—' },
-] : [])
 const summaryStats = computed(() => [
   { label: 'GIOCATE', value: matchHistory.value.stats.played },
   { label: 'VITTORIE', value: matchHistory.value.stats.wins },
   { label: 'SCONFITTE', value: matchHistory.value.stats.losses },
   { label: 'VITTORIE %', value: `${matchHistory.value.stats.win_rate}%` },
 ])
-const heroStats = computed(() => player.value ? [
-  { label: 'POSIZIONE', value: `#${player.value.ranking || '—'}`, copy: 'Ranking del club' },
+const profileDetails = computed(() => player.value ? [
+  { icon: 'pi pi-hashtag', label: 'POSIZIONE', value: `#${player.value.ranking || '—'}`, copy: 'Ranking del club' },
+  { icon: 'pi pi-calendar', label: 'DATA DI NASCITA', value: formatDate(player.value.birth_date), copy: 'Dato anagrafico' },
   {
+    icon: 'pi pi-clock',
     label: 'ETÀ',
     value: player.value.birth_date ? formatAge(player.value.birth_date).replace(' anni', '') : '—',
     copy: player.value.birth_date ? 'anni' : 'Non disponibile',
   },
-  { label: 'STATO', value: 'Attivo', copy: 'Profilo registrato' },
+  { icon: 'pi pi-building-columns', label: 'CLUB', value: player.value.club ?? '—', copy: player.value.club ? 'Circolo di appartenenza' : 'Non specificato' },
+  { icon: 'pi pi-phone', label: 'CONTATTO', value: player.value.phone ?? '—', copy: player.value.phone ? 'Numero di telefono' : 'Non disponibile' },
+  { icon: 'pi pi-check-circle', label: 'STATO', value: 'Attivo', copy: 'Profilo registrato' },
 ] : [])
 const systemDetails = computed(() => player.value ? [
   { label: 'ID GIOCATORE', value: player.value.id },
@@ -129,9 +127,6 @@ watch(() => route.params['id'], loadPlayer, { immediate: true })
         @click="router.push({ name: 'players' })"
       />
       <div>
-        <p class="mb-2 hidden text-xs font-extrabold tracking-[0.16em] text-primary sm:block">
-          SCHEDA ATLETA
-        </p>
         <h1 class="text-3xl font-bold tracking-tight sm:text-5xl">Profilo giocatore</h1>
         <p class="mt-3 hidden text-(--color-text-muted) sm:block">
           Identità, contatti e informazioni sportive.
@@ -140,18 +135,14 @@ watch(() => route.params['id'], loadPlayer, { immediate: true })
     </header>
 
     <!-- Section: Loading profile -->
-    <div v-if="loading" class="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
-      <div class="flex items-center gap-5 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-5 sm:p-6">
+    <div v-if="loading">
+      <div class="flex min-h-72 items-center gap-5 rounded-xl bg-linear-to-b from-(--color-sidebar-start) to-(--color-sidebar-end) p-5 sm:p-6">
         <Skeleton shape="circle" size="7rem" />
-        <div class="grid min-w-0 gap-3">
+        <div class="grid min-w-0 flex-1 gap-3">
           <Skeleton width="7rem" height="1.5rem" />
           <Skeleton class="max-w-full" width="15rem" height="2.5rem" />
           <Skeleton width="10rem" height="1rem" />
         </div>
-      </div>
-      <div class="grid gap-3 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-5 sm:p-6">
-        <Skeleton width="8rem" height="1.5rem" />
-        <Skeleton v-for="item in 4" :key="item" width="100%" height="3.5rem" />
       </div>
     </div>
 
@@ -179,74 +170,46 @@ watch(() => route.params['id'], loadPlayer, { immediate: true })
       <!------------------------------>
       <!-- Section: Player hero -->
       <!------------------------------>
-      <section class="grid items-center gap-5 overflow-hidden rounded-xl border border-primary-700 bg-primary-800 p-5 text-white sm:grid-cols-[auto_minmax(0,1fr)] sm:p-6">
-        <Avatar
-          :label="getInitials(player.name)"
-          :image="player.photo_url ?? undefined"
-          shape="circle"
-          class="size-20! ring-4 ring-white/10 sm:size-28!"
-        />
-        <div class="min-w-0">
-          <h2 class="truncate text-2xl font-bold tracking-tight sm:text-3xl xl:text-4xl" :title="fullName">
-            {{ fullName }}
-          </h2>
-          <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-white/70">
-            <span class="flex min-w-0 items-center gap-2">
-              <i class="pi pi-building-columns shrink-0" />
-              <span class="truncate">{{ player.club ?? 'Club non specificato' }}</span>
-            </span>
-            <strong class="shrink-0 text-(--color-accent)">#{{ player.ranking || '—' }}</strong>
-          </div>
-        </div>
-        <div class="col-span-full mt-1 grid grid-cols-1 divide-y divide-white/10 border-t border-white/10 pt-2 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:pt-5">
-          <div
-            v-for="stat in heroStats"
-            :key="stat.label"
-            class="grid gap-1 px-2 py-3 sm:px-4 sm:py-0"
-          >
-            <small class="text-[0.625rem] font-extrabold tracking-widest text-white/50">{{ stat.label }}</small>
-            <strong class="text-lg">{{ stat.value }}</strong>
-            <span class="text-xs text-white/50">{{ stat.copy }}</span>
-          </div>
-        </div>
-      </section>
-
-      <!------------------------------>
-      <!-- Section: Personal details -->
-      <!------------------------------>
-      <section class="rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
-        <header class="mb-5 flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-          <div class="flex items-center gap-3">
-            <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary">
-              <i class="pi pi-id-card" />
-            </span>
-            <div>
-              <h2 class="font-bold">Informazioni personali</h2>
-              <p class="mt-1 text-xs text-(--color-text-subtle)">Dati anagrafici e contatti</p>
+      <section class="overflow-hidden rounded-xl bg-linear-to-b from-(--color-sidebar-start) to-(--color-sidebar-end) p-5 text-white lg:col-span-2 sm:p-6 lg:p-8">
+        <header class="flex flex-col items-stretch justify-between gap-5 sm:flex-row sm:items-center">
+          <div class="flex min-w-0 items-center gap-4 sm:gap-6">
+            <Avatar
+              :label="getInitials(player.name)"
+              :image="player.photo_url ?? undefined"
+              shape="circle"
+              class="size-20! shrink-0 ring-4 ring-white/10 sm:size-28!"
+            />
+            <div class="min-w-0">
+              <p class="mb-2 text-xs font-extrabold tracking-[0.16em] text-white/50">GIOCATORE</p>
+              <h2 class="truncate text-2xl font-bold tracking-tight sm:text-3xl xl:text-4xl" :title="fullName">
+                {{ fullName }}
+              </h2>
+              <p class="mt-2 text-sm text-white/60">Identità, contatti e informazioni sportive</p>
             </div>
           </div>
           <Button
             v-if="auth.isAdmin"
-            class="w-full sm:w-auto"
+            class="w-full shrink-0 sm:w-auto"
             label="Modifica profilo"
             icon="pi pi-pencil"
             severity="secondary"
-            outlined
             @click="router.push({ name: 'player-edit', params: { id: player.id } })"
           />
         </header>
-        <div class="grid gap-3">
+
+        <div class="mt-6 grid gap-2 border-t border-white/10 pt-5 sm:grid-cols-2 lg:grid-cols-3">
           <div
-            v-for="detail in personalDetails"
+            v-for="detail in profileDetails"
             :key="detail.label"
-            class="flex items-center gap-3 rounded-lg bg-(--color-surface-soft) p-3.5"
+            class="flex min-w-0 items-center gap-3 rounded-lg bg-white/8 p-3.5"
           >
-            <span class="grid size-9 shrink-0 place-items-center rounded-md bg-(--color-surface-card) text-sm text-primary shadow-sm">
+            <span class="grid size-9 shrink-0 place-items-center rounded-md bg-white/10 text-sm text-white/80">
               <i :class="detail.icon" />
             </span>
             <div class="grid min-w-0 gap-0.5">
-              <small class="text-[0.625rem] font-extrabold tracking-wider text-(--color-text-subtle)">{{ detail.label }}</small>
-              <strong class="truncate text-sm text-(--color-text-muted)" :title="detail.value">{{ detail.value }}</strong>
+              <small class="text-[0.625rem] font-extrabold tracking-wider text-white/50">{{ detail.label }}</small>
+              <strong class="truncate text-sm" :title="detail.value">{{ detail.value }}</strong>
+              <span class="truncate text-xs text-white/45">{{ detail.copy }}</span>
             </div>
           </div>
         </div>

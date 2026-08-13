@@ -273,7 +273,7 @@
 </template>
 
 <style scoped>
-.photo-picker { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1rem; padding: 1rem; border: 1px dashed var(--color-border); border-radius: 0; background: var(--color-surface-soft); }
+.photo-picker { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1rem; padding: 1rem; border: 1px dashed var(--color-border); border-radius: var(--p-content-border-radius); background: var(--color-surface-soft); }
 .photo-preview { position: relative; display: grid; place-items: center; width: 6.5rem; height: 6.5rem; overflow: hidden; border: 3px solid white; border-radius: 50%; background: var(--color-border); box-shadow: 0 5px 16px rgb(var(--color-shadow-rgb) / 12%); }
 .preview-image { width: 100%; height: 100%; object-fit: cover; }
 .empty-preview { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; color: var(--color-text-subtle); text-align: center; }
@@ -283,11 +283,11 @@
 .photo-copy > p { max-width: 540px; margin: 0; color: var(--color-text-muted); font-size: 0.72rem; line-height: 1.55; }
 .photo-hint { display: block; margin-top: 0.3rem; color: var(--color-text-subtle); font-size: 0.55rem; font-weight: 700; letter-spacing: 0.05em; }
 .photo-actions { display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 0.8rem; }
-.crop-editor { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-card); }
+.crop-editor { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--p-content-border-radius); background: var(--color-surface-card); }
 .crop-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .crop-header > div > div { font-size: 0.82rem; font-weight: 750; }
 .crop-header p { margin: 0.25rem 0 0; color: var(--color-text-muted); font-size: 0.62rem; }
-.crop-stage { overflow: hidden; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface-muted); }
+.crop-stage { overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--p-content-border-radius); background: var(--color-surface-muted); }
 .cropper-host { width: 100%; height: 320px; }
 .crop-meta { display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: var(--color-text-subtle); font-size: 0.58rem; }
 

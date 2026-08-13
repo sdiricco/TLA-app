@@ -2,7 +2,6 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import moment from 'moment'
-import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import DatePicker from 'primevue/datepicker'
 import InputNumber from 'primevue/inputnumber'
@@ -35,9 +34,6 @@ const form = ref<PlayerForm>(emptyForm())
 
 const editingId = computed(() => route.params['id'] ? String(route.params['id']) : null)
 const isEditing = computed(() => editingId.value !== null)
-const previewInitials = computed(() =>
-  form.value.name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('') || '?',
-)
 
 function emptyForm(): PlayerForm {
   return { name: '', ranking: null, birth_date: null, photo_url: '', club: '', phone: '' }
@@ -109,59 +105,117 @@ watch(editingId, async (id) => {
   <!------------------------------>
   <!-- Page layout -->
   <!------------------------------>
-  <div class="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 text-(--color-text) sm:gap-6">
+  <div class="mx-auto flex w-full max-w-5xl flex-col gap-4 text-(--color-text) sm:gap-5">
     <!-- Section: Header -->
-    <header>
-      <Button :label="isEditing ? 'Torna al profilo' : 'Tutti i giocatori'" icon="pi pi-arrow-left" text severity="secondary" @click="cancel" />
-      <p class="mb-2 hidden text-xs font-extrabold tracking-[0.16em] text-primary sm:block">{{ isEditing ? 'MODIFICA ATLETA' : 'NUOVO ATLETA' }}</p>
-      <h1 class="text-3xl font-bold tracking-tight sm:text-5xl">{{ isEditing ? 'Aggiorna il profilo.' : 'Aggiungi un giocatore.' }}</h1>
-      <p class="mt-3 hidden text-(--color-text-muted) sm:block">{{ isEditing ? 'Mantieni aggiornati dati personali e informazioni sportive.' : 'Crea una nuova identità sportiva nel roster del circolo.' }}</p>
+    <header class="grid gap-3">
+      <Button
+        class="w-fit"
+        :label="isEditing ? 'Torna al profilo' : 'Tutti i giocatori'"
+        icon="pi pi-arrow-left"
+        text
+        severity="secondary"
+        @click="cancel"
+      />
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight sm:text-5xl">
+          {{ isEditing ? 'Modifica profilo giocatore' : 'Nuovo giocatore' }}
+        </h1>
+        <p class="mt-3 hidden text-(--color-text-muted) sm:block">
+          {{ isEditing ? 'Aggiorna identità, contatti e informazioni sportive.' : 'Inserisci identità, contatti e informazioni sportive.' }}
+        </p>
+      </div>
     </header>
 
     <!-- Section: Loading form -->
-    <div v-if="loadingPlayer" class="grid items-start gap-4 lg:grid-cols-[minmax(15rem,0.32fr)_minmax(0,1fr)]"><div class="flex flex-col items-center gap-4 border border-(--color-border) bg-(--color-surface-card) p-8"><Skeleton shape="circle" size="8rem" /><Skeleton width="75%" height="2rem" /><Skeleton width="45%" height="1rem" /></div><div class="flex min-h-125 flex-col gap-4 border border-(--color-border) bg-(--color-surface-card) p-5"><Skeleton v-for="item in 5" :key="item" width="100%" height="4rem" /></div></div>
+    <div v-if="loadingPlayer" class="overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface-card)">
+      <div class="grid gap-5 p-4 sm:grid-cols-2 sm:p-6">
+        <Skeleton class="sm:col-span-2" width="11rem" height="1.5rem" />
+        <Skeleton v-for="item in 5" :key="item" width="100%" height="4.5rem" />
+      </div>
+      <div class="border-t border-(--color-border) bg-(--color-surface-soft) p-4 sm:p-5"><Skeleton width="16rem" height="2.75rem" /></div>
+    </div>
 
     <!------------------------------>
     <!-- Section: Player form -->
     <!------------------------------>
-    <form v-else class="grid items-start gap-4 lg:grid-cols-[minmax(15rem,0.32fr)_minmax(0,1fr)]" @submit.prevent="savePlayer">
-      <!-- Live profile preview -->
-      <aside class="flex flex-col items-center overflow-hidden border border-(--color-border) bg-primary-800 p-4 text-center text-white lg:sticky lg:top-4 lg:min-h-107 lg:p-6">
-        <p class="mb-5 hidden self-stretch text-left text-xs font-extrabold tracking-wider text-primary-300 sm:block">ANTEPRIMA PROFILO</p>
-        <div class="relative"><Avatar :label="previewInitials" :image="form.photo_url || undefined" shape="circle" class="size-16! sm:size-32!" /><span class="absolute bottom-1 right-1 size-4 rounded-full border-3 border-primary-800 bg-(--color-accent)" /></div>
-        <h2 class="mt-4 max-w-full truncate text-xl font-bold">{{ form.name || 'Nome giocatore' }}</h2>
-        <p class="mt-2 flex items-center gap-2 text-sm text-primary-300"><i class="pi pi-building-columns" /> {{ form.club || 'Club non specificato' }}</p>
-        <div class="mt-6 hidden w-full border-t border-primary-700 pt-4 sm:grid"><small class="text-[0.65rem] font-extrabold tracking-widest text-(--color-accent)">RANKING</small><strong class="mt-1 text-2xl">#{{ form.ranking || '—' }}</strong><span class="text-xs text-primary-300">Posizione nel club</span></div>
-        <div class="mt-auto hidden items-center gap-2 pt-6 text-left text-xs text-primary-300 sm:flex"><i class="pi pi-eye" /><span>L’anteprima si aggiorna mentre compili il modulo.</span></div>
-      </aside>
-
-      <!-- Form fields -->
-      <section class="border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6 lg:p-8">
-        <div class="flex flex-col gap-5">
-          <header class="flex items-center gap-3"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary"><i class="pi pi-user" /></span><div><h2 class="font-bold">Identità sportiva</h2><p class="mt-1 text-xs text-(--color-text-subtle)">Nome e posizione nel ranking</p></div></header>
-          <div class="grid gap-4 sm:grid-cols-[minmax(0,1.8fr)_minmax(9rem,0.5fr)]">
-            <label for="p-name" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Nome *<InputText id="p-name" v-model="form.name" placeholder="Mario Rossi" fluid required autofocus /></label>
-            <label for="p-ranking" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Ranking<InputNumber id="p-ranking" v-model="form.ranking" placeholder="1" :min="1" :max="9999" fluid /></label>
+    <form
+      v-else
+      class="overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface-card)"
+      @submit.prevent="savePlayer"
+    >
+      <!------------------------------>
+      <!-- Section: Player information -->
+      <!------------------------------>
+      <section class="grid gap-5 p-4 sm:p-6 lg:p-7">
+        <header class="flex items-center gap-3">
+          <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary">
+            <i class="pi pi-id-card" />
+          </span>
+          <div>
+            <h2 class="font-bold">Informazioni giocatore</h2>
+            <p class="mt-1 text-xs text-(--color-text-subtle)">Dati anagrafici, sportivi e di contatto</p>
           </div>
+        </header>
+
+        <div class="grid gap-x-5 gap-y-4 sm:grid-cols-2">
+          <label for="p-name" class="grid gap-2 text-sm font-bold text-(--color-text-muted) sm:col-span-2">
+            <span>Nome completo <span class="text-red-700" aria-hidden="true">*</span></span>
+            <InputText id="p-name" v-model="form.name" placeholder="Mario Rossi" fluid required autofocus />
+            <small class="font-normal text-(--color-text-subtle)">Nome visualizzato nelle liste, nei tabelloni e nel profilo.</small>
+          </label>
+          <label for="p-birth-date" class="grid content-start gap-2 text-sm font-bold text-(--color-text-muted)">
+            Data di nascita
+            <DatePicker id="p-birth-date" v-model="form.birth_date" date-format="dd/mm/yy" placeholder="gg/mm/aaaa" fluid show-button-bar />
+          </label>
+          <label for="p-ranking" class="grid content-start gap-2 text-sm font-bold text-(--color-text-muted)">
+            Ranking nel club
+            <InputNumber id="p-ranking" v-model="form.ranking" placeholder="Es. 12" :min="1" :max="9999" fluid />
+          </label>
+          <label for="p-club" class="grid content-start gap-2 text-sm font-bold text-(--color-text-muted)">
+            Club
+            <InputText id="p-club" v-model="form.club" placeholder="Es. TC Milano" fluid />
+          </label>
+          <label for="p-phone" class="grid content-start gap-2 text-sm font-bold text-(--color-text-muted)">
+            Telefono
+            <InputText id="p-phone" v-model="form.phone" type="tel" autocomplete="tel" placeholder="Es. 333 0000000" fluid />
+          </label>
         </div>
-
-        <div class="my-6 h-px bg-(--color-surface-muted)" />
-
-        <div class="flex flex-col gap-5">
-          <header class="flex items-center gap-3"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary"><i class="pi pi-address-book" /></span><div><h2 class="font-bold">Anagrafica e contatti</h2><p class="mt-1 text-xs text-(--color-text-subtle)">Informazioni personali del giocatore</p></div></header>
-          <div class="grid gap-4 sm:grid-cols-2">
-            <label for="p-birth-date" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Data nascita<DatePicker id="p-birth-date" v-model="form.birth_date" date-format="dd/mm/yy" placeholder="gg/mm/aaaa" fluid show-button-bar /></label>
-            <label for="p-club" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Club<InputText id="p-club" v-model="form.club" placeholder="TC Milano" fluid /></label>
-            <label for="p-phone" class="grid gap-2 text-sm font-bold text-(--color-text-muted) sm:col-span-2">Contatto<InputText id="p-phone" v-model="form.phone" placeholder="333 0000000" fluid /></label>
-          </div>
-        </div>
-
-        <div class="my-6 h-px bg-(--color-surface-muted)" />
-
-        <div class="flex flex-col gap-5"><header class="flex items-center gap-3"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary"><i class="pi pi-camera" /></span><div><h2 class="font-bold">Foto profilo</h2><p class="mt-1 text-xs text-(--color-text-subtle)">Immagine quadrata per avatar e scheda atleta</p></div></header><PlayerPhotoPicker v-model="form.photo_url" /></div>
-
-        <footer class="-mx-4 -mb-4 mt-7 flex flex-col items-stretch justify-between gap-3 border-t border-(--color-surface-muted) bg-(--color-surface-soft) p-4 sm:-mx-6 sm:-mb-6 sm:flex-row sm:items-center sm:px-6 lg:-mx-8 lg:-mb-8 lg:px-8"><span class="hidden items-center gap-2 text-xs text-(--color-text-subtle) sm:flex"><i class="pi pi-info-circle" /> I campi contrassegnati con * sono obbligatori.</span><div class="grid grid-cols-[1fr_1.3fr] gap-2"><Button type="button" label="Annulla" severity="secondary" outlined @click="cancel" /><Button type="submit" :label="isEditing ? 'Salva modifiche' : 'Crea giocatore'" icon="pi pi-check" :loading="saving" /></div></footer>
       </section>
+
+      <!------------------------------>
+      <!-- Section: Profile photo -->
+      <!------------------------------>
+      <section class="grid gap-5 border-t border-(--color-border) p-4 sm:p-6 lg:p-7">
+        <header class="flex items-center gap-3">
+          <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary">
+            <i class="pi pi-camera" />
+          </span>
+          <div>
+            <h2 class="font-bold">Foto profilo</h2>
+            <p class="mt-1 text-xs text-(--color-text-subtle)">Immagine quadrata mostrata nel profilo del giocatore</p>
+          </div>
+        </header>
+        <PlayerPhotoPicker v-model="form.photo_url" />
+      </section>
+
+      <!------------------------------>
+      <!-- Section: Form actions -->
+      <!------------------------------>
+      <footer class="flex flex-col items-stretch justify-between gap-3 border-t border-(--color-border) bg-(--color-surface-soft) p-4 sm:flex-row sm:items-center sm:p-5 lg:px-7">
+        <span class="hidden items-center gap-2 text-xs text-(--color-text-subtle) sm:flex">
+          <i class="pi pi-info-circle" />
+          I campi contrassegnati con * sono obbligatori.
+        </span>
+        <div class="grid grid-cols-[1fr_1.3fr] gap-2 sm:flex">
+          <Button type="button" label="Annulla" severity="secondary" outlined @click="cancel" />
+          <Button
+            type="submit"
+            :label="isEditing ? 'Salva modifiche' : 'Crea giocatore'"
+            icon="pi pi-check"
+            :loading="saving"
+          />
+        </div>
+      </footer>
     </form>
   </div>
 </template>

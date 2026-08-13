@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import moment from 'moment'
 import 'moment/locale/it.js'
 import Button from 'primevue/button'
@@ -14,6 +14,7 @@ import type { OrganizationRequest, OrganizationRequestComment, OrganizationReque
 
 // Route services and detail state.
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const request = ref<OrganizationRequest | null>(null)
 const comments = ref<OrganizationRequestComment[]>([])
@@ -98,8 +99,8 @@ onMounted(loadDetail)
   <!------------------------------>
   <!-- Page layout -->
   <!------------------------------>
-  <section class="mx-auto grid w-full max-w-230 gap-4 py-4 sm:py-8">
-    <RouterLink to="/requests" class="text-sm font-bold text-primary no-underline">← Torna alle richieste</RouterLink>
+  <section class="mx-auto grid w-full max-w-230 gap-4 text-(--color-text) sm:gap-5">
+    <Button class="w-fit" icon="pi pi-arrow-left" label="Torna alle richieste" text severity="secondary" @click="router.push({ name: 'requests' })" />
     <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
 
     <div v-if="loading" class="flex min-h-40 items-center justify-center gap-3 text-sm text-(--color-text-muted)" role="status">
@@ -111,7 +112,7 @@ onMounted(loadDetail)
       <!------------------------------>
       <!-- Section: Request detail -->
       <!------------------------------>
-      <article class="grid gap-4 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-7">
+      <article class="grid gap-4 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-7">
         <div class="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div class="flex flex-wrap gap-2">
             <Tag :value="typeLabel(request.type)" severity="info" />
@@ -126,14 +127,14 @@ onMounted(loadDetail)
           class="wrap-anywhere leading-relaxed text-(--color-text-muted) [&_.ql-align-center]:text-center [&_.ql-align-justify]:text-justify [&_.ql-align-right]:text-right [&_.ql-ui]:hidden [&_a]:text-primary [&_blockquote]:my-4 [&_blockquote]:border-l-3 [&_blockquote]:border-primary-500 [&_blockquote]:pl-4 [&_h1]:my-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:my-3 [&_h2]:text-xl [&_h2]:font-bold [&_h3]:my-3 [&_h3]:text-lg [&_h3]:font-bold [&_img]:my-4 [&_img]:max-h-140 [&_img]:max-w-full [&_img]:object-contain [&_ol]:pl-6 [&_ul]:pl-6"
           v-html="request.description"
         />
-        <img v-if="request.image_url" class="max-h-110 w-full max-w-170 justify-self-start border border-(--color-border) bg-(--color-surface-soft) object-contain" :src="request.image_url" alt="Immagine allegata alla richiesta" />
+        <img v-if="request.image_url" class="max-h-110 w-full max-w-170 justify-self-start rounded-lg border border-(--color-border) bg-(--color-surface-soft) object-contain" :src="request.image_url" alt="Immagine allegata alla richiesta" />
         <small class="text-xs text-(--color-text-subtle)">Proposta da {{ request.created_by.name }} · {{ formatDate(request.created_at) }}</small>
       </article>
 
       <!------------------------------>
       <!-- Section: Discussion -->
       <!------------------------------>
-      <section class="grid gap-4 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-7">
+      <section class="grid gap-4 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-7">
         <div class="flex items-center justify-between gap-3">
           <div>
             <p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary">DISCUSSIONE</p>
@@ -144,7 +145,7 @@ onMounted(loadDetail)
 
         <Message v-if="!comments.length" severity="info" :closable="false">Non ci sono ancora commenti. Aggiungi il primo contributo.</Message>
         <div v-else class="grid gap-3">
-          <article v-for="comment in comments" :key="comment.id" class="border-l-3 border-primary-500 bg-(--color-surface-soft) px-4 py-3">
+          <article v-for="comment in comments" :key="comment.id" class="rounded-lg border-l-3 border-primary-500 bg-(--color-surface-soft) px-4 py-3">
             <div class="flex flex-wrap items-baseline gap-2">
               <strong class="text-sm">{{ comment.author.name }}</strong>
               <small class="text-xs text-(--color-text-subtle)">{{ formatDateTime(comment.created_at) }}</small>

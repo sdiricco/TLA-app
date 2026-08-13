@@ -123,6 +123,7 @@ export function serializeTournamentWithPlayers(tournament: {
     tournamentId: string
     position: number
     name: string
+    description: string
     format: string
     status: string
     groupCount: number
@@ -165,6 +166,7 @@ export function serializeTournamentPhase(phase: {
   tournamentId: string
   position: number
   name: string
+  description: string
   format: string
   status: string
   groupCount: number
@@ -189,6 +191,7 @@ export function serializeTournamentPhase(phase: {
     tournament_id: phase.tournamentId,
     position: phase.position,
     name: phase.name,
+    description: phase.description,
     format: phase.format as TournamentPhase['format'],
     status: phase.status as TournamentPhase['status'],
     group_count: phase.groupCount,

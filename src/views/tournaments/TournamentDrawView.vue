@@ -4,9 +4,11 @@ import { useRouter } from 'vue-router'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import ButtonGroup from 'primevue/buttongroup'
+import Drawer from 'primevue/drawer'
 import Menu from 'primevue/menu'
 import type { MenuItem } from 'primevue/menuitem'
 import ProgressSpinner from 'primevue/progressspinner'
+import Select from 'primevue/select'
 import Tab from 'primevue/tab'
 import TabList from 'primevue/tablist'
 import Tabs from 'primevue/tabs'
@@ -56,6 +58,7 @@ const selectedPhaseId = ref<string | null>(
     ?? null,
 )
 const selectedGroupId = ref<string | null>(null)
+const phaseDrawerVisible = ref(false)
 const drawActionsMenu = ref<{ toggle: (event: Event) => void } | null>(null)
 
 // -----------------------------------------------------------------------------
@@ -119,6 +122,15 @@ const activePhase = computed(() =>
     ?? phases.value[0],
 )
 const phaseGroups = computed(() => activePhase.value?.groups ?? [])
+const phaseOptions = computed(() => phases.value.map((phase) => ({
+  label: `Fase ${phase.position} di ${phases.value.length} · ${phase.name}`,
+  value: phase.id,
+  disabled: phase.status === 'pending',
+})))
+const groupOptions = computed(() => phaseGroups.value.map((group) => ({
+  label: group.name,
+  value: group.id,
+})))
 const isRoundRobin = computed(() => activePhase.value?.format === 'round_robin')
 const guaranteedQualifiersPerGroup = computed(() =>
   Math.floor((activePhase.value?.output_count ?? 0) / Math.max(1, phaseGroups.value.length)),
@@ -210,6 +222,18 @@ const nextPhase = computed(() =>
 )
 const completedMatchesCount = computed(
   () => matchesStore.matches.filter((match) => match.status === 'completed').length,
+)
+const phaseMatchesCount = computed(() => matchesStore.matches.length)
+const remainingMatchesCount = computed(() =>
+  Math.max(0, phaseMatchesCount.value - completedMatchesCount.value),
+)
+const phaseProgressPercentage = computed(() =>
+  phaseMatchesCount.value > 0
+    ? Math.round((completedMatchesCount.value / phaseMatchesCount.value) * 100)
+    : 0,
+)
+const activeRoundPosition = computed(() =>
+  bracketRoundTabs.value.findIndex((round) => round.index === activeBracketRound.value),
 )
 const canCompletePhase = computed(
   () =>
@@ -428,6 +452,19 @@ function openMatchDetail(match: Match): void {
   })
 }
 
+function selectPhase(phaseId: string): void {
+  const phase = phases.value.find((item) => item.id === phaseId)
+  if (!phase || phase.status === 'pending') return
+  selectedPhaseId.value = phase.id
+  phaseDrawerVisible.value = false
+}
+
+function changeRound(direction: -1 | 1): void {
+  const nextPosition = activeRoundPosition.value + direction
+  const nextRound = bracketRoundTabs.value[nextPosition]
+  if (nextRound) activeBracketRound.value = nextRound.index
+}
+
 // A regenerated or reset draw always starts from its first available round.
 watch(
   () => matchesStore.numRounds,
@@ -445,6 +482,10 @@ watch(selectedPhaseId, async (phaseId, previousPhaseId) => {
   activeBracketRound.value = 0
 })
 
+watch(selectedGroupId, () => {
+  activeBracketRound.value = bracketRoundTabs.value[0]?.index ?? 0
+})
+
 // Initial loading starts only when this child route is actually visited.
 onMounted(loadDraw)
 </script>
@@ -459,50 +500,100 @@ onMounted(loadDraw)
 
   <div v-else class="flex flex-col gap-4 py-2">
     <Menu ref="drawActionsMenu" :model="drawActions" popup />
+    <Drawer
+      v-model:visible="phaseDrawerVisible"
+      position="right"
+      header="Percorso del torneo"
+      class="w-full! sm:w-104!"
+    >
+      <p class="mb-4 text-sm text-muted-color">{{ phases.length }} fasi complessive</p>
+      <nav class="grid gap-2" aria-label="Fasi del torneo">
+        <button
+          v-for="phase in phases"
+          :key="phase.id"
+          type="button"
+          class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border p-3 text-left transition-colors"
+          :class="phase.id === selectedPhaseId
+            ? 'border-primary-200 bg-primary-50 text-primary'
+            : 'border-(--color-border) bg-(--color-surface-card)'"
+          :disabled="phase.status === 'pending'"
+          @click="selectPhase(phase.id)"
+        >
+          <span
+            class="grid size-8 place-items-center rounded-full text-xs font-bold"
+            :class="phase.id === selectedPhaseId ? 'bg-primary text-white' : 'bg-(--color-surface-soft) text-muted-color'"
+          >
+            <i v-if="phase.status === 'completed'" class="pi pi-check" aria-hidden="true" />
+            <span v-else>{{ phase.position }}</span>
+          </span>
+          <span class="grid min-w-0 gap-0.5">
+            <strong class="truncate text-sm">Fase {{ phase.position }} · {{ phase.name }}</strong>
+            <small class="text-xs text-muted-color">
+              {{ phase.status === 'completed' ? 'Completata' : phase.status === 'active' ? 'In corso' : 'Non ancora disponibile' }}
+            </small>
+            <small v-if="phase.description" class="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-color">
+              {{ phase.description }}
+            </small>
+          </span>
+          <i
+            :class="phase.status === 'pending' ? 'pi pi-lock' : 'pi pi-chevron-right'"
+            class="text-xs text-muted-color"
+            aria-hidden="true"
+          />
+        </button>
+      </nav>
+    </Drawer>
 
     <!------------------------------>
     <!-- Section: Tournament phases -->
     <!------------------------------>
-    <section v-if="phases.length > 1" class="flex flex-col gap-3">
-      <div class="flex items-center justify-between gap-3">
-        <div>
-          <small class="text-xs font-extrabold uppercase tracking-widest text-muted-color">Percorso torneo</small>
-          <h2 class="mt-0.5 font-bold">{{ activePhase?.name }}</h2>
-          <p class="mt-0.5 text-xs text-muted-color">
-            {{ activePhase?.players.length ?? 0 }} in ingresso
-            <i class="pi pi-arrow-right mx-1 text-[0.65rem]" aria-hidden="true" />
-            {{ activePhase?.output_count ?? 0 }} in uscita
-          </p>
-        </div>
-        <span class="text-xs font-semibold text-muted-color">
-          Fase {{ activePhase?.position }} di {{ phases.length }}
-        </span>
+    <section
+      v-if="phases.length > 1"
+      class="grid gap-4 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 lg:grid-cols-[minmax(15rem,0.9fr)_minmax(15rem,1.1fr)_auto] lg:items-end"
+    >
+      <div class="grid gap-2">
+        <label for="tournament-phase" class="text-sm font-bold text-muted-color">Fase corrente</label>
+        <Select
+          id="tournament-phase"
+          v-model="selectedPhaseId"
+          :options="phaseOptions"
+          option-label="label"
+          option-value="value"
+          option-disabled="disabled"
+          fluid
+        />
+        <p v-if="activePhase?.description" class="text-xs leading-relaxed text-muted-color">
+          {{ activePhase.description }}
+        </p>
       </div>
-      <Tabs v-model:value="selectedPhaseId" scrollable>
-        <TabList>
-          <Tab
-            v-for="phase in phases"
-            :key="phase.id"
-            :value="phase.id"
-            :disabled="phase.status === 'pending'"
-            class="min-w-40 whitespace-nowrap"
-          >
-            <span class="flex items-center gap-2">
-              <i
-                :class="
-                  phase.status === 'completed'
-                    ? 'pi pi-check-circle text-primary'
-                    : phase.status === 'active'
-                      ? 'pi pi-play-circle text-primary'
-                      : 'pi pi-lock text-muted-color'
-                "
-                aria-hidden="true"
-              />
-              {{ phase.name }}
-            </span>
-          </Tab>
-        </TabList>
-      </Tabs>
+
+      <div class="grid gap-2 pb-1">
+        <div class="flex items-center justify-between gap-3 text-xs">
+          <span class="text-muted-color">Incontri completati</span>
+          <strong>{{ completedMatchesCount }} di {{ phaseMatchesCount }}</strong>
+        </div>
+        <div
+          class="h-1.5 overflow-hidden rounded-full bg-(--color-surface-muted)"
+          role="progressbar"
+          aria-label="Incontri completati nella fase"
+          :aria-valuenow="completedMatchesCount"
+          aria-valuemin="0"
+          :aria-valuemax="Math.max(1, phaseMatchesCount)"
+        >
+          <span
+            class="block h-full rounded-full bg-primary transition-[width]"
+            :style="{ width: `${phaseProgressPercentage}%` }"
+          />
+        </div>
+      </div>
+
+      <Button
+        label="Vedi percorso"
+        icon="pi pi-sitemap"
+        severity="secondary"
+        outlined
+        @click="phaseDrawerVisible = true"
+      />
     </section>
 
     <div v-if="enrolledPlayers.length < 2" class="flex min-h-55 flex-col items-center justify-center gap-3 text-center text-muted-color">
@@ -514,18 +605,21 @@ onMounted(loadDraw)
     <!-- Section: Round robin -->
     <!------------------------------>
     <template v-else-if="isRoundRobin">
-      <Tabs v-if="phaseGroups.length > 1" v-model:value="selectedGroupId" scrollable>
-        <TabList>
-          <Tab
-            v-for="group in phaseGroups"
-            :key="group.id"
-            :value="group.id"
-            class="min-w-28 whitespace-nowrap"
-          >
-            {{ group.name }}
-          </Tab>
-        </TabList>
-      </Tabs>
+      <label
+        v-if="phaseGroups.length > 1"
+        for="tournament-group"
+        class="grid max-w-64 gap-2 text-sm font-bold text-muted-color"
+      >
+        Girone
+        <Select
+          id="tournament-group"
+          v-model="selectedGroupId"
+          :options="groupOptions"
+          option-label="label"
+          option-value="value"
+          fluid
+        />
+      </label>
 
       <div v-if="auth.isAdmin && !hasMatches" class="flex flex-wrap items-center gap-2">
         <Button
@@ -576,34 +670,34 @@ onMounted(loadDraw)
           />
         </div>
 
-        <div v-if="roundRobinViewMode === 'schedule'" class="flex flex-col gap-4">
-          <div class="flex items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-              <span class="grid size-10 place-items-center rounded-lg bg-primary-50 text-primary"><i class="pi pi-calendar" /></span>
-              <div>
-                <small class="text-xs font-extrabold tracking-widest text-muted-color">CALENDARIO</small>
-                <h2 class="mt-0.5 text-base font-bold">
-                  {{ bracketRoundTabs.find((tab) => tab.index === activeBracketRound)?.fullLabel }}
-                </h2>
-              </div>
+        <div v-if="roundRobinViewMode === 'schedule'" class="flex flex-col gap-3">
+          <div class="flex items-center justify-between gap-3 rounded-xl border border-(--color-border) bg-(--color-surface-soft) p-3 sm:p-4">
+            <div>
+              <h2 class="font-bold">
+                {{ bracketRoundTabs.find((tab) => tab.index === activeBracketRound)?.fullLabel }}
+                <span class="text-muted-color">di {{ bracketRoundTabs.length }}</span>
+              </h2>
+              <p class="mt-1 text-xs text-muted-color">{{ activeBracketMatches.length }} incontri</p>
             </div>
-            <span class="hidden rounded-full bg-surface-100 px-2.5 py-1.5 text-xs font-bold sm:inline-flex">
-              {{ activeBracketMatches.length }} incontri
-            </span>
+            <div class="flex gap-2">
+              <Button
+                icon="pi pi-chevron-left"
+                severity="secondary"
+                outlined
+                aria-label="Giornata precedente"
+                :disabled="activeRoundPosition <= 0"
+                @click="changeRound(-1)"
+              />
+              <Button
+                icon="pi pi-chevron-right"
+                severity="secondary"
+                outlined
+                aria-label="Giornata successiva"
+                :disabled="activeRoundPosition < 0 || activeRoundPosition >= bracketRoundTabs.length - 1"
+                @click="changeRound(1)"
+              />
+            </div>
           </div>
-
-          <Tabs v-model:value="activeBracketRound" scrollable>
-            <TabList>
-              <Tab
-                v-for="tab in bracketRoundTabs"
-                :key="tab.index"
-                :value="tab.index"
-                class="min-w-28 whitespace-nowrap"
-              >
-                {{ tab.fullLabel }}
-              </Tab>
-            </TabList>
-          </Tabs>
 
           <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-3">
             <TournamentMatchCard
@@ -686,25 +780,6 @@ onMounted(loadDraw)
           </div>
         </section>
 
-        <section
-          v-if="activePhase?.status === 'active' && nextPhase"
-          class="flex flex-col gap-3 rounded-lg border border-(--color-border) bg-surface-50 p-4 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div>
-            <h3 class="font-bold">Passaggio a {{ nextPhase.name }}</h3>
-            <p class="mt-1 text-sm text-muted-color">
-              {{ completedMatchesCount }} di {{ matchesStore.matches.length }} incontri completati.
-              Il sistema calcolerà qualificati e teste di serie.
-            </p>
-          </div>
-          <Button
-            label="Concludi fase e genera"
-            icon="pi pi-arrow-right"
-            :disabled="!canCompletePhase"
-            :loading="completingPhase"
-            @click="completeCurrentPhase"
-          />
-        </section>
       </template>
     </template>
 
@@ -874,5 +949,34 @@ onMounted(loadDraw)
         </div>
       </div>
     </template>
+
+    <!------------------------------>
+    <!-- Section: Phase transition -->
+    <!------------------------------>
+    <section
+      v-if="activePhase?.status === 'active' && nextPhase && hasMatches"
+      class="flex flex-col gap-3 rounded-xl border border-primary-200 bg-primary-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div>
+        <h3 class="font-bold">Prossimo passaggio: {{ nextPhase.name }}</h3>
+        <p class="mt-1 text-sm text-muted-color">
+          <template v-if="remainingMatchesCount > 0">
+            {{ remainingMatchesCount === 1 ? 'Manca 1 risultato' : `Mancano ${remainingMatchesCount} risultati` }}
+            per completare la fase corrente.
+          </template>
+          <template v-else>
+            Tutti gli incontri sono completi. La fase successiva può essere generata.
+          </template>
+        </p>
+      </div>
+      <Button
+        v-if="auth.isAdmin"
+        label="Passa alla fase successiva"
+        icon="pi pi-arrow-right"
+        :disabled="!canCompletePhase"
+        :loading="completingPhase"
+        @click="completeCurrentPhase"
+      />
+    </section>
   </div>
 </template>

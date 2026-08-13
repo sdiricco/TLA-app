@@ -11,6 +11,12 @@ export const tournamentPhaseInclude = {
 
 type PhaseTransaction = Prisma.TransactionClient
 
+function defaultPhaseDescription(format: TournamentPhaseInput['format']): string {
+  return format === 'round_robin'
+    ? 'Calendario, risultati e classifica della fase.'
+    : 'Tabellone e incontri a eliminazione diretta della fase.'
+}
+
 type StandingRow = {
   playerId: string
   groupId: string
@@ -31,6 +37,7 @@ export function normalizeTournamentPhases(
   if (phases?.length) {
     return phases.map((phase, index) => ({
       ...phase,
+      description: phase.description?.trim() || defaultPhaseDescription(phase.format),
       output_count:
         phase.output_count
         ?? (
@@ -44,6 +51,7 @@ export function normalizeTournamentPhases(
     return [
       {
         name: 'Fase a gironi',
+        description: 'I giocatori si affrontano nei gironi per accedere alla fase finale.',
         format: 'round_robin',
         group_count: groupCount ?? 1,
         output_count: (groupCount ?? 1) * (qualifiersPerGroup ?? 1),
@@ -51,6 +59,7 @@ export function normalizeTournamentPhases(
       },
       {
         name: 'Fase finale',
+        description: 'I qualificati si affrontano in un tabellone a eliminazione diretta.',
         format: 'single_elimination',
         group_count: 1,
         output_count: 1,
@@ -60,6 +69,9 @@ export function normalizeTournamentPhases(
   }
   return [{
     name: format === 'round_robin' ? 'Girone unico' : 'Tabellone',
+    description: defaultPhaseDescription(
+      format === 'round_robin' ? 'round_robin' : 'single_elimination',
+    ),
     format: format === 'round_robin' ? 'round_robin' : 'single_elimination',
     group_count: 1,
     output_count: 1,
@@ -75,6 +87,12 @@ export function validateTournamentPhases(
   let inputCount = participantLimit ?? null
   phases.forEach((phase, index) => {
     if (!phase.name.trim()) throw new Error(`Il nome della fase ${index + 1} è obbligatorio`)
+    if (!phase.description?.trim()) {
+      throw new Error(`La descrizione della fase ${index + 1} è obbligatoria`)
+    }
+    if (phase.description.trim().length > 240) {
+      throw new Error(`La descrizione della fase ${index + 1} non può superare 240 caratteri`)
+    }
     if (!['round_robin', 'single_elimination'].includes(phase.format)) {
       throw new Error(`Formato non valido per la fase ${index + 1}`)
     }
@@ -110,6 +128,7 @@ export async function createTournamentPhases(
         tournamentId,
         position: index + 1,
         name: input.name.trim(),
+        description: input.description?.trim() || defaultPhaseDescription(input.format),
         format: input.format,
         status: index === 0 ? 'active' : 'pending',
         groupCount: input.format === 'round_robin' ? input.group_count : 1,

@@ -24,7 +24,10 @@
     "prisma:studio": "prisma studio --schema server/prisma/schema.prisma",
     "preview": "vite preview",
     "release": "semantic-release",
-    "release:dry-run": "semantic-release --dry-run --no-ci"
+    "release:dry-run": "semantic-release --dry-run --no-ci",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",
@@ -63,6 +66,7 @@
   "devDependencies": {
     "@commitlint/cli": "21.2.1",
     "@commitlint/config-conventional": "21.2.0",
+    "@playwright/test": "^1.62.1",
     "@semantic-release/commit-analyzer": "13.0.1",
     "@semantic-release/github": "12.0.9",
     "@semantic-release/release-notes-generator": "14.1.1",

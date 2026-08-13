@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import Button from 'primevue/button'
+import { useAuthStore } from '../../stores/auth'
 import { useOrganizationsStore } from '../../stores/organizations'
+import { useLayoutStore } from '../../stores/layout'
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 const organizations = useOrganizationsStore()
+const layout = useLayoutStore()
 const title = computed(() => {
   if (route.path.startsWith('/organizations/explore')) return 'Esplora organizzazioni'
   if (route.path.startsWith('/organizations/new')) return 'Nuova organizzazione'
@@ -18,25 +24,99 @@ const title = computed(() => {
 })
 
 const activeOrganizationName = computed(() => organizations.activeOrganization?.name ?? 'Tornei globali')
+const displayedTitle = computed(() => layout.topbarContext?.title ?? title.value)
+const createAction = computed(() => {
+  if (!auth.isAdmin) return null
+  if (route.name === 'tournaments') {
+    return {
+      routeName: 'tournament-create' as const,
+      label: 'Nuovo torneo',
+      icon: 'pi pi-plus',
+      ariaLabel: 'Crea un nuovo torneo',
+    }
+  }
+  if (route.name === 'players') {
+    return {
+      routeName: 'player-create' as const,
+      label: 'Nuovo giocatore',
+      icon: 'pi pi-user-plus',
+      ariaLabel: 'Crea un nuovo giocatore',
+    }
+  }
+  return null
+})
+
+function openCreate(): void {
+  if (auth.isGuest || !createAction.value) return
+  void router.push({ name: createAction.value.routeName })
+}
+
+function goBack(): void {
+  if (!layout.topbarContext?.backTo) return
+  void router.push(layout.topbarContext.backTo)
+}
 </script>
 
 <template>
-  <header class="mobile-topbar hidden max-md:flex items-center gap-3 px-3 h-14 sticky top-0 z-10">
+  <header class="app-topbar flex h-14 shrink-0 items-center gap-2">
+    <button
+      v-if="layout.topbarContext?.backTo"
+      type="button"
+      class="topbar-icon"
+      :aria-label="layout.topbarContext.backLabel ?? 'Torna indietro'"
+      :title="layout.topbarContext.backLabel ?? 'Torna indietro'"
+      @click="goBack"
+    >
+      <i class="pi pi-arrow-left" aria-hidden="true" />
+    </button>
     <div class="topbar-copy">
-      <span class="topbar-title">{{ title }}</span>
+      <span class="topbar-title">{{ displayedTitle }}</span>
       <span class="topbar-organization">{{ activeOrganizationName }}</span>
+    </div>
+    <div class="topbar-actions">
+      <button
+        type="button"
+        class="topbar-icon"
+        aria-label="Apri ricerca globale"
+        title="Cerca"
+        @click="layout.openSearch"
+      >
+        <i class="pi pi-search" aria-hidden="true" />
+      </button>
+      <Button
+        v-if="createAction"
+        class="md:hidden"
+        :icon="createAction.icon"
+        :aria-label="createAction.ariaLabel"
+        :disabled="auth.isGuest"
+        @click="openCreate"
+      />
+      <Button
+        v-if="createAction"
+        class="hidden md:inline-flex"
+        :label="createAction.label"
+        :icon="createAction.icon"
+        :aria-label="createAction.ariaLabel"
+        :disabled="auth.isGuest"
+        @click="openCreate"
+      />
     </div>
   </header>
 </template>
 
 <style scoped>
-.mobile-topbar {
+.app-topbar {
   margin: 0;
-  padding-inline: 0.85rem;
+  padding-inline: var(--app-page-padding);
   background: radial-gradient(circle at 100% 0, rgb(var(--color-primary-500-rgb) / 5%), transparent 30rem), var(--app-bg);
   color: var(--color-text);
 }
 .topbar-copy { display: flex; min-width: 0; flex: 1; align-items: baseline; gap: 0.55rem; overflow: hidden; }
 .topbar-title { min-width: 0; overflow: hidden; color: var(--color-text); font-size: 0.92rem; font-weight: 800; letter-spacing: -0.02em; text-overflow: ellipsis; white-space: nowrap; }
 .topbar-organization { min-width: 0; overflow: hidden; color: var(--color-text-muted); font-size: 0.76rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 0.15rem; }
+.topbar-icon { display: grid; width: 2.5rem; height: 2.5rem; flex: 0 0 auto; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--color-text); cursor: pointer; }
+.topbar-icon:hover { color: var(--color-primary-600); }
+.topbar-icon:focus-visible { outline: 2px solid rgb(var(--color-primary-500-rgb) / 35%); outline-offset: 2px; }
+@media (max-width: 767px) { .app-topbar { padding-inline: 0.85rem; } }
 </style>

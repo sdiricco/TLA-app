@@ -17,7 +17,8 @@ function createInitialPhase(inputCount: number): TournamentPhaseInput[] {
   const outputCount = Math.min(8, Math.max(1, Math.floor(inputCount / 2)))
   return [
     {
-      name: 'Fase 1',
+      name: 'Fase a gironi',
+      description: `I migliori ${outputCount} giocatori accedono alla fase successiva.`,
       format: 'round_robin',
       group_count: 1,
       output_count: outputCount,
@@ -63,6 +64,15 @@ function validatePhases(): boolean {
         severity: 'warn',
         summary: 'Nome mancante',
         detail: `Inserisci il nome della fase ${index + 1}.`,
+        life: 4000,
+      })
+      return false
+    }
+    if (!phase.description?.trim()) {
+      toast.add({
+        severity: 'warn',
+        summary: 'Descrizione mancante',
+        detail: `Descrivi brevemente la fase ${index + 1}.`,
         life: 4000,
       })
       return false

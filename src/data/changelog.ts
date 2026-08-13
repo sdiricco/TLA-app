@@ -9,7 +9,38 @@ export interface ChangelogEntry {
   items: string[]
 }
 
+// Keep newest entries first. Every user-visible change must update this list in
+// the same pull request; see the product changelog policy in AGENTS.md.
 export const changelogEntries: ChangelogEntry[] = [
+  {
+    date: '2026-08-13',
+    version: 'Tornei 2.0',
+    kind: 'improvement',
+    title: 'Tornei a fasi più semplici da gestire',
+    description: 'Il tabellone mostra solo il contesto necessario e rende esplicito quando una fase può avanzare.',
+    items: [
+      'Selettori compatti per fase e girone',
+      'Percorso completo consultabile in un pannello dedicato',
+      'Avanzamento basato sugli incontri completati',
+      'Navigazione tra giornate con controlli precedente e successivo',
+      'Accesso ai giocatori integrato nel riepilogo del torneo',
+      'Nome e descrizione della fase visibili durante la gestione del tabellone',
+      'Topbar compatta e condivisa tra desktop e mobile',
+    ],
+  },
+  {
+    date: '2026-08-12',
+    version: 'UX 2.0',
+    kind: 'improvement',
+    title: 'Navigazione e gestione più immediate',
+    description: 'Le aree principali dell’app condividono ora una gerarchia più chiara e controlli più adatti a desktop e mobile.',
+    items: [
+      'Ricerca globale e azioni principali integrate nella topbar',
+      'Filtri di tornei e giocatori più compatti e leggibili',
+      'Profilo giocatore ridisegnato e modulo di modifica semplificato',
+      'Sidebar, richieste e impostazioni uniformate al nuovo design',
+    ],
+  },
   {
     date: '2026-07-13',
     version: 'Backlog 1.0',

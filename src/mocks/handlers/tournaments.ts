@@ -47,6 +47,11 @@ function createMockPhases(
       tournament_id: tournamentId,
       position: index + 1,
       name: phase.name,
+      description: phase.description?.trim() || (
+        phase.format === 'round_robin'
+          ? 'Calendario, risultati e classifica della fase.'
+          : 'Tabellone e incontri a eliminazione diretta della fase.'
+      ),
       format: phase.format,
       status: index === 0 ? 'active' as const : 'pending' as const,
       group_count: phase.group_count,
@@ -115,6 +120,9 @@ export const tournamentHandlers = [
       ...tournamentBody,
       phases: createMockPhases(tournamentId, phaseInputs ?? [{
         name: body.format === 'round_robin' ? 'Girone unico' : 'Tabellone',
+        description: body.format === 'round_robin'
+          ? 'Calendario, risultati e classifica della fase.'
+          : 'Tabellone e incontri a eliminazione diretta della fase.',
         format: body.format === 'round_robin' ? 'round_robin' : 'single_elimination',
         group_count: 1,
         output_count: 1,

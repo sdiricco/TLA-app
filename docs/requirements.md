@@ -1,56 +1,19 @@
 # Requirements
 
-## Functional Requirements
+This document is the entry point for product requirements. The first traceable
+baseline lives in [Product requirements](requirements/product.md).
 
-### Tournament Management
-- Create, edit and delete tournaments
-- Configure tournament details: name, date, location, category, format
-- Support multiple tournament formats:
-  - Single elimination (knockout)
-  - Double elimination
-  - Round robin (all-play-all)
-  - Round robin + knockout (group stage + final bracket)
-- Support masculine and feminine categories
+Requirements use stable identifiers so that implementation work, tests and
+future decision records can refer to them without relying on section names.
 
-### Player Management
-- Add, edit and remove players from the registry
-- Player profile: name, ranking, club, contact info
-- Associate players to a specific tournament
+## Status values
 
-### Draw & Brackets
-- Automatically generate a draw based on registered players
-- Support seeding (place top-ranked players in non-overlapping bracket halves)
-- Manual draw adjustment before the tournament starts
-- Visual bracket/draw display
-
-### Match Management
-- Schedule matches with date, time and court
-- Record match results (score by set)
-- Mark walkovers and retirements
-- Automatically advance winners through the bracket
-
-### Standings & Rankings
-- Show real-time standings for round-robin phases
-- Display final rankings at the end of a tournament
-
----
-
-## Non-Functional Requirements
-
-| Area | Requirement |
+| Status | Meaning |
 |---|---|
-| **Usability** | Responsive design — usable on desktop and tablet |
-| **Performance** | Bracket and standings updates feel instant (< 100 ms) |
-| **Offline** | Core features work without an internet connection (localStorage) |
-| **Persistence** | Tournament data survives page reload |
-| **Accessibility** | Keyboard-navigable UI, sufficient color contrast |
+| Implemented | The current application contains the capability; coverage may still grow. |
+| Partial | A usable slice exists, but one or more acceptance criteria are missing. |
+| Planned | The requirement is agreed as direction but not implemented yet. |
 
----
-
-## Out of Scope (v1)
-
-- User authentication / multi-user accounts
-- Server-side data storage or sync
-- Live scoring from a mobile device
-- Umpire / referee workflows
-- Payment or registration fees
+When behavior changes, update the requirement and its acceptance criteria in
+the same pull request. A requirement is not considered verified until it has a
+manual check or an automated test linked from its `Verification` field.

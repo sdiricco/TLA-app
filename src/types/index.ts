@@ -159,6 +159,7 @@ export type TournamentPhaseStatus = 'pending' | 'active' | 'completed'
 
 export interface TournamentPhaseInput {
   name: string
+  description?: string | null
   format: TournamentPhaseFormat
   group_count: number
   output_count: number
@@ -185,6 +186,7 @@ export interface TournamentPhase {
   tournament_id: string
   position: number
   name: string
+  description: string
   format: TournamentPhaseFormat
   status: TournamentPhaseStatus
   group_count: number

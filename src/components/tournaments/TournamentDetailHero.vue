@@ -2,6 +2,7 @@
 // Moment and PrimeVue dependencies.
 import moment from 'moment'
 import 'moment/locale/it.js'
+import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
 import type { MenuItem } from 'primevue/menuitem'
 import SplitButton from 'primevue/splitbutton'
@@ -23,7 +24,6 @@ defineProps<{
 }>()
 
 defineEmits<{
-  back: []
   edit: []
   downloadRegulation: []
   statusChange: [status: TournamentStatus]
@@ -49,13 +49,6 @@ function formatCurrency(value: number): string {
   return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(value)
 }
 
-function phaseFlowLabel(tournament: TournamentWithPlayers): string {
-  const counts = [
-    tournament.participant_limit ?? tournament.playerIds?.length ?? 0,
-    ...(tournament.phases ?? []).map((phase) => phase.output_count),
-  ]
-  return counts.join(' → ')
-}
 </script>
 
 <template>
@@ -63,16 +56,7 @@ function phaseFlowLabel(tournament: TournamentWithPlayers): string {
   <!-- Section: Tournament hero -->
   <!------------------------------>
   <header class="overflow-hidden rounded-lg bg-linear-to-b from-(--color-sidebar-start) to-(--color-sidebar-end) p-4 text-white sm:p-6 lg:p-8">
-    <a
-      href="/tournaments"
-      class="inline-flex items-center gap-2 text-sm font-semibold text-white/65 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-      @click.prevent="$emit('back')"
-    >
-      <i class="pi pi-arrow-left" aria-hidden="true" />
-      <span>Tutti i tornei</span>
-    </a>
-
-    <div class="mt-3 flex flex-col justify-between gap-4 sm:mt-5 sm:flex-row sm:items-end sm:gap-8">
+    <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end sm:gap-8">
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap gap-2">
           <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1.5 text-xs font-extrabold uppercase tracking-wide text-white/80">
@@ -88,10 +72,7 @@ function phaseFlowLabel(tournament: TournamentWithPlayers): string {
           </span>
         </div>
 
-        <p class="mt-4 hidden text-xs font-extrabold tracking-[0.16em] text-primary-200 sm:block">
-          CONTROL ROOM TORNEO
-        </p>
-        <h1 class="mt-2 truncate text-3xl font-bold leading-tight tracking-tighter sm:text-4xl lg:text-5xl">
+        <h1 class="mt-4 truncate text-3xl font-bold leading-tight tracking-tighter sm:text-4xl lg:text-5xl">
           {{ tournament.name }}
         </h1>
         <p class="mt-2 flex items-center gap-2 text-sm text-white/70">
@@ -136,19 +117,24 @@ function phaseFlowLabel(tournament: TournamentWithPlayers): string {
     <!-- Section: Tournament summary -->
     <!------------------------------>
     <div class="mt-4 grid grid-cols-2 gap-3 border-t border-white/10 pt-4 lg:mt-7 lg:grid-cols-[1.25fr_1fr_0.7fr_0.7fr]">
-      <div class="flex min-w-0 items-center gap-2">
+      <div class="flex min-w-0 items-center gap-2 p-2">
         <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white/10 text-(--color-accent) sm:size-10"><i class="pi pi-calendar" /></span>
         <p class="grid min-w-0 gap-0.5"><small class="text-xs font-extrabold tracking-wide text-white/55">PERIODO</small><strong class="truncate text-sm text-white/90">{{ formatDate(tournament.start_date) }}<template v-if="tournament.end_date"> — {{ formatDate(tournament.end_date) }}</template></strong></p>
       </div>
-      <div class="flex min-w-0 items-center gap-2">
+      <div class="flex min-w-0 items-center gap-2 p-2">
         <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white/10 text-(--color-accent) sm:size-10"><i class="pi pi-sitemap" /></span>
         <p class="grid min-w-0 gap-0.5"><small class="text-xs font-extrabold tracking-wide text-white/55">FORMATO</small><strong class="truncate text-sm text-white/90">{{ tournamentFormatLabels[tournament.format] ?? tournament.format }}</strong></p>
       </div>
-      <div class="flex min-w-0 items-center gap-2">
+      <RouterLink
+        :to="{ name: 'tournament-players', params: { id: tournament.id } }"
+        class="group flex min-w-0 items-center gap-2 rounded-lg p-2 transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        :aria-label="`Apri i ${enrolledPlayersCount} giocatori iscritti`"
+      >
         <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white/10 text-(--color-accent) sm:size-10"><i class="pi pi-users" /></span>
-        <p class="grid min-w-0 gap-0.5"><small class="text-xs font-extrabold tracking-wide text-white/55">PARTECIPANTI</small><strong class="truncate text-sm text-white/90">{{ enrolledPlayersCount }} / {{ tournament.participant_limit || '∞' }}</strong></p>
-      </div>
-      <div class="flex min-w-0 items-center gap-2">
+        <p class="grid min-w-0 flex-1 gap-0.5"><small class="text-xs font-extrabold tracking-wide text-white/55">PARTECIPANTI</small><strong class="truncate text-sm text-white/90">{{ enrolledPlayersCount }} / {{ tournament.participant_limit || '∞' }}</strong></p>
+        <i class="pi pi-chevron-right text-xs text-white/35 transition-transform group-hover:translate-x-0.5 group-hover:text-white/70" aria-hidden="true" />
+      </RouterLink>
+      <div class="flex min-w-0 items-center gap-2 p-2">
         <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white/10 text-(--color-accent) sm:size-10"><i class="pi pi-user" /></span>
         <p class="grid min-w-0 gap-0.5"><small class="text-xs font-extrabold tracking-wide text-white/55">CATEGORIA</small><strong class="truncate text-sm text-white/90">{{ categoryLabels[tournament.category] ?? tournament.category }}</strong></p>
       </div>
@@ -161,7 +147,7 @@ function phaseFlowLabel(tournament: TournamentWithPlayers): string {
       <span v-if="tournament.registration_start_date || tournament.registration_end_date" class="inline-flex items-center gap-1.5 rounded-full bg-black/10 px-2.5 py-1.5 text-xs text-white/50"><i class="pi pi-user-plus" /> Iscrizioni <template v-if="tournament.registration_start_date">dal {{ formatDate(tournament.registration_start_date) }}</template><template v-if="tournament.registration_end_date"> al {{ formatDate(tournament.registration_end_date) }}</template></span>
       <span v-if="tournament.game_formula" class="inline-flex items-center gap-1.5 rounded-full bg-black/10 px-2.5 py-1.5 text-xs text-white/50"><i class="pi pi-list-check" /> {{ tournament.game_formula }}</span>
       <span v-if="tournament.registration_fee != null" class="inline-flex items-center gap-1.5 rounded-full bg-black/10 px-2.5 py-1.5 text-xs text-white/50"><i class="pi pi-euro" /> {{ formatCurrency(tournament.registration_fee) }}</span>
-      <span v-if="(tournament.phases?.length ?? 0) > 1" class="inline-flex items-center gap-1.5 rounded-full bg-black/10 px-2.5 py-1.5 text-xs text-white/50"><i class="pi pi-sitemap" /> {{ tournament.phases?.length }} fasi · {{ phaseFlowLabel(tournament) }} giocatori</span>
+      <span v-if="(tournament.phases?.length ?? 0) > 1" class="inline-flex items-center gap-1.5 rounded-full bg-black/10 px-2.5 py-1.5 text-xs text-white/50"><i class="pi pi-sitemap" /> {{ tournament.phases?.length }} fasi</span>
     </div>
   </header>
 </template>

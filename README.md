@@ -17,6 +17,17 @@ npm install
 npm run dev
 ```
 
+## End-to-end tests
+
+The Playwright smoke suite starts Vite automatically and uses the local MSW API:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+See [E2E testing](docs/testing/e2e.md) for UI mode, reports and test conventions.
+
 ## Backend
 
 The backend entrypoint lives under `server/` and currently exposes:
@@ -106,6 +117,7 @@ with a suitable GitHub token when release analysis must be tested locally.
 
 | Document | Description |
 |---|---|
+| [Documentation index](docs/README.md) | Entry point and documentation conventions |
 | [Technologies](docs/technologies.md) | Frontend stack and build tooling |
 | [Architecture](docs/architecture.md) | Folder structure, layers and routing |
-| [Requirements](docs/requirements.md) | Functional and non-functional requirements |
+| [Requirements](docs/requirements/product.md) | Product scope and traceable acceptance criteria |

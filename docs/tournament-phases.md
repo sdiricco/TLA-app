@@ -21,7 +21,8 @@ the phase that owns the match.
 ## Data model
 
 - `tournament_phases` stores ordered phases, their lifecycle status and the
-  total number of players produced by each phase (`output_count`).
+  total number of players produced by each phase (`output_count`). Each phase
+  also has a concise name and a description shown in the tournament context.
 - `tournament_groups` stores the groups belonging to a round-robin phase.
 - `tournament_phase_players` snapshots players, group allocation, seed,
   qualification status and source rank for each phase.

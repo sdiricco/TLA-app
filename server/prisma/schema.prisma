@@ -201,6 +201,7 @@ model TournamentPhase {
   tournamentId       String                  @map("tournament_id")
   position           Int
   name               String
+  description        String                  @default("")
   format             String
   status             String                  @default("pending")
   groupCount         Int                     @default(1) @map("group_count")

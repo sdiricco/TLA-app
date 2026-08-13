@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, provide, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, provide, ref } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import ProgressSpinner from 'primevue/progressspinner'
@@ -8,6 +8,7 @@ import { useToast } from 'primevue/usetoast'
 import TournamentDetailHero from '@/components/tournaments/TournamentDetailHero.vue'
 import { tournamentDetailKey } from '@/components/tournaments/tournamentDetailContext'
 import { useAuthStore } from '@/stores/auth'
+import { useLayoutStore } from '@/stores/layout'
 import { useTournamentsStore } from '@/stores/tournaments'
 import type { TournamentStatus, TournamentWithPlayers } from '@/types'
 
@@ -18,6 +19,7 @@ const route = useRoute()
 const router = useRouter()
 const tournamentsStore = useTournamentsStore()
 const auth = useAuthStore()
+const layout = useLayoutStore()
 const confirm = useConfirm()
 const toast = useToast()
 
@@ -37,18 +39,6 @@ const enrolledPlayersCount = computed(() => {
 })
 const canViewAdmin = computed(() => auth.isAdmin)
 const canModify = computed(() => !auth.isGuest)
-const activeSection = computed(() =>
-  route.name === 'tournament-players'
-    ? {
-        title: 'Giocatori iscritti',
-        description: 'Consulta e gestisci i partecipanti iscritti al torneo.',
-      }
-    : {
-        title: 'Tabellone e incontri',
-        description: 'Gestisci turni, incontri e risultati della competizione.',
-      },
-)
-
 // PrimeVue Menu consumes a declarative list. Commands remain here because they
 // modify the shared tournament and therefore affect both subpages.
 const tournamentActions = computed(() => {
@@ -91,6 +81,11 @@ const tournamentActions = computed(() => {
 // -----------------------------------------------------------------------------
 async function reloadTournament(): Promise<void> {
   tournament.value = await tournamentsStore.getById(route.params['id'] as string)
+  layout.setTopbarContext({
+    title: tournament.value.name,
+    backTo: '/tournaments',
+    backLabel: 'Torna a tutti i tornei',
+  })
 }
 
 async function loadPage(): Promise<void> {
@@ -194,6 +189,7 @@ async function setTournamentStatus(status: TournamentStatus): Promise<void> {
 }
 
 onMounted(loadPage)
+onBeforeUnmount(layout.clearTopbarContext)
 
 // -----------------------------------------------------------------------------
 // Child-route context
@@ -235,38 +231,25 @@ provide(tournamentDetailKey, {
         :updating-status="updatingStatus"
         :downloading-regulation="downloadingRegulation"
         :actions="tournamentActions"
-        @back="router.push({ name: 'tournaments' })"
         @download-regulation="downloadRegulation"
         @edit="openEdit"
         @status-change="setTournamentStatus"
       />
 
       <!------------------------------>
-      <!-- Section: Tournament subpages -->
+      <!-- Section: Tournament content -->
       <!------------------------------>
-      <nav class="flex max-w-full self-start overflow-x-auto rounded-lg border border-(--color-border) bg-(--color-surface-card)" aria-label="Sezioni torneo">
-        <RouterLink
-          :to="{ name: 'tournament-draw', params: { id: tournament.id } }"
-          class="flex min-w-max items-center gap-2 px-4 py-2.5 text-sm font-semibold text-muted-color transition-colors hover:bg-surface-50 hover:text-color"
-          active-class="bg-primary text-white"
-        >
-          <i class="pi pi-sitemap" />
-          Tabellone e incontri
-        </RouterLink>
-        <RouterLink
-          :to="{ name: 'tournament-players', params: { id: tournament.id } }"
-          class="flex min-w-max items-center gap-2 border-l border-(--color-border) px-4 py-2.5 text-sm font-semibold text-muted-color transition-colors hover:bg-surface-50 hover:text-color"
-          active-class="bg-primary text-white"
-        >
-          <i class="pi pi-users" />
-          Giocatori iscritti ({{ enrolledPlayersCount }})
-        </RouterLink>
-      </nav>
-
       <main class="rounded-lg border border-(--color-border) bg-(--color-surface-card) p-3 sm:p-5">
-        <header class="mb-4 border-b border-(--color-border) pb-4">
-          <h2 class="text-lg font-bold tracking-tight text-color">{{ activeSection.title }}</h2>
-          <p class="mt-1 text-sm text-muted-color">{{ activeSection.description }}</p>
+        <header v-if="route.name === 'tournament-players'" class="mb-4 border-b border-(--color-border) pb-4">
+          <RouterLink
+            :to="{ name: 'tournament-draw', params: { id: tournament.id } }"
+            class="inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primary-700"
+          >
+            <i class="pi pi-arrow-left" aria-hidden="true" />
+            Torna al tabellone
+          </RouterLink>
+          <h2 class="mt-3 text-xl font-bold tracking-tight text-color">Giocatori iscritti</h2>
+          <p class="mt-1 text-sm text-muted-color">Consulta e gestisci i partecipanti del torneo.</p>
         </header>
         <RouterView />
       </main>

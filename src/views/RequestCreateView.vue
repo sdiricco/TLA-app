@@ -103,12 +103,11 @@ function handleEditorLoad(event: EditorLoadEvent): void {
   <!------------------------------>
   <!-- Page layout -->
   <!------------------------------>
-  <section class="mx-auto grid w-full max-w-225 gap-4 py-4 sm:py-8">
-    <Button icon="pi pi-arrow-left" label="Torna alle richieste" text severity="secondary" @click="router.push({ name: 'requests' })" />
+  <section class="mx-auto grid w-full max-w-225 gap-4 text-(--color-text) sm:gap-5">
+    <Button class="w-fit" icon="pi pi-arrow-left" label="Torna alle richieste" text severity="secondary" @click="router.push({ name: 'requests' })" />
 
     <!-- Section: Header -->
     <header>
-      <p class="mb-2 text-xs font-extrabold tracking-[0.14em] text-primary">BACKLOG ORGANIZZAZIONE</p>
       <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Nuova richiesta</h1>
       <p class="mt-2 leading-relaxed text-(--color-text-muted)">Racconta con chiarezza l’idea o il problema che vuoi condividere.</p>
     </header>
@@ -118,7 +117,7 @@ function handleEditorLoad(event: EditorLoadEvent): void {
     <!------------------------------>
     <!-- Section: Request form -->
     <!------------------------------>
-    <form class="overflow-hidden border border-(--color-border) bg-(--color-surface-card)" @submit.prevent="createRequest">
+    <form class="overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface-card)" @submit.prevent="createRequest">
       <!-- Content section -->
       <section class="grid gap-5 p-4 sm:p-7">
         <div class="flex items-start gap-3">

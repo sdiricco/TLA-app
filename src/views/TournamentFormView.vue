@@ -119,6 +119,7 @@
         phases: [
           {
             name: 'Fase a girone',
+            description: `Tutti i giocatori si affrontano nel girone; i migliori ${singleGroupOutput} accedono alla fase finale.`,
             format: 'round_robin',
             group_count: 1,
             output_count: singleGroupOutput,
@@ -126,6 +127,7 @@
           },
           {
             name: 'Fase finale',
+            description: 'I giocatori qualificati si affrontano in un tabellone a eliminazione diretta.',
             format: 'single_elimination',
             group_count: 1,
             output_count: 1,
@@ -142,6 +144,7 @@
         phases: [
           {
             name: 'Fase a gironi',
+            description: 'I primi due classificati di ogni girone accedono alla fase finale.',
             format: 'round_robin',
             group_count: groupCount,
             output_count: multiGroupOutput,
@@ -149,6 +152,7 @@
           },
           {
             name: 'Fase finale',
+            description: 'Gli otto giocatori qualificati si affrontano in un tabellone a eliminazione diretta.',
             format: 'single_elimination',
             group_count: 1,
             output_count: 1,
@@ -220,6 +224,7 @@
     return [
       {
         name: 'Fase a gironi',
+        description: `I migliori ${qualifiedCount} giocatori accedono alla fase finale.`,
         format: 'round_robin',
         group_count: 1,
         output_count: qualifiedCount,
@@ -227,6 +232,7 @@
       },
       {
         name: 'Fase finale',
+        description: 'I giocatori qualificati si affrontano in un tabellone a eliminazione diretta.',
         format: 'single_elimination',
         group_count: 1,
         output_count: 1,
@@ -411,6 +417,15 @@
           });
           return false;
         }
+        if (!phase.description?.trim()) {
+          toast.add({
+            severity: 'warn',
+            summary: 'Controlla le fasi',
+            detail: `Inserisci la descrizione della fase ${index + 1}`,
+            life: 4000,
+          });
+          return false;
+        }
         if (
           !Number.isInteger(phase.output_count)
           || phase.output_count < 1
@@ -476,6 +491,7 @@
           firstPhase?.qualifiers_per_group ?? tournament.qualifiers_per_group ?? null,
         phases: tournament.phases?.map((phase) => ({
           name: phase.name,
+          description: phase.description,
           format: phase.format,
           group_count: phase.group_count,
           output_count:
@@ -950,7 +966,10 @@
                     </span>
                     <div class="min-w-0 flex-1">
                       <p class="truncate font-semibold">{{ item.phase.name }}</p>
-                      <p class="text-xs text-muted-color">
+                      <p v-if="item.phase.description" class="mt-0.5 line-clamp-2 text-xs text-muted-color">
+                        {{ item.phase.description }}
+                      </p>
+                      <p class="mt-1 text-xs font-medium text-muted-color">
                         {{ item.phase.format === 'round_robin' ? "Girone all'italiana" : 'Eliminazione diretta' }}
                         <template v-if="item.phase.format === 'round_robin'">
                           · {{ item.phase.group_count }} {{ item.phase.group_count === 1 ? 'girone' : 'gironi' }}

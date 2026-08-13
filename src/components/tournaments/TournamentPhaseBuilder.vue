@@ -6,6 +6,7 @@ import InputIcon from 'primevue/inputicon'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
+import Textarea from 'primevue/textarea'
 import type { TournamentPhaseFormat, TournamentPhaseInput } from '@/types'
 
 const props = defineProps<{
@@ -56,7 +57,8 @@ function addPhase(): void {
     previous.output_count = Math.min(2, Math.max(1, phaseInputCount(previousIndex)))
   }
   phases.value.push({
-    name: `Fase ${phases.value.length + 1}`,
+    name: '',
+    description: '',
     format: 'single_elimination',
     group_count: 1,
     output_count: 1,
@@ -175,6 +177,23 @@ function updatePhaseFormat(phase: TournamentPhaseInput, index: number): void {
                 fluid
               />
             </IconField>
+          </div>
+
+          <div class="flex flex-col gap-1.5 md:col-span-2 lg:col-span-2">
+            <div class="flex items-baseline justify-between gap-3">
+              <label :for="`phase-description-${item.index}`" class="text-sm font-medium">
+                Descrizione fase *
+              </label>
+              <small class="text-xs text-muted-color">Mostrata nella pagina del torneo</small>
+            </div>
+            <Textarea
+              :id="`phase-description-${item.index}`"
+              v-model="item.phase.description"
+              rows="3"
+              maxlength="240"
+              placeholder="Es. I primi due classificati di ogni girone accedono alla fase finale."
+              fluid
+            />
           </div>
 
           <div class="flex flex-col gap-1.5">

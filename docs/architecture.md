@@ -1,60 +1,52 @@
 # Architecture
 
-## Overview
+## Runtime overview
 
-TLA App is a **Single Page Application (SPA)** built with Vue 3. All logic runs on the client; there is no backend server. Data persistence is handled via `localStorage` (or a future API integration).
+TLA is a Vue single-page application backed by an Express API and
+Supabase/PostgreSQL. During frontend-only development, Mock Service Worker
+(MSW) handles supported `/api/*` requests when `VITE_API_URL` is not set.
 
-## Folder Structure
-
-```
-src/
-├── assets/          # Static assets (images, fonts, global styles)
-├── components/      # Reusable UI components
-├── views/           # Page-level components, one per route
-├── router/          # Vue Router configuration and route definitions
-├── stores/          # Pinia stores (global state)
-└── style.css        # Global stylesheet
-```
-
-## Layers
-
-```
-┌─────────────────────────────────────┐
-│              Views (pages)          │
-│   route-level components            │
-├─────────────────────────────────────┤
-│            Components               │
-│   reusable, stateless UI blocks     │
-├─────────────────────────────────────┤
-│          Pinia Stores               │
-│   shared state & business logic     │
-├─────────────────────────────────────┤
-│         Vue Router                  │
-│   client-side navigation            │
-└─────────────────────────────────────┘
+```text
+Vue 3 application
+  -> Pinia stores
+  -> typed services / Axios
+  -> MSW handlers (frontend-only development)
+     or Express API (integrated environments)
+        -> domain helpers
+        -> Supabase Auth and PostgreSQL
 ```
 
-## State Management
+The UI may hide actions based on role, but authorization is enforced again in
+Express middleware and Supabase row-level security policies.
 
-Each domain area has its own Pinia store, keeping concerns separated:
+## Source boundaries
 
-| Store | Responsibility |
+| Path | Responsibility |
 |---|---|
-| `tournaments` | Tournament list, active tournament, creation/deletion |
-| `players` | Player registry, stats |
-| `matches` | Match results, scheduling |
-| `draws` | Bracket/draw generation and state |
+| `src/views/` | Route-level orchestration and navigation. |
+| `src/components/` | Reusable presentation and interaction blocks. |
+| `src/stores/` | Pinia state and frontend domain coordination. |
+| `src/services/` | Typed HTTP clients, authentication and token handling. |
+| `src/mocks/` | Deterministic MSW data and request handlers for local development. |
+| `server/src/routes/` | Express HTTP endpoints and request-level authorization. |
+| `server/src/lib/` | Backend domain logic, serialization and Supabase integration. |
+| `server/prisma/` | Prisma schema and generated-client metadata. |
+| `supabase/migrations/` | Immutable ordered PostgreSQL schema changes and RLS policies. |
+| `e2e/` | Playwright browser tests. |
 
-## Routing
+## Frontend navigation
 
-Routes are organized by feature area:
+Vue Router defines public login and registration routes plus an authenticated
+application shell. Guards initialize authentication, load organization context
+and enforce guest/admin navigation rules. Feature routes cover organizations,
+requests, tournaments, matches, players, profile and settings.
 
-| Path | View | Description |
-|---|---|---|
-| `/` | redirect | Landing route, forwards to `/tournaments` |
-| `/tournaments` | `TournamentsView` | List of all tournaments |
-| `/tournaments/:id` | `TournamentDetailView` | Single tournament detail |
-| `/tournaments/:id/draw` | `DrawView` | Bracket/draw for a tournament |
-| `/players` | `PlayersView` | Player registry |
+## Data flow
 
-> Routes will be added incrementally as features are implemented.
+Views call Pinia actions, stores delegate HTTP access to services, and services
+normalize API data into shared TypeScript types. When MSW is enabled, requests
+stay in the browser. Integrated environments direct the same service calls to
+Express via `VITE_API_URL`.
+
+Schema changes are delivered as new Supabase migrations. Existing migrations
+remain immutable so deployed environments share an auditable history.

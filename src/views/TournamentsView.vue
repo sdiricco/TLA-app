@@ -2,15 +2,11 @@
   // Vue and third-party dependencies
   import { computed, onMounted, ref } from 'vue';
   import { useRouter } from 'vue-router';
-  import { watchDebounced } from '@vueuse/core';
   import moment from 'moment';
   import 'moment/locale/it.js';
   import Button from 'primevue/button';
   import Chip from 'primevue/chip';
-  import InputText from 'primevue/inputtext';
-  import Tab from 'primevue/tab';
-  import TabList from 'primevue/tablist';
-  import Tabs from 'primevue/tabs';
+  import Select from 'primevue/select';
 
   // Page components and tournament filter types
   import TournamentEmptyState from '@/components/tournaments/TournamentEmptyState.vue';
@@ -55,7 +51,6 @@
    * incomplete or unwanted edits.
    */
   const filtersOpen = ref(false);
-  const searchName = ref('');
   const draftFilters = ref<TournamentFilters>(createDefaultFilters());
   const appliedFilters = ref<TournamentFilters>(createDefaultFilters());
 
@@ -104,7 +99,6 @@
 
   const hasQueryFilters = computed(
     () =>
-      searchName.value.trim() !== '' ||
       appliedFilters.value.status !== 'all' ||
       activeFiltersCount.value > 0
   );
@@ -113,6 +107,10 @@
     get: () => appliedFilters.value.status,
     set: (status: TournamentStatus | 'all') => applyStatus(status),
   });
+
+  function getStatusOption(status: TournamentStatus | 'all') {
+    return statusOptions.find((option) => option.value === status) ?? statusOptions[0];
+  }
 
   // Converts applied filter values into the presentation model used by PrimeVue chips.
   const activeFilterChips = computed<ActiveTournamentFilter[]>(() => {
@@ -167,7 +165,6 @@
   function currentFilters() {
     const filters = appliedFilters.value;
     return {
-      name: searchName.value.trim() || undefined,
       category: filters.category === 'all' ? undefined : filters.category,
       status: filters.status === 'all' ? undefined : filters.status,
       dateFrom: toDateQuery(completedDateRange.value?.[0]),
@@ -271,12 +268,8 @@
 
   // The empty-state action clears both the current scope and every refinement.
   function clearAllQueryFilters(): void {
-    const hadSearch = searchName.value.trim() !== '';
     appliedFilters.value = createDefaultFilters();
-    searchName.value = '';
-
-    // A changed search is reloaded by the debounced watcher.
-    if (!hadSearch) void loadTournaments(0, store.perPage);
+    void loadTournaments(0, store.perPage);
   }
 
   /**
@@ -288,15 +281,6 @@
     void loadTournaments();
   });
 
-  // Waits until typing pauses before querying, avoiding one request per keystroke.
-  // VueUse also disposes the pending watcher automatically on component unmount.
-  watchDebounced(
-    searchName,
-    () => {
-      void loadTournaments(0, store.perPage);
-    },
-    { debounce: 300 }
-  );
 </script>
 
 <template>
@@ -314,53 +298,50 @@
           Gestisci le competizioni della tua organizzazione.
         </p>
       </div>
-      <Button
-        v-if="canViewAdmin"
-        class="sm:hidden"
-        icon="pi pi-plus"
-        aria-label="Crea un nuovo torneo"
-        :disabled="auth.isGuest"
-        @click="openCreate"
-      />
-      <Button
-        v-if="canViewAdmin"
-        class="hidden sm:inline-flex"
-        label="Nuovo torneo"
-        icon="pi pi-plus"
-        aria-label="Crea un nuovo torneo"
-        :disabled="auth.isGuest"
-        @click="openCreate"
-      />
     </header>
 
     <!------------------------------>
-    <!-- Section: Status, search and filters -->
+    <!-- Section: Status and filters -->
     <!------------------------------>
     <section class="rounded-lg border border-(--color-border) bg-(--color-surface-card) p-3 sm:p-4">
-      <Tabs
-        v-model:value="selectedStatus"
-        scrollable
-        class="w-fit max-w-full bg-transparent [&_.p-tab]:border-t-0! [&_.p-tab]:border-b-2! [&_.p-tab]:bg-transparent! [&_.p-tablist]:bg-transparent! [&_.p-tablist-content]:bg-transparent! [&_.p-tablist-tab-list]:border-b! [&_.p-tablist-tab-list]:border-(--color-border)! [&_.p-tablist-tab-list]:bg-transparent!"
-      >
-        <TabList aria-label="Stato dei tornei">
-          <Tab v-for="option in statusOptions" :key="option.value" :value="option.value">
-            <span class="flex items-center gap-2">
-              <IconifyIcon :icon="option.icon" class="size-4 shrink-0" aria-hidden="true" />
-              <span>{{ option.label }}</span>
-            </span>
-          </Tab>
-        </TabList>
-      </Tabs>
-
-      <div class="mt-3 flex items-center gap-2">
-        <span class="min-w-0 flex-1">
-          <InputText
-            v-model="searchName"
-            aria-label="Cerca torneo per nome"
-            placeholder="Cerca torneo per nome"
+      <div class="flex items-end gap-2 sm:justify-between">
+        <label
+          for="tournament-status-filter"
+          class="grid min-w-0 flex-1 gap-2 text-sm font-bold text-(--color-text-muted) sm:max-w-72"
+        >
+          <span>Stato</span>
+          <Select
+            input-id="tournament-status-filter"
+            v-model="selectedStatus"
+            :options="statusOptions"
+            option-label="label"
+            option-value="value"
+            aria-label="Stato dei tornei"
             fluid
-          />
-        </span>
+          >
+            <template #value="{ value }">
+              <span class="flex min-w-0 items-center gap-2">
+                <IconifyIcon
+                  :icon="getStatusOption(value).icon"
+                  class="size-4 shrink-0 text-primary"
+                  aria-hidden="true"
+                />
+                <span class="truncate">{{ getStatusOption(value).label }}</span>
+              </span>
+            </template>
+            <template #option="{ option }">
+              <span class="flex items-center gap-2">
+                <IconifyIcon
+                  :icon="option.icon"
+                  class="size-4 shrink-0 text-primary"
+                  aria-hidden="true"
+                />
+                <span>{{ option.label }}</span>
+              </span>
+            </template>
+          </Select>
+        </label>
+
         <Button
           label="Filtri"
           icon="pi pi-sliders-h"

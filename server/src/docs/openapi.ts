@@ -33,6 +33,7 @@ const tournamentPhaseInputSchema = {
   required: ['name', 'format', 'group_count', 'output_count'],
   properties: {
     name: { type: 'string' },
+    description: { type: 'string', maxLength: 240 },
     format: { type: 'string', enum: ['round_robin', 'single_elimination'] },
     group_count: { type: 'integer', minimum: 1 },
     output_count: { type: 'integer', minimum: 1 },

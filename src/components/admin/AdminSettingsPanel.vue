@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import Button from 'primevue/button'
-import Card from 'primevue/card'
-import Checkbox from 'primevue/checkbox'
 import Tag from 'primevue/tag'
+import ToggleSwitch from 'primevue/toggleswitch'
 import {
   tournamentCategoryDefinitions,
   tournamentFormatDefinitions,
@@ -55,12 +54,12 @@ function toggleCategory(category: TournamentCategory, enabled: boolean): void {
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
-    <div v-if="!embedded" class="flex items-start justify-between gap-4 flex-wrap">
+  <div class="flex flex-col gap-7">
+    <div v-if="!embedded" class="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-5">
       <div>
-        <h2 class="m-0 text-2xl">Admin</h2>
-        <p class="mt-1 mb-0 text-sm text-muted-color">
-          Feature flags per formati e categorie torneo. Eliminazione diretta e girone all'italiana restano sempre attivi.
+        <h2 class="m-0 text-2xl font-bold">Configurazione tornei</h2>
+        <p class="mb-0 mt-1 text-sm text-(--color-text-muted)">
+          Scegli quali opzioni rendere disponibili durante la creazione dei tornei.
         </p>
       </div>
 
@@ -73,167 +72,139 @@ function toggleCategory(category: TournamentCategory, enabled: boolean): void {
       />
     </div>
 
-    <div class="flex flex-col gap-3">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
-        <h3 class="m-0 text-lg font-semibold">Aspetto app</h3>
-        <Tag value="Bloccato su verde" severity="success" />
+    <!-- Section: Appearance summary -->
+    <section class="grid gap-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 class="m-0 text-lg font-bold">Aspetto app</h3>
+          <p class="mb-0 mt-1 text-sm text-(--color-text-muted)">Configurazione visiva attualmente disponibile.</p>
+        </div>
+        <Tag value="Tema verde" severity="success" />
       </div>
 
-      <Card>
-        <template #content>
-          <div class="flex items-start gap-4">
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center bg-primary-100 text-primary-600">
-              <i class="pi pi-palette text-xl" />
-            </div>
+      <article class="flex flex-col gap-4 rounded-lg border border-(--color-border) bg-(--color-surface-soft) p-4 sm:flex-row sm:items-center">
+        <span class="grid size-11 shrink-0 place-items-center rounded-lg bg-primary-100 text-primary-700">
+          <i class="pi pi-palette text-lg" />
+        </span>
+        <div class="min-w-0 flex-1">
+          <h4 class="m-0 font-bold">Erba · modalità chiara</h4>
+          <p class="mb-0 mt-1 text-sm leading-relaxed text-(--color-text-muted)">
+            Le varianti colore e la modalità scura non sono ancora selezionabili.
+          </p>
+        </div>
+        <Tag :value="theme.isDark ? 'Scuro' : 'Chiaro'" severity="secondary" />
+      </article>
+    </section>
 
-            <div class="min-w-0 flex-1">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <h3 class="m-0 text-base font-semibold">Tema attivo</h3>
-                  <p class="mt-1 mb-0 text-sm text-muted-color leading-relaxed">
-                    Per ora l'app resta sul tema verde standard. Varianti alternative e tema scuro sono disabilitati.
-                  </p>
-                </div>
-
-                <Tag :value="theme.isDark ? 'Scuro' : 'Chiaro'" severity="secondary" />
-              </div>
-
-              <div class="mt-5 flex items-center justify-between gap-3">
-                <span class="text-sm text-muted-color">
-                  Superficie attiva: Erba
-                </span>
-
-                <span class="text-sm font-semibold text-primary-600">Solo Admin</span>
-              </div>
-            </div>
-          </div>
-        </template>
-      </Card>
-    </div>
-
-    <div class="flex flex-col gap-3">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
-        <h3 class="m-0 text-lg font-semibold">Formati torneo</h3>
+    <!-- Section: Tournament formats -->
+    <section class="grid gap-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 class="m-0 text-lg font-bold">Formati torneo</h3>
+          <p class="mb-0 mt-1 text-sm text-(--color-text-muted)">Controlla i formati mostrati nel nuovo torneo.</p>
+        </div>
         <Button
-          label="Ripristina formati"
+          label="Ripristina"
           icon="pi pi-undo"
+          size="small"
           severity="secondary"
-          text
+          outlined
           @click="featureFlags.resetTournamentFormats()"
         />
       </div>
-      <div class="grid gap-4 lg:grid-cols-2">
-        <Card
+
+      <div class="grid gap-3 lg:grid-cols-2">
+        <article
           v-for="item in formatCards"
           :key="item.format"
+          class="grid gap-4 rounded-lg border border-(--color-border) bg-(--color-surface-card) p-4"
         >
-          <template #content>
-            <div class="flex items-start gap-4">
-              <div
-                class="flex h-12 w-12 shrink-0 items-center justify-center"
-                :class="item.enabled ? 'bg-primary-100 text-primary-600' : 'bg-surface-100 text-muted-color'"
-              >
-                <i :class="[item.icon, 'text-xl']" />
+          <div class="flex min-w-0 items-start gap-3">
+            <span
+              class="grid size-10 shrink-0 place-items-center rounded-lg"
+              :class="item.enabled ? 'bg-primary-100 text-primary-700' : 'bg-(--color-surface-soft) text-(--color-text-subtle)'"
+            >
+              <i :class="item.icon" />
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <h4 class="m-0 font-bold">{{ item.title }}</h4>
+                <Tag :value="item.enabled ? 'Attivo' : 'Non attivo'" :severity="item.enabled ? 'success' : 'secondary'" />
               </div>
-
-              <div class="min-w-0 flex-1">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 class="m-0 text-base font-semibold">{{ item.title }}</h3>
-                    <p class="mt-1 mb-0 text-sm text-muted-color leading-relaxed">
-                      {{ item.description }}
-                    </p>
-                  </div>
-
-                  <Tag :value="item.enabled ? 'Attivo' : 'Coming soon'" :severity="item.enabled ? 'success' : 'secondary'" />
-                </div>
-
-                <div class="mt-5 flex items-center justify-between gap-3">
-                  <span class="text-sm text-muted-color">
-                    {{ item.locked ? 'Bloccato finché non lo abilitiamo da qui' : 'Sempre disponibile' }}
-                  </span>
-
-                  <div v-if="item.locked" class="flex items-center gap-2">
-                    <Checkbox
-                      :binary="true"
-                      :modelValue="item.enabled"
-                      @update:modelValue="(value) => toggleFormat(item.format as LockedTournamentFormat, Boolean(value))"
-                    />
-                    <span class="text-sm font-medium">{{ item.enabled ? 'On' : 'Off' }}</span>
-                  </div>
-
-                  <span v-else class="text-sm font-semibold text-primary-600">Sempre attivo</span>
-                </div>
-              </div>
+              <p class="mb-0 mt-1 text-sm leading-relaxed text-(--color-text-muted)">{{ item.description }}</p>
             </div>
-          </template>
-        </Card>
-      </div>
-    </div>
+          </div>
 
-    <div class="flex flex-col gap-3">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
-        <h3 class="m-0 text-lg font-semibold">Categorie torneo</h3>
+          <div class="flex items-center justify-between gap-3 border-t border-(--color-border) pt-3">
+            <span class="text-xs text-(--color-text-muted)">
+              {{ item.locked ? 'Disponibilità nel form' : 'Formato sempre disponibile' }}
+            </span>
+            <div v-if="item.locked" class="flex items-center gap-2">
+              <label class="text-sm font-semibold" :for="`format-${item.format}`">{{ item.enabled ? 'Attivo' : 'Disattivato' }}</label>
+              <ToggleSwitch
+                :input-id="`format-${item.format}`"
+                :model-value="item.enabled"
+                @update:model-value="(value) => toggleFormat(item.format as LockedTournamentFormat, Boolean(value))"
+              />
+            </div>
+            <span v-else class="text-sm font-semibold text-primary">Sempre attivo</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Section: Tournament categories -->
+    <section class="grid gap-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 class="m-0 text-lg font-bold">Categorie torneo</h3>
+          <p class="mb-0 mt-1 text-sm text-(--color-text-muted)">Scegli le categorie disponibili per l’organizzazione.</p>
+        </div>
         <Button
-          label="Ripristina categorie"
+          label="Ripristina"
           icon="pi pi-undo"
+          size="small"
           severity="secondary"
-          text
+          outlined
           @click="featureFlags.resetTournamentCategories()"
         />
       </div>
 
-      <div class="grid gap-4 lg:grid-cols-2">
-        <Card
+      <div class="grid gap-3 lg:grid-cols-2">
+        <article
           v-for="item in categoryCards"
           :key="item.category"
+          class="grid gap-4 rounded-lg border border-(--color-border) bg-(--color-surface-card) p-4"
         >
-          <template #content>
-            <div class="flex items-start gap-4">
-              <div
-                class="flex h-12 w-12 shrink-0 items-center justify-center"
-                :class="item.enabled ? 'bg-primary-100 text-primary-600' : 'bg-surface-100 text-muted-color'"
-              >
-                <i :class="[item.icon, 'text-xl']" />
+          <div class="flex min-w-0 items-start gap-3">
+            <span
+              class="grid size-10 shrink-0 place-items-center rounded-lg"
+              :class="item.enabled ? 'bg-primary-100 text-primary-700' : 'bg-(--color-surface-soft) text-(--color-text-subtle)'"
+            >
+              <i :class="item.icon" />
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <h4 class="m-0 font-bold">{{ item.title }}</h4>
+                <Tag :value="item.enabled ? 'Attiva' : 'Non attiva'" :severity="item.enabled ? 'success' : 'secondary'" />
               </div>
-
-              <div class="min-w-0 flex-1">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 class="m-0 text-base font-semibold">{{ item.title }}</h3>
-                    <p class="mt-1 mb-0 text-sm text-muted-color leading-relaxed">
-                      {{ item.description }}
-                    </p>
-                  </div>
-
-                  <Tag :value="item.enabled ? 'Attiva' : 'Coming soon'" :severity="item.enabled ? 'success' : 'secondary'" />
-                </div>
-
-                <div class="mt-5 flex items-center justify-between gap-3">
-                  <span class="text-sm text-muted-color">
-                    {{ item.enabled ? 'Disponibile nel form torneo' : 'Nascosta nelle creazioni' }}
-                  </span>
-
-                  <div class="flex items-center gap-2">
-                    <Checkbox
-                      :binary="true"
-                      :modelValue="item.enabled"
-                      @update:modelValue="(value) => toggleCategory(item.category, Boolean(value))"
-                    />
-                    <span class="text-sm font-medium">{{ item.enabled ? 'On' : 'Off' }}</span>
-                  </div>
-                </div>
-              </div>
+              <p class="mb-0 mt-1 text-sm leading-relaxed text-(--color-text-muted)">{{ item.description }}</p>
             </div>
-          </template>
-        </Card>
+          </div>
+
+          <div class="flex items-center justify-between gap-3 border-t border-(--color-border) pt-3">
+            <span class="text-xs text-(--color-text-muted)">Disponibilità nel form</span>
+            <div class="flex items-center gap-2">
+              <label class="text-sm font-semibold" :for="`category-${item.category}`">{{ item.enabled ? 'Attiva' : 'Disattivata' }}</label>
+              <ToggleSwitch
+                :input-id="`category-${item.category}`"
+                :model-value="item.enabled"
+                @update:model-value="(value) => toggleCategory(item.category, Boolean(value))"
+              />
+            </div>
+          </div>
+        </article>
       </div>
-    </div>
+    </section>
   </div>
 </template>
-
-<style scoped>
-@media (max-width: 640px) {
-  h2 { font-size: 1.65rem; }
-}
-</style>

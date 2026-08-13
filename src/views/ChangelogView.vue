@@ -69,12 +69,11 @@ function formatDate(date: string): string {
   <!------------------------------>
   <!-- Page layout -->
   <!------------------------------>
-  <section class="mx-auto flex w-full max-w-220 flex-col gap-7 pb-12 pt-4 sm:pt-8">
+  <section class="mx-auto flex w-full max-w-245 flex-col gap-5 pb-10 text-(--color-text)">
     <!------------------------------>
     <!-- Section: Header -->
     <!------------------------------>
     <PageHeader
-      eyebrow="AGGIORNAMENTI"
       title="Changelog"
       description="Le novità che rendono TLA più utile per organizzare tornei e community sportive."
     />
@@ -82,17 +81,23 @@ function formatDate(date: string): string {
     <!------------------------------>
     <!-- Section: Change filters -->
     <!------------------------------>
-    <div class="flex flex-wrap gap-2" aria-label="Filtra aggiornamenti">
-      <Button
-        v-for="filter in filters"
-        :key="filter.value"
-        :label="filter.label"
-        size="small"
-        :severity="activeFilter === filter.value ? 'primary' : 'secondary'"
-        :outlined="activeFilter !== filter.value"
-        :aria-pressed="activeFilter === filter.value"
-        @click="activeFilter = filter.value"
-      />
+    <div class="flex flex-col gap-3 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+      <div>
+        <h2 class="font-bold">Filtra gli aggiornamenti</h2>
+        <p class="mt-1 text-xs text-(--color-text-muted)">Scegli il tipo di modifica che vuoi consultare.</p>
+      </div>
+      <div class="flex flex-wrap gap-2" aria-label="Filtra aggiornamenti">
+        <Button
+          v-for="filter in filters"
+          :key="filter.value"
+          :label="filter.label"
+          size="small"
+          :severity="activeFilter === filter.value ? 'primary' : 'secondary'"
+          :outlined="activeFilter !== filter.value"
+          :aria-pressed="activeFilter === filter.value"
+          @click="activeFilter = filter.value"
+        />
+      </div>
     </div>
 
     <!------------------------------>
@@ -108,7 +113,7 @@ function formatDate(date: string): string {
       <article
         v-for="entry in visibleEntries"
         :key="`${entry.date}-${entry.title}`"
-        class="relative grid gap-1.5 pl-6 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-4 md:pl-0"
+        class="relative grid gap-1.5 pl-6 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-5 md:pl-0"
       >
         <!-- Timeline marker -->
         <span
@@ -125,7 +130,7 @@ function formatDate(date: string): string {
 
         <!-- Change card -->
         <div
-          class="border border-(--color-border) bg-(--color-surface-card) p-4 sm:px-5 sm:py-4.5"
+          class="rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:px-5 sm:py-5"
         >
           <div class="flex items-center justify-between gap-3">
             <Tag :value="kindLabel(entry.kind)" :severity="kindSeverity(entry.kind)" />

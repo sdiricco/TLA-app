@@ -163,39 +163,30 @@ watchDebounced(searchName, () => { void loadPlayers(0, store.perPage) }, { debou
   <!------------------------------>
   <div class="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 text-(--color-text) sm:gap-5">
     <!-- Section: Header -->
-    <PageHeader eyebrow="ROSTER DEL CIRCOLO" title="I protagonisti del campo." description="Consulta profili, ranking e informazioni dei tuoi giocatori.">
-      <Button
-        v-if="canViewAdmin"
-        class="sm:hidden"
-        icon="pi pi-user-plus"
-        aria-label="Crea un nuovo giocatore"
-        :disabled="auth.isGuest"
-        @click="openCreate"
-      />
-      <Button
-        v-if="canViewAdmin"
-        class="hidden sm:inline-flex"
-        label="Nuovo giocatore"
-        icon="pi pi-user-plus"
-        aria-label="Crea un nuovo giocatore"
-        :disabled="auth.isGuest"
-        @click="openCreate"
-      />
-    </PageHeader>
+    <PageHeader
+      class="sm:items-start!"
+      title="I protagonisti del campo."
+      description="Consulta profili, ranking e informazioni dei tuoi giocatori."
+    />
 
     <!------------------------------>
     <!-- Section: Search and filters -->
     <!------------------------------>
     <section class="rounded-lg border border-(--color-border) bg-(--color-surface-card) p-3 sm:p-4">
-      <div class="flex items-center gap-2">
-        <span class="min-w-0 flex-1">
+      <div class="flex items-end gap-2 sm:justify-between">
+        <label
+          for="player-name-filter"
+          class="grid min-w-0 flex-1 gap-2 text-sm font-bold text-(--color-text-muted) sm:max-w-72"
+        >
+          <span>Giocatore</span>
           <InputText
+            id="player-name-filter"
             v-model="searchName"
             aria-label="Cerca giocatore per nome"
             placeholder="Cerca giocatore per nome"
             fluid
           />
-        </span>
+        </label>
         <Button
           label="Filtri"
           icon="pi pi-sliders-h"

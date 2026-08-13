@@ -109,9 +109,9 @@ watch([statusFilter, typeFilter], loadRequests)
   <!------------------------------>
   <!-- Page layout -->
   <!------------------------------>
-  <section class="mx-auto flex w-full max-w-245 flex-col gap-4 py-4 sm:py-8">
+  <section class="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 text-(--color-text) sm:gap-5">
     <!-- Section: Header -->
-    <PageHeader eyebrow="BACKLOG ORGANIZZAZIONE" title="Richieste" description="Idee, problemi e miglioramenti condivisi dalla community.">
+    <PageHeader title="Richieste" description="Idee, problemi e miglioramenti condivisi dalla community.">
       <Button v-if="!auth.isGuest" label="Nuova richiesta" icon="pi pi-plus" @click="router.push({ name: 'request-create' })" />
     </PageHeader>
 
@@ -120,16 +120,16 @@ watch([statusFilter, typeFilter], loadRequests)
     <!------------------------------>
     <!-- Section: Request filters -->
     <!------------------------------>
-    <div class="flex flex-col gap-3 border border-(--color-border) bg-(--color-surface-card) p-4 sm:flex-row sm:items-end">
-      <label for="request-status-filter" class="grid min-w-0 flex-1 gap-2 text-sm font-bold text-(--color-text-muted)">
+    <div class="flex flex-col gap-3 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:flex-row sm:items-end sm:p-5">
+      <label for="request-status-filter" class="grid min-w-0 gap-2 text-sm font-bold text-(--color-text-muted) sm:w-64">
         Stato
         <Select id="request-status-filter" v-model="statusFilter" :options="statusFilterOptions" option-label="label" option-value="value" fluid />
       </label>
-      <label for="request-type-filter" class="grid min-w-0 flex-1 gap-2 text-sm font-bold text-(--color-text-muted)">
+      <label for="request-type-filter" class="grid min-w-0 gap-2 text-sm font-bold text-(--color-text-muted) sm:w-64">
         Tipo
         <Select id="request-type-filter" v-model="typeFilter" :options="typeFilterOptions" option-label="label" option-value="value" fluid />
       </label>
-      <span class="text-xs text-(--color-text-subtle) sm:pb-3">{{ requests.length }} {{ requests.length === 1 ? 'richiesta' : 'richieste' }}</span>
+      <span class="shrink-0 rounded-full bg-(--color-surface-soft) px-3 py-2 text-xs font-bold text-(--color-text-subtle)">{{ requests.length }} {{ requests.length === 1 ? 'richiesta' : 'richieste' }}</span>
     </div>
 
     <!------------------------------>
@@ -139,7 +139,7 @@ watch([statusFilter, typeFilter], loadRequests)
       <article
         v-for="request in requests"
         :key="request.id"
-        class="grid min-h-22 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border border-(--color-border) bg-(--color-surface-card) p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-4 sm:p-4"
+        class="grid min-h-22 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-3 transition-colors hover:border-primary-200 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-4 sm:p-4"
       >
         <Button
           :label="String(request.important_count)"
@@ -152,7 +152,7 @@ watch([statusFilter, typeFilter], loadRequests)
         />
 
         <RouterLink :to="{ name: 'request-detail', params: { id: request.id } }" class="group flex min-w-0 items-center gap-3 text-inherit no-underline sm:gap-4">
-          <span class="grid size-12 shrink-0 place-items-center bg-(--color-surface-soft) text-lg text-primary sm:size-13">
+          <span class="grid size-12 shrink-0 place-items-center rounded-lg bg-(--color-surface-soft) text-lg text-primary sm:size-13">
             <i :class="typeIcon(request.type)" />
           </span>
           <span class="grid min-w-0 gap-1">
@@ -162,7 +162,7 @@ watch([statusFilter, typeFilter], loadRequests)
         </RouterLink>
 
         <div class="col-start-2 flex flex-wrap items-center gap-2 sm:col-auto sm:justify-end">
-          <Image v-if="request.image_url" class="block overflow-hidden [&_img]:size-11 [&_img]:object-cover" :src="request.image_url" alt="Immagine allegata" preview />
+          <Image v-if="request.image_url" class="block overflow-hidden rounded-lg [&_img]:size-11 [&_img]:object-cover" :src="request.image_url" alt="Immagine allegata" preview />
           <Tag :value="statusLabel(request.status)" :severity="statusSeverity(request.status)" />
           <Select
             v-if="organizations.isAdmin"

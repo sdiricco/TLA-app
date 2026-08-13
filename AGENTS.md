@@ -96,6 +96,11 @@ could not be run.
 - Reuse existing domain types, serializers and API helpers before introducing
   parallel representations.
 - Update relevant documentation when behavior, setup or architecture changes.
+- Update `src/data/changelog.ts` in the same change whenever a feature, fix or
+  improvement is visible to users. Add entries newest-first, use an ISO date,
+  write user-facing copy in Italian and group closely related changes into one
+  concise entry. Purely internal refactors, documentation and maintenance work
+  do not require a changelog entry.
 - Do not edit generated PWA files in `dev-dist/` by hand.
 - Preserve unrelated working-tree changes and do not commit, push or deploy
   unless explicitly requested.

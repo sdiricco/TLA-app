@@ -1,8 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
+interface TopbarContext {
+  title: string
+  backTo?: string
+  backLabel?: string
+}
+
 export const useLayoutStore = defineStore('layout', () => {
   const sidebarOpen = ref(false)
+  const searchOpen = ref(false)
+  const topbarContext = ref<TopbarContext | null>(null)
 
   function toggleSidebar(): void {
     sidebarOpen.value = !sidebarOpen.value
@@ -16,5 +24,32 @@ export const useLayoutStore = defineStore('layout', () => {
     sidebarOpen.value = true
   }
 
-  return { sidebarOpen, toggleSidebar, openSidebar, closeSidebar }
+  function openSearch(): void {
+    searchOpen.value = true
+  }
+
+  function closeSearch(): void {
+    searchOpen.value = false
+  }
+
+  function setTopbarContext(context: TopbarContext): void {
+    topbarContext.value = context
+  }
+
+  function clearTopbarContext(): void {
+    topbarContext.value = null
+  }
+
+  return {
+    sidebarOpen,
+    searchOpen,
+    topbarContext,
+    toggleSidebar,
+    openSidebar,
+    closeSidebar,
+    openSearch,
+    closeSearch,
+    setTopbarContext,
+    clearTopbarContext,
+  }
 })
