@@ -26,7 +26,7 @@ const theme = useThemeStore()
     <!------------------------------>
     <!-- Section: Account settings -->
     <!------------------------------>
-    <article class="rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
+    <article id="personalizzazione" class="scroll-mt-4 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
       <header class="mb-5 flex items-center gap-3">
         <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary">
           <i class="pi pi-sliders-h" aria-hidden="true" />
@@ -68,7 +68,7 @@ const theme = useThemeStore()
     <!------------------------------>
     <!-- Section: Tournament configuration -->
     <!------------------------------>
-    <section v-if="auth.isAdmin" class="grid gap-6 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
+    <section v-if="auth.isAdmin" id="configurazione" class="scroll-mt-4 grid gap-6 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
       <header class="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div class="flex items-center gap-3">
           <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary">
@@ -84,7 +84,7 @@ const theme = useThemeStore()
       <AdminSettingsPanel embedded />
     </section>
 
-    <article v-else class="rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
+    <article v-else id="configurazione" class="scroll-mt-4 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
       <div class="flex items-start gap-3">
         <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-(--color-surface-soft) text-primary">
           <i class="pi pi-lock" aria-hidden="true" />

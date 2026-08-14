@@ -1,33 +1,47 @@
 <script setup lang="ts">
 // Moment and PrimeVue dependencies.
+import { computed, ref } from 'vue'
 import moment from 'moment'
 import 'moment/locale/it.js'
 import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
+import Menu from 'primevue/menu'
 import type { MenuItem } from 'primevue/menuitem'
-import SplitButton from 'primevue/splitbutton'
 
 // Tournament configuration and domain types.
 import { tournamentFormatLabels } from '@/config/tournamentFormats'
 import type { TournamentStatus, TournamentWithPlayers } from '@/types'
 
 // Public component contract.
-defineProps<{
+const props = defineProps<{
   tournament: TournamentWithPlayers
   enrolledPlayersCount: number
-  canModify: boolean
   canViewAdmin: boolean
-  guest: boolean
   updatingStatus: boolean
-  downloadingRegulation: boolean
-  actions: MenuItem[]
+  updatingVisibility: boolean
 }>()
 
-defineEmits<{
-  edit: []
-  downloadRegulation: []
+const emit = defineEmits<{
   statusChange: [status: TournamentStatus]
+  visibilityChange: []
 }>()
+
+const statusMenu = ref<{ toggle: (event: Event) => void } | null>(null)
+const statusOptions: Array<{ label: string; value: TournamentStatus; icon: string }> = [
+  { label: 'In programma', value: 'upcoming', icon: 'pi pi-clock' },
+  { label: 'In corso', value: 'ongoing', icon: 'pi pi-play-circle' },
+  { label: 'Completato', value: 'completed', icon: 'pi pi-check-circle' },
+]
+const statusItems = computed<MenuItem[]>(() => statusOptions.map((option) => ({
+  label: option.label,
+  icon: props.tournament.status === option.value ? 'pi pi-check' : option.icon,
+  disabled: props.updatingStatus || props.tournament.status === option.value,
+  command: () => emit('statusChange', option.value),
+})))
+
+function toggleStatusMenu(event: Event): void {
+  statusMenu.value?.toggle(event)
+}
 
 // Presentation helpers.
 const categoryLabels: Record<string, string> = {
@@ -56,59 +70,61 @@ function formatCurrency(value: number): string {
   <!-- Section: Tournament hero -->
   <!------------------------------>
   <header class="overflow-hidden rounded-lg bg-linear-to-b from-(--color-sidebar-start) to-(--color-sidebar-end) p-4 text-white sm:p-6 lg:p-8">
-    <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end sm:gap-8">
-      <div class="min-w-0 flex-1">
-        <div class="flex flex-wrap gap-2">
-          <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1.5 text-xs font-extrabold uppercase tracking-wide text-white/80">
-            <i
-              class="size-1.5 rounded-full bg-current"
-              :class="tournament.status === 'ongoing' ? 'animate-pulse bg-(--color-accent) motion-reduce:animate-none' : ''"
-            />
-            {{ statusLabel(tournament.status) }}
-          </span>
-          <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1.5 text-xs font-extrabold uppercase tracking-wide text-white/80">
-            <i :class="tournament.published ? 'pi pi-eye' : 'pi pi-eye-slash'" />
-            {{ tournament.published ? 'Pubblicato' : 'Nascosto' }}
-          </span>
-        </div>
+    <div class="min-w-0">
+      <h1 class="truncate text-3xl font-bold leading-tight tracking-tighter sm:text-4xl lg:text-5xl">
+        {{ tournament.name }}
+      </h1>
+      <p class="mt-2 flex items-center gap-2 text-sm text-white/70">
+        <i class="pi pi-map-marker" />
+        {{ tournament.location || 'Sede da definire' }}
+      </p>
+    </div>
 
-        <h1 class="mt-4 truncate text-3xl font-bold leading-tight tracking-tighter sm:text-4xl lg:text-5xl">
-          {{ tournament.name }}
-        </h1>
-        <p class="mt-2 flex items-center gap-2 text-sm text-white/70">
-          <i class="pi pi-map-marker" />
-          {{ tournament.location || 'Sede da definire' }}
+    <!------------------------------>
+    <!-- Section: Tournament state controls -->
+    <!------------------------------>
+    <div class="mt-5 grid w-full gap-2 sm:max-w-[50%]">
+      <div class="flex min-h-14 items-center gap-3 rounded-lg bg-white/10 px-3 py-2">
+        <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white/10 text-(--color-accent)">
+          <i class="pi" :class="tournament.status === 'ongoing' ? 'pi-play-circle' : tournament.status === 'completed' ? 'pi-check-circle' : 'pi-clock'" />
+        </span>
+        <p class="grid min-w-0 flex-1 gap-0.5">
+          <small class="text-[0.65rem] font-extrabold uppercase tracking-wider text-white/55">Stato torneo</small>
+          <strong class="truncate text-sm text-white/90">{{ statusLabel(tournament.status) }}</strong>
         </p>
+        <Button
+          v-if="canViewAdmin"
+          :label="updatingStatus ? 'Aggiornamento…' : 'Cambia stato'"
+          icon="pi pi-chevron-down"
+          icon-pos="right"
+          size="small"
+          text
+          class="shrink-0 border-transparent! bg-transparent! px-1! py-1! text-(--color-accent)! shadow-none! hover:bg-transparent!"
+          :disabled="updatingStatus"
+          aria-haspopup="true"
+          aria-controls="tournament-status-menu"
+          @click="toggleStatusMenu"
+        />
+        <Menu id="tournament-status-menu" ref="statusMenu" :model="statusItems" popup />
       </div>
 
-      <div class="flex w-full shrink-0 gap-2 sm:w-auto sm:justify-end">
+      <div class="flex min-h-14 items-center gap-3 rounded-lg bg-white/10 px-3 py-2">
+        <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white/10 text-(--color-accent)">
+          <i :class="tournament.published ? 'pi pi-eye' : 'pi pi-eye-slash'" />
+        </span>
+        <p class="grid min-w-0 flex-1 gap-0.5">
+          <small class="text-[0.65rem] font-extrabold uppercase tracking-wider text-white/55">Visibilità</small>
+          <strong class="truncate text-sm text-white/90">{{ tournament.published ? 'Pubblicato' : 'Nascosto' }}</strong>
+        </p>
         <Button
-          v-if="tournament.regulation_name && !guest"
-          label="Regolamento"
-          icon="pi pi-download"
-          size="small"
-          severity="secondary"
-          :loading="downloadingRegulation"
-          @click="$emit('downloadRegulation')"
-        />
-        <Button
-          v-if="canModify && tournament.status === 'upcoming'"
-          label="Avvia torneo"
-          icon="pi pi-play"
-          size="small"
-          severity="success"
-          :loading="updatingStatus"
-          @click="$emit('statusChange', 'ongoing')"
-        />
-        <SplitButton
           v-if="canViewAdmin"
-          label="Modifica torneo"
-          icon="pi pi-pencil"
+          :label="updatingVisibility ? 'Aggiornamento…' : tournament.published ? 'Nascondi' : 'Pubblica'"
+          :icon="tournament.published ? 'pi pi-eye-slash' : 'pi pi-eye'"
           size="small"
-          severity="secondary"
-          :model="actions"
-          :disabled="guest"
-          @click="$emit('edit')"
+          text
+          class="shrink-0 border-transparent! bg-transparent! px-1! py-1! text-(--color-accent)! shadow-none! hover:bg-transparent!"
+          :disabled="updatingVisibility"
+          @click="$emit('visibilityChange')"
         />
       </div>
     </div>

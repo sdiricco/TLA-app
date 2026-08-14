@@ -17,6 +17,8 @@ const title = computed(() => {
   if (route.path.startsWith('/organizations')) return 'Organizzazioni'
   if (route.path.startsWith('/players')) return 'Giocatori'
   if (route.path.startsWith('/settings')) return 'Impostazioni'
+  if (route.path.startsWith('/changelog')) return 'Changelog'
+  if (route.path.startsWith('/requests')) return 'Richieste'
   if (route.path.startsWith('/profile')) return 'Profilo'
   if (route.path.startsWith('/admin')) return 'Admin'
   if (route.path.includes('/matches/')) return 'Partita'
@@ -25,6 +27,24 @@ const title = computed(() => {
 
 const activeOrganizationName = computed(() => organizations.activeOrganization?.name ?? 'Tornei globali')
 const displayedTitle = computed(() => layout.topbarContext?.title ?? title.value)
+const backNavigation = computed(() => {
+  if (layout.topbarContext?.backTo) {
+    return {
+      to: layout.topbarContext.backTo,
+      label: layout.topbarContext.backLabel ?? 'Torna indietro',
+    }
+  }
+
+  if (route.name === 'request-create' || route.name === 'request-detail') {
+    return { to: '/requests', label: 'Torna alle richieste' }
+  }
+
+  if (route.name === 'settings' || route.name === 'changelog' || route.name === 'requests') {
+    return { to: '/profile', label: 'Torna al profilo' }
+  }
+
+  return null
+})
 const createAction = computed(() => {
   if (!auth.isAdmin) return null
   if (route.name === 'tournaments') {
@@ -52,19 +72,19 @@ function openCreate(): void {
 }
 
 function goBack(): void {
-  if (!layout.topbarContext?.backTo) return
-  void router.push(layout.topbarContext.backTo)
+  if (!backNavigation.value) return
+  void router.push(backNavigation.value.to)
 }
 </script>
 
 <template>
   <header class="app-topbar flex h-14 shrink-0 items-center gap-2">
     <button
-      v-if="layout.topbarContext?.backTo"
+      v-if="backNavigation"
       type="button"
       class="topbar-icon"
-      :aria-label="layout.topbarContext.backLabel ?? 'Torna indietro'"
-      :title="layout.topbarContext.backLabel ?? 'Torna indietro'"
+      :aria-label="backNavigation.label"
+      :title="backNavigation.label"
       @click="goBack"
     >
       <i class="pi pi-arrow-left" aria-hidden="true" />
@@ -83,6 +103,7 @@ function goBack(): void {
       >
         <i class="pi pi-search" aria-hidden="true" />
       </button>
+      <div id="app-topbar-context-actions" class="contents"></div>
       <Button
         v-if="createAction"
         class="md:hidden"

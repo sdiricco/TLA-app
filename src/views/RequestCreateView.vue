@@ -104,8 +104,6 @@ function handleEditorLoad(event: EditorLoadEvent): void {
   <!-- Page layout -->
   <!------------------------------>
   <section class="mx-auto grid w-full max-w-225 gap-4 text-(--color-text) sm:gap-5">
-    <Button class="w-fit" icon="pi pi-arrow-left" label="Torna alle richieste" text severity="secondary" @click="router.push({ name: 'requests' })" />
-
     <!-- Section: Header -->
     <header>
       <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Nuova richiesta</h1>

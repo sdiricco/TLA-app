@@ -2,6 +2,8 @@
 import { computed, onBeforeUnmount, onMounted, provide, ref } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
+import Menu from 'primevue/menu'
+import type { MenuItem } from 'primevue/menuitem'
 import ProgressSpinner from 'primevue/progressspinner'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
@@ -31,48 +33,79 @@ const toast = useToast()
 const tournament = ref<TournamentWithPlayers | null>(null)
 const loading = ref(true)
 const updatingStatus = ref(false)
+const updatingVisibility = ref(false)
 const downloadingRegulation = ref(false)
+const tournamentActionsMenu = ref<{ toggle: (event: Event) => void } | null>(null)
 
 const enrolledPlayersCount = computed(() => {
   if (!tournament.value) return 0
   return tournament.value.playerIds?.length ?? tournament.value.tournament_players?.length ?? 0
 })
 const canViewAdmin = computed(() => auth.isAdmin)
-const canModify = computed(() => !auth.isGuest)
+const tournamentStatusActions = computed<MenuItem[]>(() => [
+  { label: 'In programma', value: 'upcoming' as const, icon: 'pi pi-clock' },
+  { label: 'In corso', value: 'ongoing' as const, icon: 'pi pi-play-circle' },
+  { label: 'Completato', value: 'completed' as const, icon: 'pi pi-check-circle' },
+].map((option) => ({
+  label: option.label,
+  icon: tournament.value?.status === option.value ? 'pi pi-check' : option.icon,
+  disabled: updatingStatus.value || tournament.value?.status === option.value,
+  command: () => requestTournamentStatusChange(option.value),
+})))
 // PrimeVue Menu consumes a declarative list. Commands remain here because they
 // modify the shared tournament and therefore affect both subpages.
-const tournamentActions = computed(() => {
-  const actions = []
+const tournamentActions = computed<MenuItem[]>(() => {
+  const actions: MenuItem[] = []
 
-  if (tournament.value?.status === 'ongoing') {
-    actions.push(
-      {
-        label: 'Chiudi torneo',
-        icon: 'pi pi-check-circle',
-        disabled: updatingStatus.value,
-        command: confirmCloseTournament,
-      },
-      { separator: true },
-    )
-  }
-
-  actions.push(
-    {
+  if (canViewAdmin.value) {
+    actions.push({
+      label: 'Stato torneo',
+      icon: 'pi pi-flag',
+      items: tournamentStatusActions.value,
+    })
+    actions.push({
       label: tournament.value?.published ? 'Nascondi torneo' : 'Pubblica torneo',
       icon: tournament.value?.published ? 'pi pi-eye-slash' : 'pi pi-eye',
+      disabled: updatingVisibility.value,
       command: publishToggle,
-    },
-    { separator: true },
-    {
-      label: 'Elimina torneo',
-      icon: 'pi pi-trash',
-      class: 'text-red-600',
-      command: confirmDelete,
-    },
-  )
+    })
+  }
+
+  if (canViewAdmin.value) {
+    if (actions.length > 0) actions.push({ separator: true })
+    actions.push({
+      label: 'Modifica torneo',
+      icon: 'pi pi-pencil',
+      command: openEdit,
+    })
+  }
+
+  if (tournament.value?.regulation_name && !auth.isGuest) {
+    if (!canViewAdmin.value && actions.length > 0) actions.push({ separator: true })
+    actions.push({
+      label: 'Scarica regolamento',
+      icon: 'pi pi-download',
+      disabled: downloadingRegulation.value,
+      command: downloadRegulation,
+    })
+  }
+
+  if (!canViewAdmin.value) return actions
+
+  actions.push({ separator: true })
+  actions.push({
+    label: 'Elimina torneo',
+    icon: 'pi pi-trash',
+    class: 'text-red-600',
+    command: confirmDelete,
+  })
 
   return actions
 })
+
+function toggleTournamentActions(event: Event): void {
+  tournamentActionsMenu.value?.toggle(event)
+}
 
 // -----------------------------------------------------------------------------
 // Loading and synchronization
@@ -163,10 +196,32 @@ function confirmCloseTournament(): void {
   })
 }
 
+function requestTournamentStatusChange(status: TournamentStatus): void {
+  if (status === 'completed' && tournament.value?.status !== 'completed') {
+    confirmCloseTournament()
+    return
+  }
+  void setTournamentStatus(status)
+}
+
 async function publishToggle(): Promise<void> {
   if (auth.isGuest || !tournament.value) return
-  await tournamentsStore.setPublished(tournament.value.id, !tournament.value.published)
-  await reloadTournament()
+  const nextPublished = !tournament.value.published
+  updatingVisibility.value = true
+  try {
+    await tournamentsStore.setPublished(tournament.value.id, nextPublished)
+    await reloadTournament()
+    toast.add({
+      severity: 'success',
+      summary: 'Visibilità aggiornata',
+      detail: nextPublished ? 'Il torneo è ora pubblicato.' : 'Il torneo è ora nascosto.',
+      life: 3000,
+    })
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Errore', detail: (error as Error).message, life: 4000 })
+  } finally {
+    updatingVisibility.value = false
+  }
 }
 
 async function setTournamentStatus(status: TournamentStatus): Promise<void> {
@@ -225,15 +280,11 @@ provide(tournamentDetailKey, {
       <TournamentDetailHero
         :tournament="tournament"
         :enrolled-players-count="enrolledPlayersCount"
-        :can-modify="canModify"
         :can-view-admin="canViewAdmin"
-        :guest="auth.isGuest"
         :updating-status="updatingStatus"
-        :downloading-regulation="downloadingRegulation"
-        :actions="tournamentActions"
-        @download-regulation="downloadRegulation"
-        @edit="openEdit"
-        @status-change="setTournamentStatus"
+        :updating-visibility="updatingVisibility"
+        @status-change="requestTournamentStatusChange"
+        @visibility-change="publishToggle"
       />
 
       <!------------------------------>
@@ -254,5 +305,29 @@ provide(tournamentDetailKey, {
         <RouterView />
       </main>
     </template>
+
+    <!------------------------------>
+    <!-- Section: Tournament topbar actions -->
+    <!------------------------------>
+    <Teleport v-if="tournament" to="#app-topbar-context-actions">
+      <Button
+        v-if="tournamentActions.length > 0"
+        icon="pi pi-ellipsis-v"
+        severity="secondary"
+        text
+        rounded
+        aria-label="Altre azioni del torneo"
+        aria-haspopup="true"
+        aria-controls="tournament-actions-menu"
+        title="Altre azioni"
+        @click="toggleTournamentActions"
+      />
+      <Menu
+        id="tournament-actions-menu"
+        ref="tournamentActionsMenu"
+        :model="tournamentActions"
+        popup
+      />
+    </Teleport>
   </div>
 </template>

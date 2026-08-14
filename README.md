@@ -63,6 +63,12 @@ Before deploying, set these Fly secrets:
 - `DATABASE_URL`
 - `CORS_ORIGIN` is optional while we keep CORS open during this phase
 
+Production deploys from `master` run the versioned SQL migrations in
+`supabase/migrations/` before updating the Fly application. Configure the
+repository secret `SUPABASE_DB_URL` with the production PostgreSQL connection
+string used by the deployment workflow. If a migration fails, the Fly deploy
+does not start.
+
 Then deploy with:
 
 ```bash

@@ -8,6 +8,7 @@ const route = useRoute()
 const auth = useAuthStore()
 const organizations = useOrganizationsStore()
 const isOrganizationFlow = computed(() => route.name === 'organizations-explore' || route.name === 'organization-create' || route.name === 'organization-edit')
+const profilePaths = ['/profile', '/settings', '/changelog', '/requests']
 
 const navItems = computed(() => {
   const profileItem = { label: 'Profilo', icon: 'mdi:account-outline', to: '/profile' }
@@ -24,7 +25,6 @@ const navItems = computed(() => {
       { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
       { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
       { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
-      profileItem,
     ]
   }
 
@@ -44,6 +44,7 @@ const navItems = computed(() => {
 
 function isActive(to: string): boolean {
   if (to === '/') return route.path === to
+  if (to === '/profile') return profilePaths.some((path) => route.path.startsWith(path))
   return route.path.startsWith(to)
 }
 </script>

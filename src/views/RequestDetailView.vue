@@ -100,7 +100,6 @@ onMounted(loadDetail)
   <!-- Page layout -->
   <!------------------------------>
   <section class="mx-auto grid w-full max-w-230 gap-4 text-(--color-text) sm:gap-5">
-    <Button class="w-fit" icon="pi pi-arrow-left" label="Torna alle richieste" text severity="secondary" @click="router.push({ name: 'requests' })" />
     <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
 
     <div v-if="loading" class="flex min-h-40 items-center justify-center gap-3 text-sm text-(--color-text-muted)" role="status">

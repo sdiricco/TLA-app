@@ -20,22 +20,25 @@ const player = ref<Player | null>(null)
 const history = ref<PlayerMatchHistory>({ stats: { played: 0, wins: 0, losses: 0, win_rate: 0 }, recent_form: [], recent_matches: [] })
 const loadingPlayer = ref(true)
 const editOpen = ref(false)
+const infoOpen = ref(false)
 const editName = ref('')
 const saving = ref(false)
 const loggingOut = ref(false)
 const error = ref<string | null>(null)
 
-const displayName = computed(() => auth.user?.name || auth.user?.email || 'Il tuo profilo')
+const displayName = computed(() => auth.user?.name?.trim() || 'Il tuo profilo')
 const email = computed(() => auth.user?.email ?? '—')
+const avatarLabel = computed(() => initials(auth.user?.name || email.value))
 const roleLabel = computed(() => auth.isAdmin ? 'Amministratore' : 'Giocatore')
 const organizationCount = computed(() => organizations.organizations.length)
+const activeOrganizationLabel = computed(() => organizations.activeOrganization?.name ?? 'Nessuna selezionata')
 
 function initials(name: string): string {
   return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('')
 }
 
 function openEdit(): void {
-  editName.value = displayName.value
+  editName.value = auth.user?.name?.trim() ?? ''
   error.value = null
   editOpen.value = true
 }
@@ -87,76 +90,187 @@ onMounted(loadPlayerCard)
   <!------------------------------>
   <!-- Page layout -->
   <!------------------------------>
-  <main class="mx-auto grid w-full max-w-270 gap-4 text-(--color-text)">
+  <main class="mx-auto grid w-full max-w-5xl gap-5 text-(--color-text)">
+    <!------------------------------>
     <!-- Section: Account hero -->
-    <header class="flex flex-col items-start justify-between gap-4 border border-(--color-border) bg-(--color-surface-card) p-4 md:flex-row md:items-center sm:p-6">
-      <div class="flex items-center gap-4">
-        <Avatar :label="initials(displayName)" shape="circle" class="size-18! shrink-0" />
-        <div class="min-w-0">
-          <p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary">IL TUO ACCOUNT</p>
-          <h1 class="truncate text-3xl font-bold tracking-tight sm:text-4xl">{{ displayName }}</h1>
-          <p class="mt-1 text-(--color-text-muted)">{{ email }}</p>
+    <!------------------------------>
+    <header class="rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
+      <div class="flex min-w-0 items-center gap-3 sm:gap-4">
+        <Avatar :label="avatarLabel" shape="circle" class="size-14! shrink-0 sm:size-18!" />
+        <div class="min-w-0 flex-1">
+          <p class="mb-1 text-[0.65rem] font-extrabold tracking-[0.14em] text-primary">IL TUO ACCOUNT</p>
+          <h1 class="break-words text-xl font-bold leading-tight tracking-tight sm:text-3xl">{{ displayName }}</h1>
+          <p class="mt-1 break-all text-sm text-(--color-text-muted) sm:text-base">{{ email }}</p>
         </div>
       </div>
-      <div class="flex flex-wrap gap-2">
-        <Button label="Le mie organizzazioni" icon="pi pi-building" severity="secondary" outlined @click="router.push({ name: 'organizations' })" />
-        <Button label="Modifica profilo" icon="pi pi-pencil" @click="openEdit" />
-        <Button label="Esci" icon="pi pi-sign-out" severity="secondary" text :loading="loggingOut" @click="logout" />
+
+      <div class="mt-5 grid grid-cols-2 gap-2 border-t border-(--color-border) pt-4 sm:flex sm:flex-wrap">
+        <Button label="Modifica profilo" icon="pi pi-pencil" class="w-full sm:w-auto" @click="openEdit" />
+        <Button label="Esci" icon="pi pi-sign-out" severity="secondary" text class="w-full sm:ml-auto sm:w-auto" :loading="loggingOut" @click="logout" />
       </div>
     </header>
 
+    <!------------------------------>
     <!-- Section: Account overview -->
-    <section class="grid gap-3 md:grid-cols-3" aria-label="Riepilogo account">
-      <article v-for="item in [{ icon: 'pi pi-shield', label: 'RUOLO', value: roleLabel }, { icon: 'pi pi-building', label: 'LE MIE ORGANIZZAZIONI', value: `${organizationCount} ${organizationCount === 1 ? 'organizzazione' : 'organizzazioni'}` }, { icon: 'pi pi-calendar', label: 'ACCESSO', value: 'Account attivo' }]" :key="item.label" class="flex min-w-0 items-center gap-3 border border-(--color-border) bg-(--color-surface-card) p-4">
-        <i :class="item.icon" class="text-lg text-primary" />
-        <div><small class="block text-[0.6rem] font-extrabold tracking-wider text-(--color-text-subtle)">{{ item.label }}</small><strong class="mt-1 block text-sm">{{ item.value }}</strong></div>
+    <!------------------------------>
+    <section class="overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface-card)" aria-labelledby="account-overview-title">
+      <header class="flex items-center gap-3 border-b border-(--color-border) px-4 py-3.5 sm:px-5">
+        <span class="grid size-9 place-items-center rounded-lg bg-primary-50 text-primary"><i class="pi pi-id-card" /></span>
+        <div>
+          <h2 id="account-overview-title" class="font-bold">Account e accesso</h2>
+          <p class="text-xs text-(--color-text-muted)">Ruolo e contesto attualmente selezionato.</p>
+        </div>
+      </header>
+      <div class="grid sm:grid-cols-3">
+        <article
+          v-for="item in [
+            { icon: 'pi pi-shield', label: 'RUOLO', value: roleLabel },
+            { icon: 'pi pi-building', label: 'ORGANIZZAZIONI', value: `${organizationCount} ${organizationCount === 1 ? 'organizzazione' : 'organizzazioni'}` },
+            { icon: 'pi pi-filter', label: 'CONTESTO ATTIVO', value: activeOrganizationLabel },
+          ]"
+          :key="item.label"
+          class="flex min-w-0 items-center gap-3 border-b border-(--color-border) px-4 py-3.5 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0 sm:px-5"
+        >
+          <i :class="item.icon" class="shrink-0 text-base text-primary" />
+          <div class="min-w-0">
+            <small class="block text-[0.6rem] font-extrabold tracking-wider text-(--color-text-subtle)">{{ item.label }}</small>
+            <strong class="mt-1 block truncate text-sm">{{ item.value }}</strong>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!------------------------------>
+    <!-- Section: Profile navigation -->
+    <!------------------------------>
+    <section class="grid gap-4 md:grid-cols-2" aria-label="Sezioni profilo">
+      <article class="overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface-card)">
+        <header class="border-b border-(--color-border) px-4 py-3.5 sm:px-5">
+          <h2 class="font-bold">Preferenze e gestione</h2>
+          <p class="mt-0.5 text-xs text-(--color-text-muted)">Personalizza l’esperienza e gestisci il tuo spazio.</p>
+        </header>
+        <nav aria-label="Preferenze e gestione">
+          <RouterLink
+            :to="{ name: 'settings', hash: '#personalizzazione' }"
+            class="profile-menu-item"
+          >
+            <span class="profile-menu-icon"><i class="pi pi-palette" /></span>
+            <span class="profile-menu-copy"><strong>Personalizzazione</strong><small>Aspetto e preferenze dell’app</small></span>
+            <i class="pi pi-chevron-right profile-menu-arrow" />
+          </RouterLink>
+          <RouterLink
+            :to="{ name: 'settings', hash: '#configurazione' }"
+            class="profile-menu-item"
+          >
+            <span class="profile-menu-icon"><i class="pi pi-cog" /></span>
+            <span class="profile-menu-copy"><strong>Impostazioni</strong><small>Contesto e configurazione dei tornei</small></span>
+            <i class="pi pi-chevron-right profile-menu-arrow" />
+          </RouterLink>
+          <RouterLink :to="{ name: 'organizations' }" class="profile-menu-item">
+            <span class="profile-menu-icon"><i class="pi pi-building" /></span>
+            <span class="profile-menu-copy"><strong>Le mie organizzazioni</strong><small>Gestisci spazi e organizzazioni</small></span>
+            <i class="pi pi-chevron-right profile-menu-arrow" />
+          </RouterLink>
+        </nav>
+      </article>
+
+      <article class="overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface-card)">
+        <header class="border-b border-(--color-border) px-4 py-3.5 sm:px-5">
+          <h2 class="font-bold">Informazioni e supporto</h2>
+          <p class="mt-0.5 text-xs text-(--color-text-muted)">Consulta le novità o chiedi assistenza.</p>
+        </header>
+        <nav aria-label="Informazioni e supporto">
+          <RouterLink :to="{ name: 'changelog' }" class="profile-menu-item">
+            <span class="profile-menu-icon"><i class="pi pi-history" /></span>
+            <span class="profile-menu-copy"><strong>Changelog</strong><small>Novità, miglioramenti e correzioni</small></span>
+            <i class="pi pi-chevron-right profile-menu-arrow" />
+          </RouterLink>
+          <RouterLink :to="{ name: 'requests' }" class="profile-menu-item">
+            <span class="profile-menu-icon"><i class="pi pi-lightbulb" /></span>
+            <span class="profile-menu-copy"><strong>Richieste e supporto</strong><small>Segnala problemi o proponi miglioramenti</small></span>
+            <i class="pi pi-chevron-right profile-menu-arrow" />
+          </RouterLink>
+          <button type="button" class="profile-menu-item w-full text-left" @click="infoOpen = true">
+            <span class="profile-menu-icon"><i class="pi pi-info-circle" /></span>
+            <span class="profile-menu-copy"><strong>Informazioni</strong><small>Scopri TLA League Admin</small></span>
+            <i class="pi pi-chevron-right profile-menu-arrow" />
+          </button>
+        </nav>
       </article>
     </section>
 
+    <!------------------------------>
     <!-- Section: Player card heading -->
-    <section class="mt-2">
+    <!------------------------------>
+    <section class="mt-1">
       <p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary">ATTIVITÀ SPORTIVA</p>
-      <h2 class="text-2xl font-bold tracking-tight">La mia scheda giocatore</h2>
-      <p class="mt-2 max-w-2xl text-(--color-text-muted)">Risultati e statistiche personali collegati all’organizzazione selezionata.</p>
+      <h2 class="text-xl font-bold tracking-tight sm:text-2xl">La mia scheda giocatore</h2>
+      <p class="mt-1 max-w-2xl text-sm text-(--color-text-muted) sm:text-base">Risultati e statistiche collegati all’organizzazione selezionata.</p>
     </section>
 
-    <section v-if="loadingPlayer" class="grid grid-cols-[auto_1fr] items-center gap-4 border border-(--color-border) bg-(--color-surface-card) p-5"><Skeleton shape="circle" size="5rem" /><div class="grid gap-2"><Skeleton width="10rem" height="1.5rem" /><Skeleton width="16rem" height="1rem" /></div></section>
+    <section v-if="loadingPlayer" class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-4 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-5"><Skeleton shape="circle" size="4rem" /><div class="grid gap-2"><Skeleton width="10rem" height="1.5rem" /><Skeleton class="max-w-full" width="16rem" height="1rem" /></div></section>
 
     <!------------------------------>
     <!-- Section: Linked player -->
     <!------------------------------>
-    <section v-else-if="player" class="grid gap-5 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
-      <div class="flex flex-wrap items-start gap-4">
-        <Avatar :label="initials(player.name)" :image="player.photo_url ?? undefined" shape="circle" class="size-20! shrink-0" />
-        <div class="min-w-0 flex-1"><p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary">GIOCATORE COLLEGATO</p><h3 class="text-xl font-bold tracking-tight">{{ player.name }}</h3><p class="mt-1 text-(--color-text-muted)">{{ player.club ?? 'Club non specificato' }} · Ranking #{{ player.ranking || '—' }}</p></div>
-        <Button label="Apri scheda" icon="pi pi-arrow-right" icon-pos="right" text @click="router.push({ name: 'player-detail', params: { id: player.id } })" />
+    <section v-else-if="player" class="grid gap-5 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
+      <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-4">
+        <Avatar :label="initials(player.name)" :image="player.photo_url ?? undefined" shape="circle" class="size-16! shrink-0 sm:size-20!" />
+        <div class="min-w-0">
+          <p class="mb-1 text-[0.65rem] font-extrabold tracking-[0.14em] text-primary">GIOCATORE COLLEGATO</p>
+          <h3 class="truncate text-lg font-bold tracking-tight sm:text-xl">{{ player.name }}</h3>
+          <p class="mt-1 truncate text-sm text-(--color-text-muted)">{{ player.club ?? 'Club non specificato' }} · Ranking #{{ player.ranking || '—' }}</p>
+        </div>
+        <Button label="Apri scheda" icon="pi pi-arrow-right" icon-pos="right" text class="col-span-2 w-full sm:col-span-1 sm:w-auto" @click="router.push({ name: 'player-detail', params: { id: player.id } })" />
       </div>
-      <div class="grid grid-cols-2 border-t border-(--color-border) md:grid-cols-4">
-        <div v-for="stat in [{ label: 'PARTITE GIOCATE', value: history.stats.played }, { label: 'VITTORIE', value: history.stats.wins }, { label: 'SCONFITTE', value: history.stats.losses }, { label: 'VITTORIE %', value: `${history.stats.win_rate}%` }]" :key="stat.label" class="py-4 md:pr-4"><small class="block text-[0.6rem] font-extrabold tracking-wider text-(--color-text-subtle)">{{ stat.label }}</small><strong class="mt-1 block text-2xl tracking-tight">{{ stat.value }}</strong></div>
+      <div class="grid grid-cols-2 gap-2 border-t border-(--color-border) pt-4 sm:grid-cols-4">
+        <div v-for="stat in [{ label: 'GIOCATE', value: history.stats.played }, { label: 'VITTORIE', value: history.stats.wins }, { label: 'SCONFITTE', value: history.stats.losses }, { label: 'VITTORIE %', value: `${history.stats.win_rate}%` }]" :key="stat.label" class="rounded-lg bg-(--color-surface-soft) p-3"><small class="block text-[0.6rem] font-extrabold tracking-wider text-(--color-text-subtle)">{{ stat.label }}</small><strong class="mt-1 block text-xl tracking-tight sm:text-2xl">{{ stat.value }}</strong></div>
       </div>
     </section>
 
-    <section v-else class="flex flex-col items-start gap-4 border border-(--color-border) bg-(--color-surface-card) p-5 md:flex-row md:items-center">
-      <span class="grid size-11 shrink-0 place-items-center bg-(--color-surface-soft) text-primary"><i class="pi pi-user-plus" /></span>
-      <div class="flex-1"><h3 class="text-xl font-bold">La tua scheda giocatore non è ancora collegata</h3><p class="mt-2 text-(--color-text-muted)">Quando verrai associato a un giocatore, qui vedrai partite, vittorie e andamento.</p></div>
-      <Button label="Vai ai giocatori" icon="pi pi-users" severity="secondary" outlined @click="router.push({ name: 'players' })" />
+    <section v-else class="grid justify-items-start gap-4 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:p-5">
+      <span class="grid size-11 shrink-0 place-items-center rounded-lg bg-(--color-surface-soft) text-primary"><i class="pi pi-user-plus" /></span>
+      <div class="min-w-0">
+        <h3 class="text-lg font-bold sm:text-xl">Scheda giocatore non collegata</h3>
+        <p class="mt-1 text-sm text-(--color-text-muted) sm:text-base">Quando il profilo verrà associato a un giocatore, qui troverai partite, vittorie e andamento.</p>
+      </div>
+      <Button label="Vai ai giocatori" icon="pi pi-users" severity="secondary" outlined class="w-full sm:w-auto" @click="router.push({ name: 'players' })" />
     </section>
 
-    <!-- Section: Permissions -->
-    <section class="flex items-start justify-between gap-4 border border-(--color-border) bg-(--color-surface-soft) p-5">
-      <div><p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary">ACCESSO</p><h2 class="text-xl font-bold">Permessi del tuo account</h2><p class="mt-2 text-(--color-text-muted)">{{ auth.isAdmin ? 'Puoi gestire tornei, giocatori e configurazioni della tua organizzazione.' : 'Puoi consultare tornei, richieste e la tua attività sportiva.' }}</p></div>
-      <i :class="auth.isAdmin ? 'pi pi-verified' : 'pi pi-check-circle'" class="text-3xl text-primary" />
-    </section>
-
+    <!------------------------------>
     <!-- Section: Edit dialog -->
-    <Dialog v-model:visible="editOpen" modal header="Modifica profilo" class="mx-4 w-full max-w-md">
+    <!------------------------------>
+    <Dialog v-model:visible="editOpen" modal header="Modifica profilo" class="mx-3 w-full max-w-md">
       <form class="grid gap-3" @submit.prevent="saveProfile">
         <label for="profile-name" class="text-sm font-bold">Nome visualizzato</label>
         <InputText id="profile-name" v-model="editName" maxlength="80" autofocus fluid />
         <small class="text-(--color-text-muted)">L’email dell’account non può essere modificata da qui.</small>
         <p v-if="error" class="text-sm text-red-700">{{ error }}</p>
-        <div class="mt-2 flex justify-end gap-2"><Button type="button" label="Annulla" severity="secondary" text @click="editOpen = false" /><Button type="submit" label="Salva modifiche" icon="pi pi-check" :loading="saving" /></div>
+        <div class="mt-2 grid grid-cols-2 gap-2 sm:flex sm:justify-end"><Button type="button" label="Annulla" severity="secondary" text @click="editOpen = false" /><Button type="submit" label="Salva modifiche" icon="pi pi-check" :loading="saving" /></div>
       </form>
+    </Dialog>
+
+    <Dialog v-model:visible="infoOpen" modal header="Informazioni su TLA" class="mx-3 w-full max-w-md">
+      <div class="grid gap-4">
+        <span class="grid size-12 place-items-center rounded-full bg-(--color-accent) text-xl text-primary-900">🎾</span>
+        <div>
+          <h2 class="text-lg font-bold">TLA League Admin</h2>
+          <p class="mt-2 text-sm leading-relaxed text-(--color-text-muted)">La piattaforma per organizzare tornei, gestire giocatori e seguire risultati e classifiche della tua community.</p>
+        </div>
+        <Button label="Vedi le novità" icon="pi pi-history" severity="secondary" outlined @click="infoOpen = false; router.push({ name: 'changelog' })" />
+      </div>
     </Dialog>
   </main>
 </template>
+
+<style scoped>
+.profile-menu-item { display: grid; min-height: 4rem; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .75rem; padding: .7rem 1rem; border: 0; border-bottom: 1px solid var(--color-border); background: transparent; color: var(--color-text); cursor: pointer; font: inherit; text-decoration: none; transition: background 160ms ease; }
+.profile-menu-item:last-child { border-bottom: 0; }
+.profile-menu-item:hover { background: var(--color-surface-soft); }
+.profile-menu-item:focus-visible { position: relative; outline: 2px solid rgb(var(--color-primary-500-rgb) / 35%); outline-offset: -2px; }
+.profile-menu-icon { display: grid; width: 2.25rem; height: 2.25rem; place-items: center; border-radius: .5rem; background: var(--color-surface-soft); color: var(--color-primary); }
+.profile-menu-copy { display: grid; min-width: 0; gap: .12rem; }
+.profile-menu-copy strong { font-size: .875rem; }
+.profile-menu-copy small { overflow: hidden; color: var(--color-text-muted); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.profile-menu-arrow { color: var(--color-text-subtle); font-size: .75rem; }
+</style>
