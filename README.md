@@ -48,6 +48,15 @@ npm run dev:server
 
 The frontend reads `VITE_API_URL` to send auth traffic to Express, while the existing mock layer still covers the remaining `/api/*` data routes until we migrate them one by one.
 
+### Email confirmation redirects
+
+In Supabase, configure **Authentication → URL Configuration** with the production
+frontend origin as the Site URL. Add the production frontend origin and the local
+development origins (for example `http://localhost:5173/`) to the allowed Redirect
+URLs. Registration and resend requests use the browser origin as their callback;
+after verification, the Vue application consumes the Supabase token and shows an
+explicit confirmation result.
+
 ## Fly.io Deploy
 
 The backend is prepared for Fly.io with:

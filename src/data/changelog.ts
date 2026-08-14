@@ -13,6 +13,18 @@ export interface ChangelogEntry {
 // the same pull request; see the product changelog policy in AGENTS.md.
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: '2026-08-14',
+    version: 'Accesso 1.1',
+    kind: 'fix',
+    title: 'Registrazione e conferma email più affidabili',
+    description: 'Il link ricevuto via email completa ora correttamente l’attivazione e restituisce sempre un esito chiaro.',
+    items: [
+      'Nuova schermata di conferma con stato di successo o link non valido',
+      'Redirect delle email verso il frontend utilizzato per la registrazione',
+      'Dati della registrazione precedente rimossi dopo login, logout o cambio pagina',
+    ],
+  },
+  {
     date: '2026-08-13',
     version: 'Tornei 2.0',
     kind: 'improvement',

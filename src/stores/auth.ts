@@ -1,36 +1,89 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { authService } from '../services/authApi'
+import { clearGuestToken, setAuthToken } from '../services/token'
 import type { User } from '../types'
 import { useOrganizationsStore } from './organizations'
 
 export const useAuthStore = defineStore('auth', () => {
+  type EmailConfirmationStatus = 'idle' | 'processing' | 'success' | 'error'
+
   const user = ref<User | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const registrationPending = ref<{ email: string; message: string } | null>(null)
+  const emailConfirmation = ref<{ status: EmailConfirmationStatus; message: string }>({
+    status: 'idle',
+    message: '',
+  })
 
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => user.value?.role === 'admin' || useOrganizationsStore().isAdmin)
   const isGuest = computed(() => user.value?.id === 'guest')
 
   async function init(): Promise<void> {
-    consumeSupabaseConfirmationCallback()
-    user.value = await authService.getCurrentUser()
+    const callbackHandled = await consumeSupabaseConfirmationCallback()
+    if (!callbackHandled) user.value = await authService.getCurrentUser()
   }
 
-  function consumeSupabaseConfirmationCallback(): void {
-    if (typeof window === 'undefined' || !window.location.hash) return
+  async function consumeSupabaseConfirmationCallback(): Promise<boolean> {
+    if (typeof window === 'undefined' || !window.location.hash) return false
 
     const params = new URLSearchParams(window.location.hash.slice(1))
+    const callbackError = params.get('error_description') ?? params.get('error')
     const accessToken = params.get('access_token')
     const type = params.get('type')
 
-    if (!accessToken || (type && type !== 'signup')) return
+    if (callbackError) {
+      emailConfirmation.value = {
+        status: 'error',
+        message: callbackError.replaceAll('+', ' '),
+      }
+      clearCallbackFromAddressBar()
+      return true
+    }
 
+    if (!accessToken || (type && type !== 'signup')) return false
+
+    emailConfirmation.value = { status: 'processing', message: 'Stiamo confermando il tuo account…' }
     clearGuestToken()
     setAuthToken(accessToken)
+    registrationPending.value = null
+    clearCallbackFromAddressBar()
+
+    user.value = await authService.getCurrentUser()
+    if (!user.value) {
+      emailConfirmation.value = {
+        status: 'error',
+        message: 'Il link non è più valido oppure è scaduto. Accedi o richiedi una nuova email di conferma.',
+      }
+      return true
+    }
+
+    emailConfirmation.value = {
+      status: 'success',
+      message: 'Il tuo indirizzo email è stato confermato. Il tuo account è pronto.',
+    }
+    return true
+  }
+
+  function clearCallbackFromAddressBar(): void {
     window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`)
+  }
+
+  function beginRegistration(): void {
+    registrationPending.value = null
+    emailConfirmation.value = { status: 'idle', message: '' }
+    error.value = null
+  }
+
+  function clearRegistration(): void {
+    registrationPending.value = null
+    error.value = null
+  }
+
+  function clearEmailConfirmation(): void {
+    emailConfirmation.value = { status: 'idle', message: '' }
   }
 
   async function login(email: string, password: string): Promise<void> {
@@ -38,6 +91,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       user.value = await authService.login(email, password)
+      if (user.value) registrationPending.value = null
     } catch (e) {
       error.value = (e as Error).message
     } finally {
@@ -48,6 +102,9 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout(): Promise<void> {
     await authService.logout()
     user.value = null
+    registrationPending.value = null
+    emailConfirmation.value = { status: 'idle', message: '' }
+    error.value = null
     useOrganizationsStore().clear()
   }
 
@@ -96,6 +153,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       user.value = await authService.loginAsGuest()
+      registrationPending.value = null
     } catch (e) {
       error.value = (e as Error).message
     } finally {
@@ -103,5 +161,23 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { user, loading, error, registrationPending, isAuthenticated, isAdmin, isGuest, init, login, register, resendConfirmation, logout, loginAsGuest }
+  return {
+    user,
+    loading,
+    error,
+    registrationPending,
+    emailConfirmation,
+    isAuthenticated,
+    isAdmin,
+    isGuest,
+    init,
+    beginRegistration,
+    clearRegistration,
+    clearEmailConfirmation,
+    login,
+    register,
+    resendConfirmation,
+    logout,
+    loginAsGuest,
+  }
 })

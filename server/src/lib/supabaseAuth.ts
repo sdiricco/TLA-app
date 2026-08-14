@@ -62,8 +62,11 @@ export async function signInWithPassword(email: string, password: string) {
   }
 }
 
-export async function signUpWithPassword(email: string, password: string, name?: string) {
-  const response = await fetch(`${env.supabaseUrl}/auth/v1/signup`, {
+export async function signUpWithPassword(email: string, password: string, name?: string, redirectTo?: string) {
+  const signupUrl = new URL(`${env.supabaseUrl}/auth/v1/signup`)
+  if (redirectTo) signupUrl.searchParams.set('redirect_to', redirectTo)
+
+  const response = await fetch(signupUrl, {
     method: 'POST',
     headers: {
       apikey: env.supabaseAnonKey,
@@ -90,8 +93,11 @@ export async function signUpWithPassword(email: string, password: string, name?:
   }
 }
 
-export async function resendSignupConfirmation(email: string): Promise<void> {
-  const response = await fetch(`${env.supabaseUrl}/auth/v1/resend`, {
+export async function resendSignupConfirmation(email: string, redirectTo?: string): Promise<void> {
+  const resendUrl = new URL(`${env.supabaseUrl}/auth/v1/resend`)
+  if (redirectTo) resendUrl.searchParams.set('redirect_to', redirectTo)
+
+  const response = await fetch(resendUrl, {
     method: 'POST',
     headers: {
       apikey: env.supabaseAnonKey,

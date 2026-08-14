@@ -27,6 +27,12 @@ const router = createRouter({
       meta: { public: true },
     },
     {
+      path: '/auth/confirm',
+      name: 'auth-confirm',
+      component: () => import('../views/AuthConfirmView.vue'),
+      meta: { public: true },
+    },
+    {
       path: '/',
       component: () => import('../layouts/AppLayout.vue'),
       meta: { requiresAuth: true },
@@ -188,6 +194,10 @@ router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
   if (!auth.user) await auth.init()
+
+  if (auth.emailConfirmation.status !== 'idle' && to.name !== 'auth-confirm') {
+    return { name: 'auth-confirm' }
+  }
 
   // Not authenticated → login
   if (to.meta.requiresAuth && !auth.isAuthenticated) {

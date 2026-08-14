@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, ref } from 'vue'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
@@ -15,6 +15,9 @@ const name = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
+
+onMounted(auth.beginRegistration)
+onBeforeRouteLeave(auth.clearRegistration)
 
 async function handleSubmit(): Promise<void> {
   if (password.value !== confirmPassword.value) {

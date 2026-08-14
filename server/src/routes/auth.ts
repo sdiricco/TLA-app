@@ -7,6 +7,25 @@ import { requireOrganization, requireSelectedOrganization, type OrganizationRequ
 
 export const authRouter = Router()
 
+function emailConfirmationRedirect(origin?: string): string | undefined {
+  if (!origin) return undefined
+
+  try {
+    const url = new URL(origin)
+    const isLocalDevelopment = url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
+    if (url.protocol !== 'https:' && !isLocalDevelopment) return undefined
+
+    // Keep the callback on the application root so static SPA hosting does not
+    // need a dedicated rewrite rule for links opened directly from an email.
+    url.pathname = '/'
+    url.search = ''
+    url.hash = ''
+    return url.toString()
+  } catch {
+    return undefined
+  }
+}
+
 authRouter.get('/me', requireAuth, async (req, res) => {
   const authReq = req as AuthenticatedRequest
   const authUser = authReq.authUser
@@ -74,6 +93,7 @@ authRouter.post('/login', async (req, res) => {
 
 authRouter.post('/register', async (req, res) => {
   const { email, password, name } = req.body as { email?: string; password?: string; name?: string }
+  const redirectTo = emailConfirmationRedirect(req.get('origin'))
 
   if (!email || !password) {
     res.status(400).json({ message: 'Email and password are required' })
@@ -81,7 +101,7 @@ authRouter.post('/register', async (req, res) => {
   }
 
   try {
-    const session = await signUpWithPassword(email, password, name)
+    const session = await signUpWithPassword(email, password, name, redirectTo)
 
     if (!session.access_token) {
       res.status(200).json({
@@ -107,7 +127,7 @@ authRouter.post('/register', async (req, res) => {
 
     if (message.toLowerCase().includes('already registered')) {
       try {
-        await resendSignupConfirmation(email.trim())
+        await resendSignupConfirmation(email.trim(), redirectTo)
         res.status(200).json({
           requires_email_confirmation: true,
           email: email.trim(),
@@ -130,6 +150,7 @@ authRouter.post('/register', async (req, res) => {
 
 authRouter.post('/resend-confirmation', async (req, res) => {
   const { email } = req.body as { email?: string }
+  const redirectTo = emailConfirmationRedirect(req.get('origin'))
 
   if (!email?.trim()) {
     res.status(400).json({ message: 'Email is required' })
@@ -137,7 +158,7 @@ authRouter.post('/resend-confirmation', async (req, res) => {
   }
 
   try {
-    await resendSignupConfirmation(email.trim())
+    await resendSignupConfirmation(email.trim(), redirectTo)
     res.status(204).send()
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to resend confirmation email'
