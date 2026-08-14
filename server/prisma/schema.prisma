@@ -8,18 +8,20 @@ datasource db {
 }
 
 model Profile {
-  id              String                       @id
-  email           String                       @unique
-  name            String?
-  role            String                       @default("player")
-  players         Player[]
-  memberships     OrganizationMembership[]
-  requestsCreated OrganizationRequest[]        @relation("RequestCreator")
-  requestVotes    OrganizationRequestVote[]
-  requestComments OrganizationRequestComment[]
-  accessRequests  OrganizationAccessRequest[]
-  createdAt       DateTime                     @default(now()) @map("created_at")
-  updatedAt       DateTime                     @updatedAt @map("updated_at")
+  id                    String                       @id
+  email                 String                       @unique
+  name                  String?
+  role                  String                       @default("player")
+  onboardingIntent      String?                      @map("onboarding_intent")
+  onboardingCompletedAt DateTime?                    @map("onboarding_completed_at")
+  players               Player[]
+  memberships           OrganizationMembership[]
+  requestsCreated       OrganizationRequest[]        @relation("RequestCreator")
+  requestVotes          OrganizationRequestVote[]
+  requestComments       OrganizationRequestComment[]
+  accessRequests        OrganizationAccessRequest[]
+  createdAt             DateTime                     @default(now()) @map("created_at")
+  updatedAt             DateTime                     @updatedAt @map("updated_at")
 
   @@map("profiles")
 }

@@ -64,7 +64,7 @@ test('handles the email confirmation callback and opens the application', async 
   await expect(page.getByRole('heading', { name: 'Email confermata' })).toBeVisible()
   await page.getByRole('button', { name: 'Continua in TLA' }).click()
 
-  await expect(page).toHaveURL(/\/tournaments$/)
+  await expect(page).toHaveURL(/\/dashboard$/)
 })
 
 test('shows confirmation progress while the backend session is loading', async ({ page }) => {
@@ -102,6 +102,7 @@ test('keeps the organization filter above the primary mobile navigation', async 
   await expect(organizationFilter).toBeVisible()
 
   const navigation = page.getByRole('navigation', { name: 'Navigazione mobile principale' })
+  await expect(navigation.getByRole('link', { name: 'Dashboard' })).toBeVisible()
   await expect(navigation.getByRole('link', { name: 'Tornei' })).toBeVisible()
   await expect(navigation.getByRole('link', { name: 'Giocatori' })).toBeVisible()
   await expect(navigation.getByRole('link', { name: 'Profilo' })).toBeVisible()
@@ -111,12 +112,12 @@ test('keeps the organization filter above the primary mobile navigation', async 
   await expect(page.getByRole('menuitem', { name: 'Gestisci organizzazioni' })).toBeVisible()
 })
 
-test('allows guest access to the tournament list', async ({ page }) => {
+test('allows guest access to the dashboard', async ({ page }) => {
   await page.route('**/api/organizations', async (route) => {
     await route.fulfill({ json: [] })
   })
   await page.getByRole('button', { name: 'Entra come ospite' }).click()
 
-  await expect(page).toHaveURL(/\/tournaments$/)
-  await expect(page.getByRole('heading', { name: 'Tornei', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/dashboard$/)
+  await expect(page.getByRole('heading', { name: /^(Buongiorno|Buon pomeriggio|Buonasera),/ })).toBeVisible()
 })

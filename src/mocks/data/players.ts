@@ -9,6 +9,7 @@ export const mockPlayers: Player[] = [
     photo_url: null,
     club: 'TC Milano',
     phone: '333-0000001',
+    user_id: 'user-2',
   },
   {
     id: 'p-2',

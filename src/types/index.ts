@@ -1,12 +1,22 @@
 // ── Domain types ────────────────────────────────────────────────────────────
 
 export type UserRole = 'admin' | 'player'
+export type OnboardingIntent = 'player' | 'manager' | 'explore'
+
+export interface OnboardingPlayerInput {
+  name: string
+  birth_date?: string | null
+  club?: string | null
+  phone?: string | null
+}
 
 export interface User {
   id: string
   email: string
   name?: string
   role: UserRole
+  onboardingCompleted?: boolean
+  onboardingIntent?: OnboardingIntent
 }
 
 export interface RegistrationResult {
@@ -20,6 +30,8 @@ export interface Profile {
   id: string
   name: string | null
   role: UserRole
+  onboardingCompleted?: boolean
+  onboardingIntent?: OnboardingIntent | null
 }
 
 export type OrganizationRole = 'owner' | 'admin' | 'member'
@@ -356,6 +368,7 @@ export interface AuthService {
   loginAsGuest(): Promise<User>
   logout(): Promise<void>
   getCurrentUser(): Promise<User | null>
+  completeOnboarding(intent: 'player' | 'explore', player?: OnboardingPlayerInput): Promise<User>
 }
 
 export interface OrganizationsService {

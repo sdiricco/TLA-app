@@ -6,6 +6,8 @@ const userSchema = {
     email: { type: 'string' },
     name: { type: 'string', nullable: true },
     role: { type: 'string', enum: ['admin', 'player'] },
+    onboardingCompleted: { type: 'boolean' },
+    onboardingIntent: { type: 'string', enum: ['player', 'manager', 'explore'], nullable: true },
   },
 }
 
@@ -391,6 +393,50 @@ export const openApiSpec = {
         summary: 'Logout',
         responses: {
           204: { description: 'Logout completato' },
+        },
+      },
+    },
+    '/auth/onboarding': {
+      post: {
+        summary: 'Completa la configurazione iniziale dell’account',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['intent'],
+                properties: {
+                  intent: { type: 'string', enum: ['player', 'explore'] },
+                  player: {
+                    type: 'object',
+                    properties: {
+                      name: { type: 'string' },
+                      birth_date: { type: 'string', format: 'date', nullable: true },
+                      club: { type: 'string', nullable: true },
+                      phone: { type: 'string', nullable: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Onboarding completato',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { user: { $ref: '#/components/schemas/User' } },
+                },
+              },
+            },
+          },
+          400: { description: 'Dati non validi' },
+          403: { description: 'Account richiesto' },
         },
       },
     },

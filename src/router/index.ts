@@ -8,6 +8,7 @@ declare module 'vue-router' {
     requiresAuth?: boolean
     requiresAdmin?: boolean
     organizationSetup?: boolean
+    allowsIncompleteOnboarding?: boolean
   }
 }
 
@@ -31,6 +32,18 @@ const router = createRouter({
       name: 'auth-confirm',
       component: () => import('../views/AuthConfirmView.vue'),
       meta: { public: true },
+    },
+    {
+      path: '/onboarding',
+      name: 'onboarding',
+      component: () => import('../views/OnboardingView.vue'),
+      meta: { requiresAuth: true, allowsIncompleteOnboarding: true },
+    },
+    {
+      path: '/onboarding/organization',
+      name: 'onboarding-organization',
+      component: () => import('../views/OrganizationCreateView.vue'),
+      meta: { requiresAuth: true, allowsIncompleteOnboarding: true },
     },
     {
       path: '/',
@@ -88,7 +101,13 @@ const router = createRouter({
         {
           path: '',
           name: 'home',
-          redirect: () => ({ name: 'tournaments' }),
+          redirect: () => ({ name: 'dashboard' }),
+        },
+        {
+          path: 'dashboard',
+          name: 'dashboard',
+          component: () => import('../views/DashboardView.vue'),
+          meta: { requiresAuth: true },
         },
         {
           path: 'tournaments',
@@ -115,6 +134,12 @@ const router = createRouter({
           meta: { requiresAuth: true, requiresAdmin: true },
         },
         {
+          path: 'tournaments/:id/players',
+          name: 'tournament-players',
+          component: () => import('../views/tournaments/TournamentPlayersView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'tournaments/:id',
           component: () => import('../views/TournamentDetailView.vue'),
           meta: { requiresAuth: true },
@@ -128,11 +153,6 @@ const router = createRouter({
               path: 'draw',
               name: 'tournament-draw',
               component: () => import('../views/tournaments/TournamentDrawView.vue'),
-            },
-            {
-              path: 'players',
-              name: 'tournament-players',
-              component: () => import('../views/tournaments/TournamentPlayersView.vue'),
             },
           ],
         },
@@ -205,6 +225,17 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.requiresAuth && auth.isAuthenticated) {
+    const needsOnboarding = !auth.isGuest && auth.user?.onboardingCompleted === false
+    if (needsOnboarding && !to.meta.allowsIncompleteOnboarding) {
+      return { name: 'onboarding' }
+    }
+    if (!needsOnboarding && (to.name === 'onboarding' || to.name === 'onboarding-organization')) {
+      return { name: 'dashboard' }
+    }
+
+    // The standalone onboarding experience does not need application data yet.
+    if (needsOnboarding) return true
+
     const { useOrganizationsStore } = await import('../stores/organizations')
     const organizations = useOrganizationsStore()
     if (!organizations.initialized) {

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { authService } from '../services/authApi'
 import { clearGuestToken, setAuthToken } from '../services/token'
-import type { User } from '../types'
+import type { OnboardingPlayerInput, User } from '../types'
 import { useOrganizationsStore } from './organizations'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -25,6 +25,10 @@ export const useAuthStore = defineStore('auth', () => {
     const callbackHandled = consumeSupabaseConfirmationCallback()
     if (callbackHandled || emailConfirmation.value.status !== 'idle') return
 
+    user.value = await authService.getCurrentUser()
+  }
+
+  async function refresh(): Promise<void> {
     user.value = await authService.getCurrentUser()
   }
 
@@ -168,6 +172,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function completeOnboarding(intent: 'player' | 'explore', player?: OnboardingPlayerInput): Promise<boolean> {
+    loading.value = true
+    error.value = null
+    try {
+      user.value = await authService.completeOnboarding(intent, player)
+      return true
+    } catch (e) {
+      error.value = (e as Error).message
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     user,
     loading,
@@ -178,6 +196,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     isGuest,
     init,
+    refresh,
     completeEmailConfirmation,
     beginRegistration,
     clearRegistration,
@@ -187,5 +206,6 @@ export const useAuthStore = defineStore('auth', () => {
     resendConfirmation,
     logout,
     loginAsGuest,
+    completeOnboarding,
   }
 })

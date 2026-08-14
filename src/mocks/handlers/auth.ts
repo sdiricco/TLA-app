@@ -10,6 +10,8 @@ const guestUser: User = {
   email: 'ospite@local',
   name: 'Ospite',
   role: 'player',
+  onboardingCompleted: true,
+  onboardingIntent: 'explore',
 }
 
 export const authHandlers = [
@@ -18,19 +20,15 @@ export const authHandlers = [
     if (mockUsers.find((u) => u.email === email)) {
       return HttpResponse.json({ message: 'Email già registrata' }, { status: 409 })
     }
-    const newUser: MockUser = { id: `user-${Date.now()}`, email, password, name, role: 'player' }
+    const newUser: MockUser = {
+      id: `user-${Date.now()}`,
+      email,
+      password,
+      name,
+      role: 'player',
+      onboardingCompleted: false,
+    }
     mockUsers.push(newUser)
-    // Auto-create player record for new player users
-    mockPlayers.push({
-      id: `p-${Date.now()}`,
-      name: name ?? 'Nuovo giocatore',
-      ranking: 0,
-      birth_date: null,
-      photo_url: null,
-      club: null,
-      phone: null,
-      user_id: newUser.id,
-    })
     const { password: _pwd, ...safeUser } = newUser
     void _pwd
     currentUser = safeUser
@@ -52,6 +50,43 @@ export const authHandlers = [
   http.post('/api/auth/logout', () => {
     currentUser = null
     return HttpResponse.json({ message: 'Logout effettuato' })
+  }),
+
+  http.post('/api/auth/onboarding', async ({ request }) => {
+    const auth = request.headers.get('Authorization')
+    if (!auth?.startsWith('Bearer mock-jwt-token-') || !currentUser) {
+      return HttpResponse.json({ message: 'Non autorizzato' }, { status: 401 })
+    }
+
+    const body = (await request.json()) as {
+      intent?: 'player' | 'explore'
+      player?: { name?: string; birth_date?: string | null; club?: string | null; phone?: string | null }
+    }
+    if (body.intent !== 'player' && body.intent !== 'explore') {
+      return HttpResponse.json({ message: 'Scegli come vuoi utilizzare TLA' }, { status: 400 })
+    }
+
+    if (body.intent === 'player' && !mockPlayers.some((player) => player.user_id === currentUser?.id)) {
+      const name = body.player?.name?.trim() || currentUser.name?.trim() || currentUser.email
+      mockPlayers.push({
+        id: `p-${Date.now()}`,
+        name,
+        ranking: 0,
+        birth_date: body.player?.birth_date || null,
+        photo_url: null,
+        club: body.player?.club?.trim() || null,
+        phone: body.player?.phone?.trim() || null,
+        user_id: currentUser.id,
+        organization_id: null,
+      })
+    }
+
+    currentUser = {
+      ...currentUser,
+      onboardingCompleted: true,
+      onboardingIntent: body.intent,
+    }
+    return HttpResponse.json({ user: currentUser as User })
   }),
 
   http.get('/api/auth/me', ({ request }) => {

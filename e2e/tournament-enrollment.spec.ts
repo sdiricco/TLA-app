@@ -78,7 +78,8 @@ test('allows a signed-in user to enroll from the tournament detail page', async 
   await page.getByRole('button', { name: 'Continua in TLA' }).click()
   await page.goto('/tournaments/test-tournament/draw')
 
-  await expect(page).toHaveURL(/\/tournaments\/test-tournament\/players$/)
+  await expect(page).toHaveURL(/\/tournaments\/test-tournament\/draw$/)
+  await expect(page.getByRole('heading', { name: '0 giocatori iscritti' })).toBeVisible()
   const enrollButton = page.getByRole('button', { name: 'Iscriviti', exact: true })
   await expect(enrollButton).toBeVisible()
   await expect(enrollButton.locator('xpath=..')).toHaveCSS('position', 'fixed')
@@ -86,8 +87,13 @@ test('allows a signed-in user to enroll from the tournament detail page', async 
 
   await expect.poll(() => enrollmentRequestReceived).toBe(true)
   await expect(page.getByRole('button', { name: 'Ritira iscrizione' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Mario Rossi' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '1 giocatore iscritto' })).toBeVisible()
   await expect(page.getByText('1 / 32')).toBeVisible()
+  await page.getByRole('button', { name: 'Vedi giocatori iscritti' }).click()
+  await expect(page).toHaveURL(/\/tournaments\/test-tournament\/players$/)
+  await expect(page.getByRole('button', { name: 'Torna al torneo' })).toBeVisible()
+  await expect(page.getByText('Sei iscritto')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Mario Rossi' })).toBeVisible()
 
   tournamentStatus = 'ongoing'
   await page.goto('/tournaments/test-tournament/draw')

@@ -1,18 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
 import Textarea from 'primevue/textarea'
 import OrganizationMap from '@/components/organizations/OrganizationMap.vue'
+import { useAuthStore } from '@/stores/auth'
 import { useOrganizationsStore } from '@/stores/organizations'
 import type { OrganizationVisibility } from '@/types'
 
 // Route services, store and local form state.
 const router = useRouter()
+const route = useRoute()
 const store = useOrganizationsStore()
+const auth = useAuthStore()
+const isOnboarding = computed(() => route.name === 'onboarding-organization')
 const name = ref('')
 const description = ref('')
 const visibility = ref<OrganizationVisibility>('private')
@@ -54,7 +58,8 @@ async function createOrganization(): Promise<void> {
       isVisibleOnMap,
       description.value.trim() || null,
     )
-    await router.push({ name: 'tournaments' })
+    await auth.refresh()
+    await router.push({ name: isOnboarding.value ? 'dashboard' : 'tournaments' })
   } catch (requestError) {
     error.value = (requestError as Error).message
   } finally {
@@ -67,17 +72,18 @@ async function createOrganization(): Promise<void> {
   <!------------------------------>
   <!-- Page layout -->
   <!------------------------------>
-  <section class="mx-auto w-full max-w-155 py-3 sm:py-8">
+  <main :class="isOnboarding ? 'min-h-svh bg-(--color-surface-soft) px-4 py-6 sm:px-6 sm:py-10' : ''">
+  <section class="mx-auto w-full max-w-155" :class="isOnboarding ? '' : 'py-3 sm:py-8'">
     <!-- Section: Header -->
     <header class="mb-4">
       <Button
         icon="pi pi-arrow-left"
-        label="Organizzazioni"
+        :label="isOnboarding ? 'Torna alla scelta' : 'Organizzazioni'"
         text
         severity="secondary"
-        @click="router.push({ name: 'organizations' })"
+        @click="router.push({ name: isOnboarding ? 'onboarding' : 'organizations' })"
       />
-      <p class="mb-2 mt-4 text-xs font-extrabold tracking-[0.15em] text-primary">NUOVO SPAZIO</p>
+      <p class="mb-2 mt-4 text-xs font-extrabold tracking-[0.15em] text-primary">{{ isOnboarding ? 'CONFIGURAZIONE · ORGANIZZATORE' : 'NUOVO SPAZIO' }}</p>
       <h1 class="text-3xl font-bold tracking-tight sm:text-5xl">Crea un’organizzazione</h1>
       <p class="mt-3 leading-relaxed text-(--color-text-muted)">Configura il tuo spazio e diventa il suo proprietario.</p>
     </header>
@@ -85,7 +91,7 @@ async function createOrganization(): Promise<void> {
     <!------------------------------>
     <!-- Section: Organization form -->
     <!------------------------------>
-    <form class="grid gap-3 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6" @submit.prevent="createOrganization">
+    <form class="grid gap-3 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6" @submit.prevent="createOrganization">
       <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
 
       <label for="organization-name" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">
@@ -118,6 +124,7 @@ async function createOrganization(): Promise<void> {
     </form>
 
     <!-- Section: Explorer navigation -->
-    <Button label="Esplora organizzazioni" icon="pi pi-map" text @click="router.push({ name: 'organizations-explore' })" />
+    <Button v-if="!isOnboarding" label="Esplora organizzazioni" icon="pi pi-map" text @click="router.push({ name: 'organizations-explore' })" />
   </section>
+  </main>
 </template>

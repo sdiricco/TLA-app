@@ -7,6 +7,8 @@ export interface StoredProfile {
   email: string
   name: string | null
   role: 'admin' | 'player'
+  onboardingIntent: 'player' | 'manager' | 'explore' | null
+  onboardingCompletedAt: Date | null
 }
 
 function mapProfile(profile: {
@@ -14,12 +16,16 @@ function mapProfile(profile: {
   email: string
   name: string | null
   role: string
+  onboardingIntent: string | null
+  onboardingCompletedAt: Date | null
 }): StoredProfile {
   return {
     id: profile.id,
     email: profile.email,
     name: profile.name,
     role: profile.role as StoredProfile['role'],
+    onboardingIntent: profile.onboardingIntent as StoredProfile['onboardingIntent'],
+    onboardingCompletedAt: profile.onboardingCompletedAt,
   }
 }
 
@@ -32,7 +38,10 @@ export async function getOrCreateProfile(
     throw new Error('Authenticated user is missing an email address')
   }
 
-  const name = (authUser.user_metadata?.name as string | undefined) ?? null
+  const metadataName = authUser.user_metadata?.name
+  const name = typeof metadataName === 'string' && metadataName.trim()
+    ? metadataName.trim()
+    : null
 
   if (!env.databaseUrl) {
     return mapProfile({
@@ -40,16 +49,20 @@ export async function getOrCreateProfile(
       email,
       name,
       role: fallbackRole,
+      onboardingIntent: null,
+      onboardingCompletedAt: null,
     })
   }
 
-  const profile = await prisma.profile.upsert({
+  let profile = await prisma.profile.upsert({
     where: { id: authUser.id },
     select: {
       id: true,
       email: true,
       name: true,
       role: true,
+      onboardingIntent: true,
+      onboardingCompletedAt: true,
     },
     create: {
       id: authUser.id,
@@ -59,9 +72,26 @@ export async function getOrCreateProfile(
     },
     update: {
       email,
-      name,
     },
   })
+
+  // The application profile is the source of truth after registration. Only
+  // backfill an empty profile from Auth metadata, so a later login cannot
+  // overwrite a name edited from the profile page with stale signup metadata.
+  if (!profile.name && name) {
+    profile = await prisma.profile.update({
+      where: { id: profile.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        onboardingIntent: true,
+        onboardingCompletedAt: true,
+      },
+      data: { name },
+    })
+  }
 
   return mapProfile(profile)
 }
@@ -76,6 +106,8 @@ export async function getProfileByUserId(userId: string): Promise<StoredProfile 
       email: true,
       name: true,
       role: true,
+      onboardingIntent: true,
+      onboardingCompletedAt: true,
     },
   })
 
@@ -91,6 +123,8 @@ export async function listUnlinkedProfiles(organizationId: string): Promise<Stor
       email: true,
       name: true,
       role: true,
+      onboardingIntent: true,
+      onboardingCompletedAt: true,
     },
     where: {
       role: 'player',

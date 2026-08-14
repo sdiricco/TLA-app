@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import moment from 'moment'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
@@ -11,24 +12,23 @@ import Tag from 'primevue/tag'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import TournamentPlayerListItem from '@/components/tournaments/TournamentPlayerListItem.vue'
-import { useTournamentDetail } from '@/components/tournaments/tournamentDetailContext'
 import { useAuthStore } from '@/stores/auth'
+import { useLayoutStore } from '@/stores/layout'
 import { usePlayersStore } from '@/stores/players'
 import { useTournamentsStore } from '@/stores/tournaments'
-import type { Player } from '@/types'
+import type { Player, TournamentWithPlayers } from '@/types'
 import { getSeededPlayersCount } from '@/utils/matches'
 
 type PlayerSelectOption = Player & { searchText: string }
 
 // -----------------------------------------------------------------------------
-// Shared context and stores
-// The tournament is owned by TournamentDetailView; this subpage owns only
-// player-specific data and mutations.
+// Route and shared stores
 // -----------------------------------------------------------------------------
-const { tournament, reloadTournament } = useTournamentDetail()
+const route = useRoute()
 const playersStore = usePlayersStore()
 const tournamentsStore = useTournamentsStore()
 const auth = useAuthStore()
+const layout = useLayoutStore()
 const confirm = useConfirm()
 const toast = useToast()
 
@@ -36,6 +36,7 @@ const toast = useToast()
 // Local UI state
 // -----------------------------------------------------------------------------
 const loading = ref(true)
+const tournament = ref<TournamentWithPlayers | null>(null)
 const selectedPlayerIds = ref<string[]>([])
 const selectedRemovePlayerIds = ref<string[]>([])
 const enrolledNameFilter = ref('')
@@ -48,6 +49,7 @@ const addingPlayer = ref(false)
 // records. Converting them here gives the rest of the page one stable model.
 // -----------------------------------------------------------------------------
 const enrolledPlayerIds = computed<string[]>(() => {
+  if (!tournament.value) return []
   if (tournament.value.playerIds) return tournament.value.playerIds
   return [...(tournament.value.tournament_players ?? [])]
     .sort((left, right) => (left.seed ?? Number.MAX_SAFE_INTEGER) - (right.seed ?? Number.MAX_SAFE_INTEGER))
@@ -97,20 +99,25 @@ const somePlayersSelected = computed(
     && !allPlayersSelected.value,
 )
 const canAddMorePlayers = computed(() =>
-  !tournament.value.participant_limit || enrolledPlayers.value.length < tournament.value.participant_limit,
+  !tournament.value?.participant_limit || enrolledPlayers.value.length < tournament.value.participant_limit,
 )
 
 // -----------------------------------------------------------------------------
 // Data loading
-// Personal enrolment is exposed by the parent detail page so the action remains
-// available from every tournament subpage.
 // -----------------------------------------------------------------------------
-async function loadPlayers(): Promise<void> {
+async function reloadTournament(): Promise<void> {
+  tournament.value = await tournamentsStore.getById(route.params['id'] as string)
+}
+
+async function loadPage(): Promise<void> {
   loading.value = true
   try {
-    await playersStore.fetchAll({ page: 0, perPage: 100 })
+    await Promise.all([
+      reloadTournament(),
+      playersStore.fetchAll({ page: 0, perPage: 100 }),
+    ])
   } catch (error) {
-    toast.add({ severity: 'error', summary: 'Errore', detail: (error as Error).message, life: 4000 })
+    toast.add({ severity: 'error', summary: 'Pagina non disponibile', detail: (error as Error).message, life: 4000 })
   } finally {
     loading.value = false
   }
@@ -174,7 +181,7 @@ function toggleRemovePlayer(playerId: string, checked: boolean): void {
 // player list and the other subpage observe the same enrolment state.
 // -----------------------------------------------------------------------------
 async function addPlayers(): Promise<void> {
-  if (selectedPlayerIds.value.length === 0) return
+  if (!tournament.value || selectedPlayerIds.value.length === 0) return
   addingPlayer.value = true
   try {
     const addedCount = selectedPlayerIds.value.length
@@ -192,7 +199,8 @@ async function addPlayers(): Promise<void> {
 }
 
 function confirmRemovePlayers(players: Player[]): void {
-  if (players.length === 0) return
+  if (!tournament.value || players.length === 0) return
+  const tournamentId = tournament.value.id
   confirm.require({
     message: players.length === 1
       ? `Rimuovere ${players[0]?.name ?? 'il giocatore selezionato'} da questo torneo?`
@@ -205,7 +213,7 @@ function confirmRemovePlayers(players: Player[]): void {
     accept: async () => {
       try {
         for (const player of players) {
-          await tournamentsStore.removePlayer(tournament.value.id, player.id)
+          await tournamentsStore.removePlayer(tournamentId, player.id)
         }
         await reloadTournament()
         selectedRemovePlayerIds.value = []
@@ -230,25 +238,52 @@ function removeSelectedPlayers(): void {
   )
 }
 
-// Initial loading starts only when this child route is actually visited.
-onMounted(loadPlayers)
+layout.setTopbarContext({
+  title: 'Giocatori iscritti',
+  backTo: `/tournaments/${String(route.params['id'])}/draw`,
+  backLabel: 'Torna al torneo',
+})
+
+onMounted(loadPage)
+onBeforeUnmount(layout.clearTopbarContext)
 watch(
   () => enrolledPlayerIds.value.join(','),
   (currentIds, previousIds) => {
-    if (currentIds !== previousIds) void loadPlayers()
+    if (currentIds !== previousIds && !loading.value) void playersStore.fetchAll({ page: 0, perPage: 100 })
   },
 )
 </script>
 
 <template>
   <!------------------------------>
-  <!-- Section: Enrolled players -->
+  <!-- Page layout -->
   <!------------------------------>
-  <div v-if="loading" class="flex min-h-60 items-center justify-center" role="status">
+  <main v-if="loading" class="flex min-h-60 items-center justify-center" role="status">
     <ProgressSpinner class="size-9" stroke-width="4" />
-  </div>
+  </main>
 
-  <div v-else class="flex flex-col gap-4 py-2">
+  <main v-else-if="tournament" class="mx-auto flex w-full max-w-screen-2xl flex-col gap-5 text-(--color-text)">
+    <!------------------------------>
+    <!-- Section: Page heading -->
+    <!------------------------------>
+    <header>
+      <p class="mb-2 text-xs font-extrabold uppercase tracking-[0.16em] text-primary">Partecipanti</p>
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 class="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{{ tournament.name }}</h1>
+          <p class="mt-2 text-sm text-(--color-text-muted) sm:text-base">Consulta {{ auth.isAdmin ? 'e gestisci ' : '' }}i giocatori iscritti al torneo.</p>
+        </div>
+        <strong class="shrink-0 text-sm text-(--color-text-muted)">
+          {{ enrolledPlayers.length }} {{ enrolledPlayers.length === 1 ? 'iscritto' : 'iscritti' }}
+          <template v-if="tournament.participant_limit"> / {{ tournament.participant_limit }}</template>
+        </strong>
+      </div>
+    </header>
+
+    <!------------------------------>
+    <!-- Section: Enrolled players -->
+    <!------------------------------>
+    <section class="flex flex-col gap-4">
     <!-- Player filters -->
     <div class="grid gap-3 rounded-lg border border-surface-200 bg-surface-0 p-4 lg:grid-cols-[1fr_1fr_auto]">
       <div class="flex flex-col gap-1.5">
@@ -397,5 +432,10 @@ watch(
         />
       </div>
     </template>
-  </div>
+    </section>
+  </main>
+
+  <main v-else class="grid min-h-60 place-items-center text-center text-(--color-text-muted)">
+    <div><i class="pi pi-exclamation-circle text-2xl" /><p class="mt-2">Torneo non disponibile.</p></div>
+  </main>
 </template>

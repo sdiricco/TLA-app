@@ -20,6 +20,7 @@ function isActive(to: string): boolean {
 }
 
 const navItems = [
+  { label: 'Dashboard', icon: 'mdi:view-dashboard-outline', to: '/dashboard' },
   { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
   { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
 ]
@@ -35,13 +36,13 @@ const profileItems = computed(() => [
 function selectOrganization(id: string): void {
   organizations.select(id)
   organizationsOpen.value = false
-  window.location.assign('/tournaments')
+  window.location.assign('/dashboard')
 }
 
 function selectGlobalContext(): void {
   organizations.clearSelection()
   organizationsOpen.value = false
-  window.location.assign('/tournaments')
+  window.location.assign('/dashboard')
 }
 
 const displayName = computed(() => auth.user?.name || auth.user?.email || 'Utente')

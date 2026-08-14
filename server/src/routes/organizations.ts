@@ -199,18 +199,27 @@ organizationsRouter.post('/', async (req, res) => {
     const discoverable = visibility === 'public' || req.body?.discoverable === true
     const coordinates = parseCoordinates(req.body ?? {}, discoverable)
     const profile = await profileFor(req as AuthenticatedRequest)
-    const organization = await prisma.organization.create({
-      data: {
-        name,
-        description: typeof req.body?.description === 'string' ? req.body.description.trim() || null : null,
-        slug: await uniqueSlug(name),
-        visibility,
-        discoverable,
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
-        joinCode: await uniqueJoinCode(),
-        memberships: { create: { profileId: profile.id, role: 'owner' } },
-      },
+    const slug = await uniqueSlug(name)
+    const joinCode = await uniqueJoinCode()
+    const organization = await prisma.$transaction(async (tx) => {
+      const created = await tx.organization.create({
+        data: {
+          name,
+          description: typeof req.body?.description === 'string' ? req.body.description.trim() || null : null,
+          slug,
+          visibility,
+          discoverable,
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude,
+          joinCode,
+          memberships: { create: { profileId: profile.id, role: 'owner' } },
+        },
+      })
+      await tx.profile.update({
+        where: { id: profile.id },
+        data: { onboardingIntent: 'manager', onboardingCompletedAt: new Date() },
+      })
+      return created
     })
     res.status(201).json({ id: organization.id, name: organization.name, slug: organization.slug, visibility: organization.visibility, discoverable: organization.discoverable, latitude: organization.latitude, longitude: organization.longitude, join_code: organization.joinCode, role: 'owner' })
   } catch (error) {

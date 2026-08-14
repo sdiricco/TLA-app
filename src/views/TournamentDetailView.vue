@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, provide, ref } from 'vue'
-import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+import { RouterView, useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Menu from 'primevue/menu'
 import type { MenuItem } from 'primevue/menuitem'
@@ -46,9 +46,10 @@ const enrolledPlayersCount = computed(() => {
 })
 const canViewAdmin = computed(() => auth.isAdmin)
 const isEnrolled = computed(() => enrollment.value?.enrolled ?? false)
-const playersArePrimaryView = computed(() =>
-  tournament.value?.status === 'upcoming' && route.name === 'tournament-players',
-)
+const enrolledPlayersLabel = computed(() => {
+  const count = enrolledPlayersCount.value
+  return `${count} ${count === 1 ? 'giocatore iscritto' : 'giocatori iscritti'}`
+})
 const tournamentStatusActions = computed<MenuItem[]>(() => [
   { label: 'In programma', value: 'upcoming' as const, icon: 'pi pi-clock' },
   { label: 'In corso', value: 'ongoing' as const, icon: 'pi pi-play-circle' },
@@ -132,9 +133,6 @@ async function loadPage(): Promise<void> {
   loading.value = true
   try {
     await reloadTournament()
-    if (tournament.value?.status === 'upcoming' && route.name === 'tournament-draw') {
-      await router.replace({ name: 'tournament-players', params: { id: tournament.value.id } })
-    }
   } catch {
     toast.add({ severity: 'error', summary: 'Errore', detail: 'Torneo non trovato', life: 3000 })
     await router.push({ name: 'tournaments' })
@@ -305,11 +303,6 @@ async function setTournamentStatus(status: TournamentStatus): Promise<void> {
   try {
     await tournamentsStore.update(tournament.value.id, { status })
     await reloadTournament()
-    if (status === 'upcoming' && route.name === 'tournament-draw') {
-      await router.replace({ name: 'tournament-players', params: { id: tournament.value.id } })
-    } else if (status !== 'upcoming' && route.name === 'tournament-players') {
-      await router.replace({ name: 'tournament-draw', params: { id: tournament.value.id } })
-    }
     toast.add({
       severity: 'success',
       summary: 'Aggiornato',
@@ -384,23 +377,31 @@ provide(tournamentDetailKey, {
       <!-- Section: Tournament content -->
       <!------------------------------>
       <main class="rounded-lg border border-(--color-border) bg-(--color-surface-card) p-3 sm:p-5">
-        <header v-if="route.name === 'tournament-players'" class="mb-4 border-b border-(--color-border) pb-4">
-          <RouterLink
-            v-if="!playersArePrimaryView"
-            :to="{ name: 'tournament-draw', params: { id: tournament.id } }"
-            class="inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primary-700"
-          >
-            <i class="pi pi-arrow-left" aria-hidden="true" />
-            Torna al tabellone
-          </RouterLink>
-          <h2 class="text-xl font-bold tracking-tight text-color" :class="{ 'mt-3': !playersArePrimaryView }">Giocatori iscritti</h2>
-          <p class="mt-1 text-sm text-muted-color">
-            {{ playersArePrimaryView
-              ? 'Il torneo non è ancora iniziato: qui trovi i partecipanti confermati.'
-              : 'Consulta e gestisci i partecipanti del torneo.' }}
-          </p>
-        </header>
-        <RouterView />
+        <section
+          v-if="tournament.status === 'upcoming' && route.name === 'tournament-draw'"
+          class="flex flex-col gap-4 rounded-lg bg-(--color-surface-soft) p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+          aria-labelledby="tournament-players-cta-title"
+        >
+          <div class="flex min-w-0 items-center gap-3">
+            <span class="grid size-11 shrink-0 place-items-center rounded-lg bg-primary-50 text-lg text-primary">
+              <i class="pi pi-users" aria-hidden="true" />
+            </span>
+            <div class="min-w-0">
+              <h2 id="tournament-players-cta-title" class="font-bold text-color">{{ enrolledPlayersLabel }}</h2>
+              <p class="mt-0.5 text-sm text-muted-color">{{ canViewAdmin ? 'Consulta o gestisci i partecipanti confermati.' : 'Scopri chi parteciperà al torneo.' }}</p>
+            </div>
+          </div>
+          <Button
+            label="Vedi giocatori iscritti"
+            icon="pi pi-arrow-right"
+            icon-pos="right"
+            severity="secondary"
+            outlined
+            class="w-full shrink-0 sm:w-auto"
+            @click="router.push({ name: 'tournament-players', params: { id: tournament.id } })"
+          />
+        </section>
+        <RouterView v-else />
       </main>
     </template>
 

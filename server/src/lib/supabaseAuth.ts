@@ -65,6 +65,7 @@ export async function signInWithPassword(email: string, password: string) {
 export async function signUpWithPassword(email: string, password: string, name?: string, redirectTo?: string) {
   const signupUrl = new URL(`${env.supabaseUrl}/auth/v1/signup`)
   if (redirectTo) signupUrl.searchParams.set('redirect_to', redirectTo)
+  const normalizedName = name?.trim()
 
   const response = await fetch(signupUrl, {
     method: 'POST',
@@ -73,9 +74,11 @@ export async function signUpWithPassword(email: string, password: string, name?:
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      email,
+      email: email.trim(),
       password,
-      options: { data: { ...(name ? { name } : {}) } },
+      // This is a direct GoTrue REST request. Unlike supabase-js, the REST
+      // endpoint expects metadata in `data`, without the `options` wrapper.
+      data: { ...(normalizedName ? { name: normalizedName } : {}) },
     }),
   })
 

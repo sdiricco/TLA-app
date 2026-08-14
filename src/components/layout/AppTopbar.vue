@@ -14,6 +14,7 @@ const organizations = useOrganizationsStore()
 const layout = useLayoutStore()
 const organizationMenu = ref()
 const title = computed(() => {
+  if (route.path.startsWith('/dashboard')) return 'Dashboard'
   if (route.path.startsWith('/organizations/explore')) return 'Esplora organizzazioni'
   if (route.path.startsWith('/organizations/new')) return 'Nuova organizzazione'
   if (route.path.startsWith('/organizations')) return 'Organizzazioni'
@@ -68,7 +69,7 @@ const backNavigation = computed(() => {
 })
 const createAction = computed(() => {
   if (!auth.isAdmin) return null
-  if (route.name === 'tournaments') {
+  if (route.name === 'dashboard' || route.name === 'tournaments') {
     return {
       routeName: 'tournament-create' as const,
       label: 'Nuovo torneo',
@@ -98,12 +99,12 @@ function toggleOrganizationMenu(event: Event): void {
 
 function selectOrganization(id: string): void {
   organizations.select(id)
-  window.location.assign('/tournaments')
+  window.location.assign('/dashboard')
 }
 
 function selectGlobalContext(): void {
   organizations.clearSelection()
-  window.location.assign('/tournaments')
+  window.location.assign('/dashboard')
 }
 
 function goBack(): void {

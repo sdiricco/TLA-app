@@ -14,6 +14,32 @@ export interface ChangelogEntry {
 export const changelogEntries: ChangelogEntry[] = [
   {
     date: '2026-08-14',
+    version: 'Onboarding 1.0',
+    kind: 'feature',
+    title: 'Un primo accesso costruito sul tuo obiettivo',
+    description: 'Dopo la registrazione TLA configura l’esperienza in base a ciò che vuoi fare, senza assegnare privilegi impropri.',
+    items: [
+      'Percorsi dedicati per giocatori, organizzatori e utenti che vogliono esplorare',
+      'Creazione guidata della scheda giocatore con dati sportivi essenziali',
+      'Creazione dell’organizzazione separata e ruolo proprietario limitato al nuovo spazio',
+      'Scelta salvata sull’account e valida su tutti i dispositivi',
+    ],
+  },
+  {
+    date: '2026-08-14',
+    version: 'Dashboard 1.0',
+    kind: 'feature',
+    title: 'Una control room per tutta l’attività',
+    description: 'La nuova pagina iniziale porta in primo piano priorità, tornei rilevanti e azioni frequenti in base al ruolo.',
+    items: [
+      'Priorità operative dedicate ad amministratori e giocatori',
+      'Indicatori essenziali per tornei, iscrizioni, giocatori e richieste',
+      'Tornei in corso e in programma raggiungibili direttamente dalla dashboard',
+      'Accessi rapidi e attività del club ottimizzati anche per mobile',
+    ],
+  },
+  {
+    date: '2026-08-14',
     version: 'Accesso 1.1',
     kind: 'fix',
     title: 'Registrazione e conferma email più affidabili',
@@ -23,9 +49,10 @@ export const changelogEntries: ChangelogEntry[] = [
       'Avanzamento visibile mentre il server completa l’accesso dopo la conferma',
       'Aggiornamenti della PWA applicati automaticamente per evitare versioni obsolete',
       'Navigazione mobile completa con filtro organizzazione sempre disponibile nella topbar',
-      'Iscrizione sticky su mobile e lista partecipanti come vista principale prima dell’inizio del torneo',
+      'Iscrizione sticky su mobile e accesso compatto alla pagina dei partecipanti',
       'Redirect delle email verso il frontend utilizzato per la registrazione',
       'Dati della registrazione precedente rimossi dopo login, logout o cambio pagina',
+      'Nome e cognome conservati correttamente nel profilo dopo la registrazione',
     ],
   },
   {

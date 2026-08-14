@@ -10,6 +10,7 @@ const profilePaths = ['/profile', '/settings', '/changelog', '/requests']
 
 const navItems = computed(() => {
   const primaryItems = [
+    { label: 'Dashboard', icon: 'mdi:view-dashboard-outline', to: '/dashboard' },
     { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
     { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
   ]

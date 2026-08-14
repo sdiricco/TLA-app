@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { mockPlayers } from '../data/players'
 import type { PaginatedResponse, Player, PlayerMatchHistory, PlayerSortField, SortOrder } from '../../types'
 
-const players: Player[] = [...mockPlayers]
+const players: Player[] = mockPlayers
 const GUEST_TOKEN = 'tla_guest_token'
 const completedMatches = [
   { id: 'm-1', tournamentId: 't-1', tournamentName: 'Torneo Primaverile 2025', player1Id: 'p-1', player2Id: 'p-2', winnerId: 'p-1', result: '6-4 6-3', playedAt: '2025-05-18T16:00:00.000Z' },
@@ -77,10 +77,7 @@ export const playerHandlers = [
       return HttpResponse.json({ message: 'Non autorizzato' }, { status: 401 })
     }
     const userId = auth.replace('Bearer mock-jwt-token-', '')
-    const playerMap: Record<string, string> = { 'user-2': 'p-1' }
-    const playerId = playerMap[userId]
-    if (!playerId) return HttpResponse.json(null)
-    const player = players.find((p) => p.id === playerId)
+    const player = players.find((item) => item.user_id === userId)
     return player ? HttpResponse.json(player) : HttpResponse.json(null)
   }),
   http.get('/api/players/:id/matches', ({ params }) => {

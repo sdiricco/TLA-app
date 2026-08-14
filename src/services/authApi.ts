@@ -1,4 +1,4 @@
-import type { AuthService, RegistrationResult, User } from '../types'
+import type { AuthService, OnboardingPlayerInput, RegistrationResult, User } from '../types'
 import { authApiClient } from './authApiClient'
 import { apiRequest } from './request'
 import {
@@ -18,6 +18,8 @@ const guestUser: User = {
   email: 'ospite@local',
   name: 'Ospite',
   role: 'player',
+  onboardingCompleted: true,
+  onboardingIntent: 'explore',
 }
 
 /**
@@ -68,6 +70,15 @@ async function resendConfirmation(email: string): Promise<void> {
   })
 }
 
+async function completeOnboarding(intent: 'player' | 'explore', player?: OnboardingPlayerInput): Promise<User> {
+  const data = await apiRequest<{ user: User }>(authApiClient, {
+    url: '/auth/onboarding',
+    method: 'POST',
+    data: { intent, ...(player ? { player } : {}) },
+  })
+  return data.user
+}
+
 /**
  * Auth service
  */
@@ -75,6 +86,7 @@ export const authService: AuthService = {
   login: (email, password) => authenticate('/auth/login', { email, password }),
   register: (email, password, name) => registerAccount(email, password, name),
   resendConfirmation,
+  completeOnboarding,
   loginAsGuest: async () => {
     clearAuthToken()
     setGuestToken()
