@@ -1,31 +1,21 @@
 <script setup lang="ts">
-import { useRegisterSW } from 'virtual:pwa-register/vue'
 import Button from 'primevue/button'
-
-const { needRefresh, offlineReady, updateServiceWorker } = useRegisterSW()
+import { pwaOfflineReady } from '@/pwa'
 
 function close(): void {
-  needRefresh.value = false
-  offlineReady.value = false
+  pwaOfflineReady.value = false
 }
 </script>
 
 <template>
   <Transition name="pwa-notice">
-    <aside v-if="needRefresh || offlineReady" class="pwa-notice" role="status" aria-live="polite">
+    <aside v-if="pwaOfflineReady" class="pwa-notice" role="status" aria-live="polite">
       <div>
-        <strong>{{ needRefresh ? 'Aggiornamento disponibile' : 'App pronta offline' }}</strong>
-        <p>
-          {{
-            needRefresh
-              ? 'È disponibile una nuova versione di TLA.'
-              : 'L’interfaccia può essere riaperta anche senza connessione.'
-          }}
-        </p>
+        <strong>App pronta offline</strong>
+        <p>L’interfaccia può essere riaperta anche senza connessione.</p>
       </div>
 
       <div class="pwa-notice__actions">
-        <Button v-if="needRefresh" label="Aggiorna" @click="updateServiceWorker()" />
         <Button icon="pi pi-times" severity="secondary" text rounded aria-label="Chiudi notifica" @click="close" />
       </div>
     </aside>

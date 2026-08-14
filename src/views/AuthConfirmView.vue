@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import ProgressSpinner from 'primevue/progressspinner'
@@ -17,6 +17,9 @@ const feedbackMessage = computed(() => {
 })
 
 onBeforeRouteLeave(auth.clearEmailConfirmation)
+onMounted(() => {
+  void auth.completeEmailConfirmation()
+})
 
 function continueToApp(): void {
   auth.clearEmailConfirmation()

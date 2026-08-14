@@ -16,7 +16,7 @@ export default defineConfig({
     tailwindcss(),
     vue(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       injectRegister: null,
       includeAssets: ['favicon.svg', 'icons.svg'],
       manifest: {
@@ -54,9 +54,6 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
-      },
-      devOptions: {
-        enabled: true,
       },
     }),
   ],

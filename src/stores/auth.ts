@@ -22,11 +22,13 @@ export const useAuthStore = defineStore('auth', () => {
   const isGuest = computed(() => user.value?.id === 'guest')
 
   async function init(): Promise<void> {
-    const callbackHandled = await consumeSupabaseConfirmationCallback()
-    if (!callbackHandled) user.value = await authService.getCurrentUser()
+    const callbackHandled = consumeSupabaseConfirmationCallback()
+    if (callbackHandled || emailConfirmation.value.status !== 'idle') return
+
+    user.value = await authService.getCurrentUser()
   }
 
-  async function consumeSupabaseConfirmationCallback(): Promise<boolean> {
+  function consumeSupabaseConfirmationCallback(): boolean {
     if (typeof window === 'undefined' || !window.location.hash) return false
 
     const params = new URLSearchParams(window.location.hash.slice(1))
@@ -51,20 +53,25 @@ export const useAuthStore = defineStore('auth', () => {
     registrationPending.value = null
     clearCallbackFromAddressBar()
 
+    return true
+  }
+
+  async function completeEmailConfirmation(): Promise<void> {
+    if (emailConfirmation.value.status !== 'processing') return
+
     user.value = await authService.getCurrentUser()
     if (!user.value) {
       emailConfirmation.value = {
         status: 'error',
         message: 'Il link non è più valido oppure è scaduto. Accedi o richiedi una nuova email di conferma.',
       }
-      return true
+      return
     }
 
     emailConfirmation.value = {
       status: 'success',
       message: 'Il tuo indirizzo email è stato confermato. Il tuo account è pronto.',
     }
-    return true
   }
 
   function clearCallbackFromAddressBar(): void {
@@ -171,6 +178,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     isGuest,
     init,
+    completeEmailConfirmation,
     beginRegistration,
     clearRegistration,
     clearEmailConfirmation,

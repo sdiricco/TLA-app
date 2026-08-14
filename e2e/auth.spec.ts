@@ -67,6 +67,20 @@ test('handles the email confirmation callback and opens the application', async 
   await expect(page).toHaveURL(/\/tournaments$/)
 })
 
+test('shows confirmation progress while the backend session is loading', async ({ page }) => {
+  await page.route('**/api/auth/me', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 2_000))
+    await route.fulfill({
+      json: { user: { id: 'user-3', email: 'slow@tla.local', name: 'Utente Fly', role: 'player' } },
+    })
+  })
+
+  await page.goto('/#access_token=slow-mock-jwt&type=signup')
+
+  await expect(page).toHaveURL(/\/auth\/confirm$/)
+  await expect(page.getByRole('heading', { name: 'Conferma in corso' })).toBeVisible()
+})
+
 test('allows guest access to the tournament list', async ({ page }) => {
   await page.route('**/api/organizations', async (route) => {
     await route.fulfill({ json: [] })

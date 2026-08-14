@@ -20,6 +20,8 @@ export const changelogEntries: ChangelogEntry[] = [
     description: 'Il link ricevuto via email completa ora correttamente l’attivazione e restituisce sempre un esito chiaro.',
     items: [
       'Nuova schermata di conferma con stato di successo o link non valido',
+      'Avanzamento visibile mentre il server completa l’accesso dopo la conferma',
+      'Aggiornamenti della PWA applicati automaticamente per evitare versioni obsolete',
       'Redirect delle email verso il frontend utilizzato per la registrazione',
       'Dati della registrazione precedente rimossi dopo login, logout o cambio pagina',
     ],

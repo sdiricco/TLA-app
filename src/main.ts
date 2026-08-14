@@ -8,6 +8,7 @@ import { definePreset } from '@primeuix/themes';
 import Lara from '@primeuix/themes/lara';
 import 'primeicons/primeicons.css';
 import './style.css';
+import './pwa';
 import App from './App.vue';
 import router from './router';
 
