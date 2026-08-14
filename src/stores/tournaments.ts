@@ -5,6 +5,7 @@ import type {
   PaginatedResponse,
   Tournament,
   TournamentCreate,
+  TournamentEnrollment,
   TournamentListQuery,
   TournamentUpdate,
   TournamentWithPlayers,
@@ -96,14 +97,16 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     if (index !== -1) tournaments.value[index] = updated
   }
 
-  async function enroll(id: string): Promise<void> {
-    await tournamentsService.enroll(id)
-    await getById(id)
+  async function getEnrollment(id: string): Promise<TournamentEnrollment> {
+    return tournamentsService.getEnrollment(id)
   }
 
-  async function withdraw(id: string): Promise<void> {
-    await tournamentsService.withdraw(id)
-    await getById(id)
+  async function enroll(id: string): Promise<TournamentEnrollment> {
+    return tournamentsService.enroll(id)
+  }
+
+  async function withdraw(id: string): Promise<TournamentEnrollment> {
+    return tournamentsService.withdraw(id)
   }
 
   return {
@@ -125,6 +128,7 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     removePlayer,
     updateSeeds,
     setPublished,
+    getEnrollment,
     enroll,
     withdraw,
   }

@@ -19,40 +19,10 @@ function isActive(to: string): boolean {
   return route.path.startsWith(to)
 }
 
-const navItems = computed(() => {
-  if (!organizations.activeOrganization) {
-    if (auth.isGuest) {
-      return [
-        { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
-        { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
-        { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
-      ]
-    }
-    return [
-      { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
-      { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
-      { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
-    ]
-  }
-
-  if (auth.isGuest) {
-    return [
-      { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
-      { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
-      { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
-    ]
-  }
-
-  if (auth.isAdmin) {
-    return [
-      { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
-      { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
-    ]
-  }
-  return [
-    { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
-  ]
-})
+const navItems = [
+  { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
+  { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
+]
 
 const profileItems = computed(() => [
   { label: 'Profilo', icon: 'pi pi-user', command: () => void router.push({ name: 'profile' }) },

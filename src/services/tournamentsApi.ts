@@ -2,6 +2,7 @@ import type {
   PaginatedResponse,
   Tournament,
   TournamentCreate,
+  TournamentEnrollment,
   TournamentListQuery,
   TournamentUpdate,
   TournamentWithPlayers,
@@ -55,6 +56,7 @@ export const tournamentsService: TournamentsService = {
     }),
   setPublished: (id, published) =>
     apiRequest<Tournament>(apiClient, { url: `/tournaments/${id}/publish`, method: 'PATCH', data: { published } }),
-  enroll: (id) => apiRequest<null>(apiClient, { url: `/tournaments/${id}/enroll`, method: 'POST' }),
-  withdraw: (id) => apiRequest<null>(apiClient, { url: `/tournaments/${id}/enroll`, method: 'DELETE' }),
+  getEnrollment: (id) => apiRequest<TournamentEnrollment>(apiClient, { url: `/tournaments/${id}/enrollment`, method: 'GET' }),
+  enroll: (id) => apiRequest<TournamentEnrollment>(apiClient, { url: `/tournaments/${id}/enroll`, method: 'POST' }),
+  withdraw: (id) => apiRequest<TournamentEnrollment>(apiClient, { url: `/tournaments/${id}/enroll`, method: 'DELETE' }),
 }

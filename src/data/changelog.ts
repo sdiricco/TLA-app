@@ -22,6 +22,8 @@ export const changelogEntries: ChangelogEntry[] = [
       'Nuova schermata di conferma con stato di successo o link non valido',
       'Avanzamento visibile mentre il server completa l’accesso dopo la conferma',
       'Aggiornamenti della PWA applicati automaticamente per evitare versioni obsolete',
+      'Navigazione mobile completa con filtro organizzazione sempre disponibile nella topbar',
+      'Iscrizione sticky su mobile e lista partecipanti come vista principale prima dell’inizio del torneo',
       'Redirect delle email verso il frontend utilizzato per la registrazione',
       'Dati della registrazione precedente rimossi dopo login, logout o cambio pagina',
     ],

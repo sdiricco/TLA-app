@@ -11,6 +11,7 @@ import { sortMatches } from '../lib/bracket'
 import { reconcileMatchProgression } from '../lib/matchProgression'
 import { buildTournamentMatchesResponse } from '../../../src/utils/matches'
 import { generateDrawPdf, getDrawPdfFilename } from '../lib/drawPdf'
+import { getOrCreateProfile } from '../lib/profileRepo'
 import { visibleTournamentWhere as getVisibleTournamentWhere } from '../lib/visibility'
 import {
   serializeMatch,
@@ -90,6 +91,81 @@ function parsePositiveInt(value: unknown, fallback: number): number {
 
 function tournamentCapacityReached(limit: number | null, count: number): boolean {
   return limit !== null && count >= limit
+}
+
+type SelfEnrollmentTournament = {
+  id: string
+  organizationId: string | null
+  participantLimit: number | null
+  published: boolean
+  status: string
+  registrationStartDate: Date | null
+  registrationEndDate: Date | null
+}
+
+async function findSelfEnrollmentTournament(
+  tournamentId: string,
+  organizationId: string | null,
+): Promise<SelfEnrollmentTournament | null> {
+  return prisma.tournament.findFirst({
+    where: { id: tournamentId, ...visibleTournamentWhere(organizationId) },
+    select: {
+      id: true,
+      organizationId: true,
+      participantLimit: true,
+      published: true,
+      status: true,
+      registrationStartDate: true,
+      registrationEndDate: true,
+    },
+  })
+}
+
+function assertSelfEnrollmentOpen(tournament: SelfEnrollmentTournament, now = new Date()): void {
+  if (!tournament.published) throw new Error('Le iscrizioni non sono disponibili')
+  if (tournament.status !== 'upcoming') throw new Error('Le iscrizioni sono chiuse')
+
+  if (tournament.registrationStartDate) {
+    const registrationStart = new Date(tournament.registrationStartDate)
+    registrationStart.setUTCHours(0, 0, 0, 0)
+    if (now < registrationStart) throw new Error('Le iscrizioni non sono ancora aperte')
+  }
+
+  if (tournament.registrationEndDate) {
+    const registrationEnd = new Date(tournament.registrationEndDate)
+    registrationEnd.setUTCHours(23, 59, 59, 999)
+    if (now > registrationEnd) throw new Error('Le iscrizioni sono chiuse')
+  }
+}
+
+async function findSelfEnrollmentPlayer(userId: string, organizationId: string | null) {
+  return prisma.player.findFirst({ where: { userId, organizationId } })
+}
+
+async function getOrCreateSelfEnrollmentPlayer(
+  authUser: NonNullable<AuthenticatedRequest['authUser']>,
+  organizationId: string | null,
+) {
+  const existingPlayer = await findSelfEnrollmentPlayer(authUser.id, organizationId)
+  if (existingPlayer) return existingPlayer
+
+  const profile = await getOrCreateProfile(authUser)
+  try {
+    return await prisma.player.create({
+      data: {
+        userId: profile.id,
+        organizationId,
+        name: profile.name?.trim() || profile.email,
+        ranking: 0,
+      },
+    })
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      const concurrentlyCreatedPlayer = await findSelfEnrollmentPlayer(authUser.id, organizationId)
+      if (concurrentlyCreatedPlayer) return concurrentlyCreatedPlayer
+    }
+    throw error
+  }
 }
 
 function parseRegulationFileName(value: string | undefined): string {
@@ -597,65 +673,99 @@ tournamentsRouter.patch('/:id/publish', requireAdmin, async (req, res) => {
   }
 })
 
-tournamentsRouter.post('/:id/enroll', async (req, res) => {
+tournamentsRouter.get('/:id/enrollment', async (req, res) => {
   const authReq = req as AuthenticatedRequest
   const tournamentId = req.params['id'] as string
   const organizationId = contextOrganizationId(req as OrganizationRequest)
-  if (!authReq.authUser) {
+  if (!authReq.authUser || authReq.authUser.id === 'guest') {
     res.status(401).json({ message: 'Not authenticated' })
     return
   }
 
-  const player = await prisma.player.findFirst({ where: { userId: authReq.authUser.id, ...(organizationId ? { organizationId } : {}) } })
-  if (!player) {
-    res.status(400).json({ message: 'Profilo giocatore non configurato' })
+  const tournament = await findSelfEnrollmentTournament(tournamentId, organizationId)
+  if (!tournament) {
+    res.status(404).json({ message: 'Torneo non trovato' })
+    return
+  }
+
+  const player = await findSelfEnrollmentPlayer(authReq.authUser.id, tournament.organizationId)
+  const enrolled = player
+    ? Boolean(await prisma.tournamentPlayer.findUnique({
+        where: { tournamentId_playerId: { tournamentId, playerId: player.id } },
+        select: { playerId: true },
+      }))
+    : false
+
+  res.json({ enrolled, player_id: player?.id ?? null })
+})
+
+tournamentsRouter.post('/:id/enroll', async (req, res) => {
+  const authReq = req as AuthenticatedRequest
+  const tournamentId = req.params['id'] as string
+  const organizationId = contextOrganizationId(req as OrganizationRequest)
+  if (!authReq.authUser || authReq.authUser.id === 'guest') {
+    res.status(401).json({ message: 'Not authenticated' })
     return
   }
 
   try {
+    const tournament = await findSelfEnrollmentTournament(tournamentId, organizationId)
+    if (!tournament) {
+      res.status(404).json({ message: 'Torneo non trovato' })
+      return
+    }
+    assertSelfEnrollmentOpen(tournament)
+    const player = await getOrCreateSelfEnrollmentPlayer(authReq.authUser, tournament.organizationId)
     await assertCanAddParticipant(tournamentId, player.id, organizationId)
-  } catch (error) {
-    const message = (error as Error).message
-    res.status(message === 'Torneo non trovato' ? 404 : 400).json({ message })
-    return
-  }
 
-  const seed = await getNextSeed(tournamentId)
-  await prisma.$transaction(async (tx) => {
-    await tx.tournamentPlayer.upsert({
-      where: {
-        tournamentId_playerId: {
+    const seed = await getNextSeed(tournamentId)
+    await prisma.$transaction(async (tx) => {
+      await tx.tournamentPlayer.upsert({
+        where: {
+          tournamentId_playerId: {
+            tournamentId,
+            playerId: player.id,
+          },
+        },
+        create: {
           tournamentId,
           playerId: player.id,
+          seed,
         },
-      },
-      create: {
-        tournamentId,
-        playerId: player.id,
-        seed,
-      },
-      update: {
-        seed,
-      },
+        update: {},
+      })
+      await syncPlayerWithFirstPhase(tx, tournamentId, player.id, seed)
     })
-    await syncPlayerWithFirstPhase(tx, tournamentId, player.id, seed)
-  })
 
-  res.status(204).send()
+    res.json({ enrolled: true, player_id: player.id })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Impossibile completare l’iscrizione'
+    res.status(message === 'Torneo non trovato' ? 404 : 400).json({ message })
+  }
 })
 
 tournamentsRouter.delete('/:id/enroll', async (req, res) => {
   const authReq = req as AuthenticatedRequest
   const tournamentId = req.params['id'] as string
   const organizationId = contextOrganizationId(req as OrganizationRequest)
-  if (!authReq.authUser) {
+  if (!authReq.authUser || authReq.authUser.id === 'guest') {
     res.status(401).json({ message: 'Not authenticated' })
     return
   }
 
-  const player = await prisma.player.findFirst({ where: { userId: authReq.authUser.id, ...(organizationId ? { organizationId } : {}) } })
+  const tournament = await findSelfEnrollmentTournament(tournamentId, organizationId)
+  if (!tournament) {
+    res.status(404).json({ message: 'Torneo non trovato' })
+    return
+  }
+  if (tournament.status !== 'upcoming') {
+    res.status(400).json({ message: 'Non puoi ritirarti dopo l’inizio del torneo' })
+    return
+  }
+
+  const player = await findSelfEnrollmentPlayer(authReq.authUser.id, tournament.organizationId)
   if (!player) {
-    res.status(400).json({ message: 'Profilo giocatore non configurato' })
+    res.json({ enrolled: false, player_id: null })
     return
   }
 
@@ -669,7 +779,7 @@ tournamentsRouter.delete('/:id/enroll', async (req, res) => {
     })
     await removePlayerFromFirstPhase(tx, tournamentId, player.id)
   })
-  res.status(204).send()
+  res.json({ enrolled: false, player_id: player.id })
 })
 
 tournamentsRouter.get('/:id/draw.pdf', async (req, res) => {

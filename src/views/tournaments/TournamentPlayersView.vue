@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import moment from 'moment'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
@@ -12,7 +12,6 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import TournamentPlayerListItem from '@/components/tournaments/TournamentPlayerListItem.vue'
 import { useTournamentDetail } from '@/components/tournaments/tournamentDetailContext'
-import { playersService } from '@/services/playersApi'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayersStore } from '@/stores/players'
 import { useTournamentsStore } from '@/stores/tournaments'
@@ -37,7 +36,6 @@ const toast = useToast()
 // Local UI state
 // -----------------------------------------------------------------------------
 const loading = ref(true)
-const myPlayer = ref<Player | null>(null)
 const selectedPlayerIds = ref<string[]>([])
 const selectedRemovePlayerIds = ref<string[]>([])
 const enrolledNameFilter = ref('')
@@ -101,20 +99,16 @@ const somePlayersSelected = computed(
 const canAddMorePlayers = computed(() =>
   !tournament.value.participant_limit || enrolledPlayers.value.length < tournament.value.participant_limit,
 )
-const isEnrolled = computed(() =>
-  Boolean(myPlayer.value && enrolledPlayerIds.value.includes(myPlayer.value.id)),
-)
 
 // -----------------------------------------------------------------------------
 // Data loading
-// The personal profile is needed only for player self-enrolment; administrators
-// still receive null and simply use the management interface.
+// Personal enrolment is exposed by the parent detail page so the action remains
+// available from every tournament subpage.
 // -----------------------------------------------------------------------------
 async function loadPlayers(): Promise<void> {
   loading.value = true
   try {
     await playersStore.fetchAll({ page: 0, perPage: 100 })
-    myPlayer.value = await playersService.getMyPlayer()
   } catch (error) {
     toast.add({ severity: 'error', summary: 'Errore', detail: (error as Error).message, life: 4000 })
   } finally {
@@ -175,21 +169,10 @@ function toggleRemovePlayer(playerId: string, checked: boolean): void {
 }
 
 // -----------------------------------------------------------------------------
-// Enrolment and administrative mutations
+// Administrative mutations
 // Every successful mutation reloads the shared tournament so the hero counter,
 // player list and the other subpage observe the same enrolment state.
 // -----------------------------------------------------------------------------
-async function handleEnroll(): Promise<void> {
-  await tournamentsStore.enroll(tournament.value.id)
-  await reloadTournament()
-  myPlayer.value = await playersService.getMyPlayer()
-}
-
-async function handleWithdraw(): Promise<void> {
-  await tournamentsStore.withdraw(tournament.value.id)
-  await reloadTournament()
-}
-
 async function addPlayers(): Promise<void> {
   if (selectedPlayerIds.value.length === 0) return
   addingPlayer.value = true
@@ -249,6 +232,12 @@ function removeSelectedPlayers(): void {
 
 // Initial loading starts only when this child route is actually visited.
 onMounted(loadPlayers)
+watch(
+  () => enrolledPlayerIds.value.join(','),
+  (currentIds, previousIds) => {
+    if (currentIds !== previousIds) void loadPlayers()
+  },
+)
 </script>
 
 <template>
@@ -392,47 +381,21 @@ onMounted(loadPlayers)
       </div>
     </template>
 
-    <!-- Player self-enrolment -->
+    <!-- Participant directory -->
     <template v-else>
-      <div v-if="!myPlayer" class="flex flex-col items-center gap-3 py-8 text-center text-muted-color">
-        <i class="pi pi-exclamation-triangle text-2xl" />
-        <p>Profilo giocatore non configurato.<br />Contatta l'amministratore.</p>
+      <div v-if="filteredEnrolledPlayers.length === 0" class="flex flex-col items-center gap-3 py-10 text-center text-muted-color">
+        <i :class="enrolledPlayers.length === 0 ? 'pi pi-users' : 'pi pi-search'" class="text-2xl" />
+        <p>{{ enrolledPlayers.length === 0 ? 'Non ci sono ancora giocatori iscritti.' : 'Nessun iscritto corrisponde ai filtri.' }}</p>
       </div>
-      <template v-else>
-        <div class="flex items-center gap-3">
-          <Button
-            v-if="!isEnrolled && tournament.status === 'upcoming'"
-            label="Iscriviti"
-            icon="pi pi-user-plus"
-            :disabled="!canAddMorePlayers"
-            @click="handleEnroll"
-          />
-          <Button
-            v-else-if="isEnrolled && tournament.status === 'upcoming'"
-            label="Ritirati"
-            icon="pi pi-user-minus"
-            severity="danger"
-            outlined
-            @click="handleWithdraw"
-          />
-        </div>
-        <div v-if="!canAddMorePlayers && tournament.participant_limit" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Torneo al completo: raggiunto il limite di {{ tournament.participant_limit }} partecipanti.
-        </div>
-        <div v-if="filteredEnrolledPlayers.length === 0" class="flex flex-col items-center gap-3 py-10 text-center text-muted-color">
-          <i class="pi pi-search text-2xl" />
-          <p>Nessun iscritto corrisponde ai filtri.</p>
-        </div>
-        <div v-else class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-          <TournamentPlayerListItem
-            v-for="player in filteredEnrolledPlayers"
-            :key="player.id"
-            :player="player"
-            :seed="seedByPlayerId.get(player.id)"
-            @open="$router.push({ name: 'player-detail', params: { id: player.id } })"
-          />
-        </div>
-      </template>
+      <div v-else class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+        <TournamentPlayerListItem
+          v-for="player in filteredEnrolledPlayers"
+          :key="player.id"
+          :player="player"
+          :seed="seedByPlayerId.get(player.id)"
+          @open="$router.push({ name: 'player-detail', params: { id: player.id } })"
+        />
+      </div>
     </template>
   </div>
 </template>

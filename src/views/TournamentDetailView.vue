@@ -8,11 +8,12 @@ import ProgressSpinner from 'primevue/progressspinner'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import TournamentDetailHero from '@/components/tournaments/TournamentDetailHero.vue'
+import TournamentEnrollmentPanel from '@/components/tournaments/TournamentEnrollmentPanel.vue'
 import { tournamentDetailKey } from '@/components/tournaments/tournamentDetailContext'
 import { useAuthStore } from '@/stores/auth'
 import { useLayoutStore } from '@/stores/layout'
 import { useTournamentsStore } from '@/stores/tournaments'
-import type { TournamentStatus, TournamentWithPlayers } from '@/types'
+import type { TournamentEnrollment, TournamentStatus, TournamentWithPlayers } from '@/types'
 
 // -----------------------------------------------------------------------------
 // Route services and shared application state
@@ -31,7 +32,9 @@ const toast = useToast()
 // routes. Players and matches are deliberately loaded inside their subpages.
 // -----------------------------------------------------------------------------
 const tournament = ref<TournamentWithPlayers | null>(null)
+const enrollment = ref<TournamentEnrollment | null>(null)
 const loading = ref(true)
+const updatingEnrollment = ref(false)
 const updatingStatus = ref(false)
 const updatingVisibility = ref(false)
 const downloadingRegulation = ref(false)
@@ -42,6 +45,10 @@ const enrolledPlayersCount = computed(() => {
   return tournament.value.playerIds?.length ?? tournament.value.tournament_players?.length ?? 0
 })
 const canViewAdmin = computed(() => auth.isAdmin)
+const isEnrolled = computed(() => enrollment.value?.enrolled ?? false)
+const playersArePrimaryView = computed(() =>
+  tournament.value?.status === 'upcoming' && route.name === 'tournament-players',
+)
 const tournamentStatusActions = computed<MenuItem[]>(() => [
   { label: 'In programma', value: 'upcoming' as const, icon: 'pi pi-clock' },
   { label: 'In corso', value: 'ongoing' as const, icon: 'pi pi-play-circle' },
@@ -125,11 +132,79 @@ async function loadPage(): Promise<void> {
   loading.value = true
   try {
     await reloadTournament()
+    if (tournament.value?.status === 'upcoming' && route.name === 'tournament-draw') {
+      await router.replace({ name: 'tournament-players', params: { id: tournament.value.id } })
+    }
   } catch {
     toast.add({ severity: 'error', summary: 'Errore', detail: 'Torneo non trovato', life: 3000 })
     await router.push({ name: 'tournaments' })
-  } finally {
     loading.value = false
+    return
+  }
+
+  if (!auth.isGuest) {
+    try {
+      enrollment.value = await tournamentsStore.getEnrollment(route.params['id'] as string)
+    } catch (error) {
+      toast.add({
+        severity: 'error',
+        summary: 'Iscrizione non disponibile',
+        detail: (error as Error).message,
+        life: 4000,
+      })
+    }
+  }
+  loading.value = false
+}
+
+async function enrollInTournament(): Promise<void> {
+  if (!tournament.value || updatingEnrollment.value) return
+  updatingEnrollment.value = true
+  try {
+    enrollment.value = await tournamentsStore.enroll(tournament.value.id)
+    await reloadTournament()
+    toast.add({
+      severity: 'success',
+      summary: 'Iscrizione confermata',
+      detail: `Sei iscritto a ${tournament.value.name}.`,
+      life: 3500,
+    })
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Iscrizione non riuscita', detail: (error as Error).message, life: 4500 })
+  } finally {
+    updatingEnrollment.value = false
+  }
+}
+
+function confirmWithdrawal(): void {
+  if (!tournament.value || updatingEnrollment.value) return
+  const currentTournament = tournament.value
+  confirm.require({
+    message: `Ritirare la tua iscrizione da "${currentTournament.name}"?`,
+    header: 'Conferma ritiro',
+    icon: 'pi pi-exclamation-triangle',
+    rejectLabel: 'Annulla',
+    acceptLabel: 'Ritira iscrizione',
+    acceptSeverity: 'danger',
+    accept: () => void withdrawFromTournament(currentTournament),
+  })
+}
+
+async function withdrawFromTournament(currentTournament: TournamentWithPlayers): Promise<void> {
+  updatingEnrollment.value = true
+  try {
+    enrollment.value = await tournamentsStore.withdraw(currentTournament.id)
+    await reloadTournament()
+    toast.add({
+      severity: 'success',
+      summary: 'Iscrizione ritirata',
+      detail: `Non partecipi più a ${currentTournament.name}.`,
+      life: 3500,
+    })
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Ritiro non riuscito', detail: (error as Error).message, life: 4500 })
+  } finally {
+    updatingEnrollment.value = false
   }
 }
 
@@ -230,6 +305,11 @@ async function setTournamentStatus(status: TournamentStatus): Promise<void> {
   try {
     await tournamentsStore.update(tournament.value.id, { status })
     await reloadTournament()
+    if (status === 'upcoming' && route.name === 'tournament-draw') {
+      await router.replace({ name: 'tournament-players', params: { id: tournament.value.id } })
+    } else if (status !== 'upcoming' && route.name === 'tournament-players') {
+      await router.replace({ name: 'tournament-draw', params: { id: tournament.value.id } })
+    }
     toast.add({
       severity: 'success',
       summary: 'Aggiornato',
@@ -264,7 +344,7 @@ provide(tournamentDetailKey, {
   <!------------------------------>
   <!-- Page layout -->
   <!------------------------------>
-  <div class="mx-auto flex max-w-screen-2xl flex-col gap-3 text-(--color-text) sm:gap-4">
+  <div class="mx-auto flex max-w-screen-2xl flex-col gap-3 pb-20 text-(--color-text) sm:gap-4 md:pb-0">
     <!------------------------------>
     <!-- Section: Loading tournament -->
     <!------------------------------>
@@ -288,19 +368,37 @@ provide(tournamentDetailKey, {
       />
 
       <!------------------------------>
+      <!-- Section: Personal enrolment -->
+      <!------------------------------>
+      <TournamentEnrollmentPanel
+        v-if="!auth.isGuest && enrollment"
+        :tournament="tournament"
+        :enrolled-players-count="enrolledPlayersCount"
+        :is-enrolled="isEnrolled"
+        :loading="updatingEnrollment"
+        @enroll="enrollInTournament"
+        @withdraw="confirmWithdrawal"
+      />
+
+      <!------------------------------>
       <!-- Section: Tournament content -->
       <!------------------------------>
       <main class="rounded-lg border border-(--color-border) bg-(--color-surface-card) p-3 sm:p-5">
         <header v-if="route.name === 'tournament-players'" class="mb-4 border-b border-(--color-border) pb-4">
           <RouterLink
+            v-if="!playersArePrimaryView"
             :to="{ name: 'tournament-draw', params: { id: tournament.id } }"
             class="inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primary-700"
           >
             <i class="pi pi-arrow-left" aria-hidden="true" />
             Torna al tabellone
           </RouterLink>
-          <h2 class="mt-3 text-xl font-bold tracking-tight text-color">Giocatori iscritti</h2>
-          <p class="mt-1 text-sm text-muted-color">Consulta e gestisci i partecipanti del torneo.</p>
+          <h2 class="text-xl font-bold tracking-tight text-color" :class="{ 'mt-3': !playersArePrimaryView }">Giocatori iscritti</h2>
+          <p class="mt-1 text-sm text-muted-color">
+            {{ playersArePrimaryView
+              ? 'Il torneo non è ancora iniziato: qui trovi i partecipanti confermati.'
+              : 'Consulta e gestisci i partecipanti del torneo.' }}
+          </p>
         </header>
         <RouterView />
       </main>

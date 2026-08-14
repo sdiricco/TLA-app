@@ -2,44 +2,20 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
-import { useOrganizationsStore } from '../../stores/organizations'
 
 const route = useRoute()
 const auth = useAuthStore()
-const organizations = useOrganizationsStore()
 const isOrganizationFlow = computed(() => route.name === 'organizations-explore' || route.name === 'organization-create' || route.name === 'organization-edit')
 const profilePaths = ['/profile', '/settings', '/changelog', '/requests']
 
 const navItems = computed(() => {
+  const primaryItems = [
+    { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
+    { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
+  ]
   const profileItem = { label: 'Profilo', icon: 'mdi:account-outline', to: '/profile' }
 
-  if (!organizations.activeOrganization) {
-    return [
-      { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
-      profileItem,
-    ]
-  }
-
-  if (auth.isGuest) {
-    return [
-      { label: 'Organizzazioni', icon: 'mdi:domain', to: '/organizations' },
-      { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
-      { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
-    ]
-  }
-
-  if (auth.isAdmin) {
-    return [
-      { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
-      { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
-      profileItem,
-    ]
-  }
-
-  return [
-    { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
-    profileItem,
-  ]
+  return auth.isGuest ? primaryItems : [...primaryItems, profileItem]
 })
 
 function isActive(to: string): boolean {

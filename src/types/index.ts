@@ -251,6 +251,11 @@ export interface TournamentWithPlayers extends Tournament {
   playerIds?: string[]
 }
 
+export interface TournamentEnrollment {
+  enrolled: boolean
+  player_id: string | null
+}
+
 // ── Matches ──────────────────────────────────────────────────────────────────
 
 export type MatchStatus = 'waiting' | 'ready' | 'completed'
@@ -396,8 +401,9 @@ export interface TournamentsService {
   removePlayer(tournamentId: string, playerId: string): Promise<null>
   updateSeeds(tournamentId: string, seededPlayerIds: string[]): Promise<void>
   setPublished(tournamentId: string, published: boolean): Promise<Tournament>
-  enroll(tournamentId: string): Promise<null>
-  withdraw(tournamentId: string): Promise<null>
+  getEnrollment(tournamentId: string): Promise<TournamentEnrollment>
+  enroll(tournamentId: string): Promise<TournamentEnrollment>
+  withdraw(tournamentId: string): Promise<TournamentEnrollment>
 }
 
 export interface MatchesService {

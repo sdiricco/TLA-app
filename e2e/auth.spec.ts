@@ -81,6 +81,36 @@ test('shows confirmation progress while the backend session is loading', async (
   await expect(page.getByRole('heading', { name: 'Conferma in corso' })).toBeVisible()
 })
 
+test('keeps the organization filter above the primary mobile navigation', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.route('**/api/auth/me', async (route) => {
+    await route.fulfill({
+      json: { user: { id: 'user-4', email: 'mobile@tla.local', name: 'Utente Mobile', role: 'player' } },
+    })
+  })
+  await page.route('**/api/organizations', async (route) => {
+    await route.fulfill({ json: [] })
+  })
+  await page.route('**/api/tournaments**', async (route) => {
+    await route.fulfill({ json: { values: [], page: 1, perPage: 12, total: 0 } })
+  })
+
+  await page.goto('/#access_token=mobile-mock-jwt&type=signup')
+  await page.getByRole('button', { name: 'Continua in TLA' }).click()
+
+  const organizationFilter = page.getByRole('button', { name: 'Filtra per organizzazione: I miei contenuti' })
+  await expect(organizationFilter).toBeVisible()
+
+  const navigation = page.getByRole('navigation', { name: 'Navigazione mobile principale' })
+  await expect(navigation.getByRole('link', { name: 'Tornei' })).toBeVisible()
+  await expect(navigation.getByRole('link', { name: 'Giocatori' })).toBeVisible()
+  await expect(navigation.getByRole('link', { name: 'Profilo' })).toBeVisible()
+  await expect(navigation.getByRole('link', { name: 'Organizzazioni' })).toHaveCount(0)
+
+  await organizationFilter.click()
+  await expect(page.getByRole('menuitem', { name: 'Gestisci organizzazioni' })).toBeVisible()
+})
+
 test('allows guest access to the tournament list', async ({ page }) => {
   await page.route('**/api/organizations', async (route) => {
     await route.fulfill({ json: [] })
