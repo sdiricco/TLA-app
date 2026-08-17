@@ -11,6 +11,7 @@
     "prestart:server": "npm run prisma:generate",
     "build": "vite build",
     "build:mobile": "vite build && npx cap sync",
+    "prebuild:server": "npm run prisma:generate",
     "build:server": "tsc -p server/tsconfig.json",
     "build:all": "npm run build && npm run build:server",
     "commitlint": "commitlint",
