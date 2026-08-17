@@ -15,6 +15,8 @@ export const mockTournaments: MockTournament[] = [
     category: 'maschile',
     status: 'completed',
     published: true,
+    organizer_id: 'mock-organizer-1',
+    organizer: { id: 'mock-organizer-1', name: 'Giulia Bianchi' },
     participant_limit: 32,
     playerIds: ['p-1', 'p-2', 'p-3', 'p-4', 'p-5', 'p-6', 'p-7', 'p-8'],
     phases: [{
@@ -50,6 +52,8 @@ export const mockTournaments: MockTournament[] = [
     category: 'femminile',
     status: 'ongoing',
     published: true,
+    organizer_id: 'mock-organizer-2',
+    organizer: { id: 'mock-organizer-2', name: 'Marco Conti' },
     participant_limit: 16,
     playerIds: ['p-1', 'p-3', 'p-5', 'p-7'],
     phases: [{
@@ -86,6 +90,8 @@ export const mockTournaments: MockTournament[] = [
     category: 'maschile',
     status: 'upcoming',
     published: false,
+    organizer_id: 'mock-organizer-1',
+    organizer: { id: 'mock-organizer-1', name: 'Giulia Bianchi' },
     participant_limit: 16,
     playerIds: [],
     phases: [{

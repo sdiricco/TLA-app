@@ -229,12 +229,26 @@ export interface Tournament {
   regulation_content_type?: string | null
   regulation_size?: number | null
   organization_id?: string | null
+  organizer_id?: string | null
+  organizer?: OrganizerSummary | null
   phases?: TournamentPhase[]
   created_at?: string
   updated_at?: string
 }
 
-export type TournamentCreate = Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'phases'> & {
+export interface OrganizerSummary {
+  id: string
+  name: string
+  tournaments_count?: number
+}
+
+export interface OrganizerProfile extends OrganizerSummary {
+  player_id?: string | null
+  photo_url?: string | null
+  tournaments: Tournament[]
+}
+
+export type TournamentCreate = Omit<Tournament, 'id' | 'created_at' | 'updated_at' | 'phases' | 'organizer_id' | 'organizer'> & {
   phases?: TournamentPhaseInput[]
 }
 export type TournamentUpdate = Partial<TournamentCreate>
@@ -248,6 +262,7 @@ export interface TournamentListQuery {
   page?: number
   perPage?: number
   organizationId?: OrganizationFilter
+  organizerId?: string
 }
 
 // ── Tournament detail ────────────────────────────────────────────────────────
@@ -417,6 +432,11 @@ export interface TournamentsService {
   getEnrollment(tournamentId: string): Promise<TournamentEnrollment>
   enroll(tournamentId: string): Promise<TournamentEnrollment>
   withdraw(tournamentId: string): Promise<TournamentEnrollment>
+}
+
+export interface OrganizersService {
+  getAll(query?: { organizationId?: OrganizationFilter }): Promise<OrganizerSummary[]>
+  getById(id: string, query?: { organizationId?: OrganizationFilter }): Promise<OrganizerProfile>
 }
 
 export interface MatchesService {

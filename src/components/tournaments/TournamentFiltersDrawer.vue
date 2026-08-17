@@ -5,11 +5,13 @@ import DatePicker from 'primevue/datepicker'
 import Drawer from 'primevue/drawer'
 import Select from 'primevue/select'
 import OrganizationFilter from '@/components/filters/OrganizationFilter.vue'
-import type { TournamentCategory } from '@/types'
+import type { OrganizerSummary, TournamentCategory } from '@/types'
 import type { TournamentFilterOption, TournamentFilters } from './tournamentFilters'
 
 const props = defineProps<{
   categoryOptions: TournamentFilterOption<TournamentCategory>[]
+  organizerOptions: OrganizerSummary[]
+  organizersLoading?: boolean
 }>()
 
 const visible = defineModel<boolean>('visible', { required: true })
@@ -18,6 +20,10 @@ defineEmits<{ reset: []; apply: [] }>()
 
 const selectedCategoryOption = computed(() =>
   props.categoryOptions.find((option) => option.value === filters.value.category)
+)
+
+const selectedOrganizer = computed(() =>
+  props.organizerOptions.find((option) => option.id === filters.value.organizerId)
 )
 </script>
 
@@ -29,6 +35,35 @@ const selectedCategoryOption = computed(() =>
           Organizzazione
         </label>
         <OrganizationFilter id="tournament-organization-filter" v-model="filters.organizationId" />
+      </div>
+
+      <div class="flex min-w-0 flex-col gap-2">
+        <label for="tournament-organizer-filter" class="text-xs font-bold text-(--color-text-muted)">
+          Organizzatore
+        </label>
+        <Select
+          id="tournament-organizer-filter"
+          v-model="filters.organizerId"
+          :options="organizerOptions"
+          option-label="name"
+          option-value="id"
+          :loading="organizersLoading"
+          fluid
+        >
+          <template #value>
+            <span v-if="selectedOrganizer" class="flex min-w-0 items-center gap-2">
+              <i class="pi pi-user shrink-0 text-primary" aria-hidden="true" />
+              <span class="truncate">{{ selectedOrganizer.name }}</span>
+            </span>
+          </template>
+          <template #option="{ option }">
+            <span class="flex min-w-0 items-center gap-2">
+              <i class="pi pi-user shrink-0 text-primary" aria-hidden="true" />
+              <span class="truncate">{{ option.name }}</span>
+              <small v-if="option.tournaments_count != null" class="ml-auto text-(--color-text-subtle)">{{ option.tournaments_count }}</small>
+            </span>
+          </template>
+        </Select>
       </div>
 
       <div class="flex min-w-0 flex-col gap-2">

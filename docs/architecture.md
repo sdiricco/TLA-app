@@ -19,6 +19,29 @@ Vue 3 application
 The UI may hide actions based on role, but authorization is enforced again in
 Express middleware and Supabase row-level security policies.
 
+## Identity and capabilities
+
+Authentication, personal identity, sports identity and organization access are
+separate concerns:
+
+- `auth.users` is owned by Supabase Auth and stores credentials and sessions.
+- `profiles` is the application identity for an authenticated account. Its
+  `name` is the canonical display name used by the UI.
+- `players` stores sports records used by registrations, matches, rankings and
+  statistics. A player may be linked to a profile, but standalone player rows
+  are valid when a club manages athletes without accounts.
+- `organization_memberships` grants an account a scoped `owner`, `admin` or
+  `member` capability in one organization.
+- `tournaments.organizer_profile_id` identifies the person who created and
+  presents a tournament. This attribution is public inside the permitted
+  tournament scope, but it does not grant administrative permissions.
+
+Player and organizer are therefore compatible capabilities, not mutually
+exclusive account roles. `profiles.role` is retained for the exceptional
+platform-wide administrator permission; ordinary organization permissions come
+from memberships. `onboarding_intent` records the user's starting path and must
+not be used for authorization.
+
 ## Source boundaries
 
 | Path | Responsibility |
@@ -40,6 +63,8 @@ Vue Router defines public login and registration routes plus an authenticated
 application shell. Guards initialize authentication, load organization context
 and enforce guest/admin navigation rules. Feature routes cover organizations,
 requests, tournaments, matches, players, profile and settings.
+Organizers have a dedicated public profile route that lists the tournaments
+attributed to them without exposing account email or private profile data.
 
 ## Data flow
 

@@ -48,8 +48,8 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 const firstName = computed(() => {
-  const value = auth.user?.name?.trim() || auth.user?.email?.split('@')[0] || 'giocatore'
-  return value.split(/\s+/)[0] ?? value
+  const value = auth.user?.name?.trim() || player.value?.name.trim()
+  return value?.split(/\s+/)[0] ?? ''
 })
 const greeting = computed(() => {
   const hour = new Date().getHours()
@@ -57,6 +57,7 @@ const greeting = computed(() => {
   if (hour < 18) return 'Buon pomeriggio'
   return 'Buonasera'
 })
+const welcomeTitle = computed(() => firstName.value ? `${greeting.value}, ${firstName.value}` : greeting.value)
 const contextLabel = computed(() => organizations.activeOrganization?.name ?? 'tutti i tuoi contenuti')
 const dashboardDescription = computed(() => {
   if (auth.isAdmin) return `Controlla le priorità di ${contextLabel.value} e porta avanti la competizione.`
@@ -150,8 +151,8 @@ const priorities = computed<DashboardPriority[]>(() => {
         key: 'player-profile',
         icon: 'pi pi-id-card',
         title: 'Completa la tua attività sportiva',
-        description: 'La scheda giocatore verrà creata alla tua prima iscrizione.',
-        to: { name: 'tournaments' },
+        description: 'Crea la tua scheda giocatore dal profilo per iscriverti ai tornei.',
+        to: { name: 'profile' },
       })
     }
   }
@@ -196,7 +197,7 @@ function requestStatusSeverity(status: OrganizationRequest['status']): 'success'
 }
 
 async function loadPersonalActivity(): Promise<void> {
-  if (auth.isGuest || auth.isAdmin) return
+  if (auth.isGuest) return
   player.value = await playersService.getMyPlayer()
   if (player.value) playerHistory.value = await playersService.getMatchHistory(player.value.id)
 }
@@ -235,7 +236,7 @@ onMounted(loadDashboard)
       <div class="grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div class="min-w-0">
           <p class="mb-2 text-[0.65rem] font-extrabold uppercase tracking-[0.18em] text-(--color-accent)">Control room</p>
-          <h1 class="text-3xl font-bold leading-tight tracking-tighter sm:text-4xl lg:text-5xl">{{ greeting }}, {{ firstName }}</h1>
+          <h1 class="text-3xl font-bold leading-tight tracking-tighter sm:text-4xl lg:text-5xl">{{ welcomeTitle }}</h1>
           <p class="mt-3 max-w-2xl text-sm leading-relaxed text-white/65 sm:text-base">{{ dashboardDescription }}</p>
         </div>
         <div class="flex flex-col gap-2 sm:flex-row lg:justify-end">
@@ -397,7 +398,7 @@ onMounted(loadDashboard)
         <!------------------------------>
         <!-- Section: Personal performance -->
         <!------------------------------>
-        <section v-if="!auth.isAdmin && !auth.isGuest" class="rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-5">
+        <section v-if="!auth.isGuest" class="rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-5">
           <p class="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-primary">La tua stagione</p>
           <template v-if="player && playerHistory">
             <div class="mt-3 flex items-center justify-between gap-4">
@@ -412,7 +413,8 @@ onMounted(loadDashboard)
           </template>
           <div v-else class="mt-3">
             <h2 class="font-bold">Inizia a giocare</h2>
-            <p class="mt-1 text-sm leading-relaxed text-(--color-text-muted)">Iscriviti a un torneo: creeremo automaticamente la tua scheda giocatore.</p>
+            <p class="mt-1 text-sm leading-relaxed text-(--color-text-muted)">Crea la tua scheda giocatore dal profilo per iscriverti ai tornei e seguire i risultati.</p>
+            <Button class="mt-3" label="Crea profilo giocatore" icon="pi pi-user-plus" size="small" text @click="$router.push({ name: 'profile' })" />
           </div>
         </section>
       </aside>

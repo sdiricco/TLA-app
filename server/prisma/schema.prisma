@@ -20,6 +20,7 @@ model Profile {
   requestVotes          OrganizationRequestVote[]
   requestComments       OrganizationRequestComment[]
   accessRequests        OrganizationAccessRequest[]
+  organizedTournaments  Tournament[]                 @relation("TournamentOrganizer")
   createdAt             DateTime                     @default(now()) @map("created_at")
   updatedAt             DateTime                     @updatedAt @map("updated_at")
 
@@ -173,7 +174,9 @@ model Tournament {
   regulationContentType String?            @map("regulation_content_type")
   regulationSize        BigInt?            @map("regulation_size")
   organizationId        String?            @map("organization_id")
+  organizerProfileId    String?            @map("organizer_profile_id")
   organization          Organization?      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizer             Profile?           @relation("TournamentOrganizer", fields: [organizerProfileId], references: [id], onDelete: SetNull)
   players               TournamentPlayer[]
   phases                TournamentPhase[]
   matches               Match[]
@@ -183,6 +186,7 @@ model Tournament {
   @@index([startDate])
   @@index([status])
   @@index([organizationId])
+  @@index([organizerProfileId])
   @@map("tournaments")
 }
 

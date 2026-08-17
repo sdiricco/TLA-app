@@ -7,6 +7,7 @@
   import Button from 'primevue/button';
   import Chip from 'primevue/chip';
   import Select from 'primevue/select';
+  import { organizersService } from '@/services/organizersApi';
 
   // Page components and tournament filter types
   import TournamentEmptyState from '@/components/tournaments/TournamentEmptyState.vue';
@@ -23,7 +24,7 @@
   import { useAuthStore } from '../stores/auth';
   import { useOrganizationsStore } from '../stores/organizations';
   import { useTournamentsStore } from '../stores/tournaments';
-  import type { TournamentCategory, TournamentStatus } from '../types';
+  import type { OrganizerSummary, TournamentCategory, TournamentStatus } from '../types';
 
   /**
    * View models
@@ -53,6 +54,10 @@
   const filtersOpen = ref(false);
   const draftFilters = ref<TournamentFilters>(createDefaultFilters());
   const appliedFilters = ref<TournamentFilters>(createDefaultFilters());
+  const organizerOptions = ref<OrganizerSummary[]>([
+    { id: 'all', name: 'Tutti gli organizzatori' },
+  ]);
+  const organizersLoading = ref(false);
 
   /**
    * Filter options
@@ -94,6 +99,7 @@
         appliedFilters.value.category !== 'all',
         completedDateRange.value !== null,
         appliedFilters.value.organizationId !== 'mine',
+        appliedFilters.value.organizerId !== 'all',
       ].filter(Boolean).length
   );
 
@@ -137,6 +143,10 @@
             )?.name ?? 'Organizzazione');
       chips.push({ key: 'organizationId', label });
     }
+    if (filters.organizerId !== 'all') {
+      const organizer = organizerOptions.value.find((option) => option.id === filters.organizerId);
+      chips.push({ key: 'organizerId', label: organizer?.name ?? 'Organizzatore' });
+    }
 
     return chips;
   });
@@ -152,6 +162,7 @@
       status: 'all',
       dateRange: null,
       organizationId: 'mine',
+      organizerId: 'all',
     };
   }
 
@@ -170,6 +181,7 @@
       dateFrom: toDateQuery(completedDateRange.value?.[0]),
       dateTo: toDateQuery(completedDateRange.value?.[1]),
       organizationId: filters.organizationId,
+      organizerId: filters.organizerId === 'all' ? undefined : filters.organizerId,
     };
   }
 
@@ -190,6 +202,19 @@
       page,
       perPage,
     });
+  }
+
+  async function loadOrganizers(): Promise<void> {
+    organizersLoading.value = true;
+    try {
+      const organizers = await organizersService.getAll({ organizationId: 'mine' });
+      organizerOptions.value = [
+        { id: 'all', name: 'Tutti gli organizzatori' },
+        ...organizers,
+      ];
+    } finally {
+      organizersLoading.value = false;
+    }
   }
 
   // Loads the following page without replacing tournaments already displayed.
@@ -246,6 +271,7 @@
     if (key === 'status') filters.status = 'all';
     if (key === 'dateRange') filters.dateRange = null;
     if (key === 'organizationId') filters.organizationId = 'mine';
+    if (key === 'organizerId') filters.organizerId = 'all';
     appliedFilters.value = filters;
     void loadTournaments(0, store.perPage);
   }
@@ -278,7 +304,7 @@
 
   // Performs the initial request when the route view becomes active.
   onMounted(() => {
-    void loadTournaments();
+    void Promise.all([loadTournaments(), loadOrganizers()]);
   });
 
 </script>
@@ -477,6 +503,8 @@
     v-model:visible="filtersOpen"
     v-model:filters="draftFilters"
     :category-options="categoryOptions"
+    :organizer-options="organizerOptions"
+    :organizers-loading="organizersLoading"
     @reset="clearFilters"
     @apply="applyFilters"
   />

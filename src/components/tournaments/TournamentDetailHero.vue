@@ -74,10 +74,20 @@ function formatCurrency(value: number): string {
       <h1 class="truncate text-3xl font-bold leading-tight tracking-tighter sm:text-4xl lg:text-5xl">
         {{ tournament.name }}
       </h1>
-      <p class="mt-2 flex items-center gap-2 text-sm text-white/70">
-        <i class="pi pi-map-marker" />
-        {{ tournament.location || 'Sede da definire' }}
-      </p>
+      <div class="mt-2 grid gap-1.5 text-sm text-white/70">
+        <p class="flex items-center gap-2">
+          <i class="pi pi-map-marker" />
+          {{ tournament.location || 'Sede da definire' }}
+        </p>
+        <RouterLink
+          v-if="tournament.organizer"
+          :to="{ name: 'organizer-profile', params: { id: tournament.organizer.id } }"
+          class="flex w-fit items-center gap-2 rounded-sm text-white/70 no-underline transition-colors hover:text-(--color-accent) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          <i class="pi pi-user" />
+          <span>Organizzato da <strong class="font-semibold text-white/90">{{ tournament.organizer.name }}</strong></span>
+        </RouterLink>
+      </div>
     </div>
 
     <!------------------------------>

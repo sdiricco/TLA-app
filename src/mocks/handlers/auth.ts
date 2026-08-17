@@ -66,25 +66,34 @@ export const authHandlers = [
       return HttpResponse.json({ message: 'Scegli come vuoi utilizzare TLA' }, { status: 400 })
     }
 
-    if (body.intent === 'player' && !mockPlayers.some((player) => player.user_id === currentUser?.id)) {
+    const wasCompleted = currentUser.onboardingCompleted === true
+    if (body.intent === 'player') {
       const name = body.player?.name?.trim() || currentUser.name?.trim() || currentUser.email
-      mockPlayers.push({
-        id: `p-${Date.now()}`,
+      const existingPlayer = mockPlayers.find((player) => player.user_id === currentUser?.id && !player.organization_id)
+      const playerData = {
         name,
-        ranking: 0,
         birth_date: body.player?.birth_date || null,
-        photo_url: null,
         club: body.player?.club?.trim() || null,
         phone: body.player?.phone?.trim() || null,
-        user_id: currentUser.id,
-        organization_id: null,
-      })
+      }
+      if (existingPlayer) Object.assign(existingPlayer, playerData)
+      else {
+        mockPlayers.push({
+          id: `p-${Date.now()}`,
+          ranking: 0,
+          photo_url: null,
+          user_id: currentUser.id,
+          organization_id: null,
+          ...playerData,
+        })
+      }
+      currentUser = { ...currentUser, name }
     }
 
     currentUser = {
       ...currentUser,
       onboardingCompleted: true,
-      onboardingIntent: body.intent,
+      onboardingIntent: wasCompleted ? currentUser.onboardingIntent : body.intent,
     }
     return HttpResponse.json({ user: currentUser as User })
   }),

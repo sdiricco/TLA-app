@@ -84,5 +84,15 @@ function formatDate(date: string | null | undefined): string {
       </strong>
     </div>
 
+    <RouterLink
+      v-if="tournament.organizer"
+      :to="{ name: 'organizer-profile', params: { id: tournament.organizer.id } }"
+      class="relative z-20 col-span-full row-start-4 flex w-fit min-w-0 items-center gap-1.5 rounded-sm text-xs font-semibold text-(--color-text-muted) no-underline transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      :aria-label="`Apri la scheda di ${tournament.organizer.name}`"
+    >
+      <i class="pi pi-user text-xs text-primary" aria-hidden="true" />
+      <span class="truncate">Organizzato da {{ tournament.organizer.name }}</span>
+    </RouterLink>
+
   </article>
 </template>

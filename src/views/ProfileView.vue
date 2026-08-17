@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import moment from 'moment'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
+import DatePicker from 'primevue/datepicker'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Skeleton from 'primevue/skeleton'
@@ -21,17 +23,31 @@ const history = ref<PlayerMatchHistory>({ stats: { played: 0, wins: 0, losses: 0
 const loadingPlayer = ref(true)
 const editOpen = ref(false)
 const infoOpen = ref(false)
+const createPlayerOpen = ref(false)
 const editName = ref('')
+const playerName = ref('')
+const playerBirthDate = ref<Date | null>(null)
+const playerClub = ref('')
+const playerPhone = ref('')
 const saving = ref(false)
+const creatingPlayer = ref(false)
 const loggingOut = ref(false)
 const error = ref<string | null>(null)
+const playerError = ref<string | null>(null)
+const today = new Date()
 
-const displayName = computed(() => auth.user?.name?.trim() || 'Il tuo profilo')
+const displayName = computed(() => auth.user?.name?.trim() || player.value?.name.trim() || 'Completa il tuo nome')
 const email = computed(() => auth.user?.email ?? '—')
-const avatarLabel = computed(() => initials(auth.user?.name || email.value))
-const roleLabel = computed(() => auth.isAdmin ? 'Amministratore' : 'Giocatore')
+const avatarLabel = computed(() => initials(auth.user?.name?.trim() || player.value?.name.trim() || 'TLA'))
+const accessLabel = computed(() => auth.user?.role === 'admin' ? 'Amministratore piattaforma' : 'Account standard')
+const activityLabel = computed(() => {
+  if (auth.isGuest) return 'Ospite'
+  const capabilities = []
+  if (player.value) capabilities.push('Giocatore')
+  if (organizations.organizations.some((organization) => ['owner', 'admin'].includes(organization.role))) capabilities.push('Organizzatore')
+  return capabilities.join(' · ') || 'Esploratore'
+})
 const organizationCount = computed(() => organizations.organizations.length)
-const activeOrganizationLabel = computed(() => organizations.activeOrganization?.name ?? 'Nessuna selezionata')
 
 function initials(name: string): string {
   return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('')
@@ -41,6 +57,38 @@ function openEdit(): void {
   editName.value = auth.user?.name?.trim() ?? ''
   error.value = null
   editOpen.value = true
+}
+
+function openPlayerCreation(): void {
+  playerName.value = auth.user?.name?.trim() ?? ''
+  playerBirthDate.value = null
+  playerClub.value = ''
+  playerPhone.value = ''
+  playerError.value = null
+  createPlayerOpen.value = true
+}
+
+async function createPlayerProfile(): Promise<void> {
+  if (playerName.value.trim().length < 2) {
+    playerError.value = 'Inserisci nome e cognome.'
+    return
+  }
+
+  creatingPlayer.value = true
+  playerError.value = null
+  const completed = await auth.completeOnboarding('player', {
+    name: playerName.value.trim(),
+    birth_date: playerBirthDate.value ? moment(playerBirthDate.value).format('YYYY-MM-DD') : null,
+    club: playerClub.value.trim() || null,
+    phone: playerPhone.value.trim() || null,
+  })
+  if (completed) {
+    createPlayerOpen.value = false
+    await loadPlayerCard()
+  } else {
+    playerError.value = auth.error
+  }
+  creatingPlayer.value = false
 }
 
 async function saveProfile(): Promise<void> {
@@ -118,15 +166,15 @@ onMounted(loadPlayerCard)
         <span class="grid size-9 place-items-center rounded-lg bg-primary-50 text-primary"><i class="pi pi-id-card" /></span>
         <div>
           <h2 id="account-overview-title" class="font-bold">Account e accesso</h2>
-          <p class="text-xs text-(--color-text-muted)">Ruolo e contesto attualmente selezionato.</p>
+          <p class="text-xs text-(--color-text-muted)">Accesso, attività e contesto attualmente selezionato.</p>
         </div>
       </header>
       <div class="grid sm:grid-cols-3">
         <article
           v-for="item in [
-            { icon: 'pi pi-shield', label: 'RUOLO', value: roleLabel },
+            { icon: 'pi pi-shield', label: 'ACCESSO', value: accessLabel },
+            { icon: 'pi pi-bolt', label: 'ATTIVITÀ', value: activityLabel },
             { icon: 'pi pi-building', label: 'ORGANIZZAZIONI', value: `${organizationCount} ${organizationCount === 1 ? 'organizzazione' : 'organizzazioni'}` },
-            { icon: 'pi pi-filter', label: 'CONTESTO ATTIVO', value: activeOrganizationLabel },
           ]"
           :key="item.label"
           class="flex min-w-0 items-center gap-3 border-b border-(--color-border) px-4 py-3.5 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0 sm:px-5"
@@ -205,7 +253,7 @@ onMounted(loadPlayerCard)
     <section class="mt-1">
       <p class="mb-1 text-xs font-extrabold tracking-[0.14em] text-primary">ATTIVITÀ SPORTIVA</p>
       <h2 class="text-xl font-bold tracking-tight sm:text-2xl">La mia scheda giocatore</h2>
-      <p class="mt-1 max-w-2xl text-sm text-(--color-text-muted) sm:text-base">Risultati e statistiche collegati all’organizzazione selezionata.</p>
+      <p class="mt-1 max-w-2xl text-sm text-(--color-text-muted) sm:text-base">Risultati e statistiche personali. La scheda può convivere con la gestione di uno o più club.</p>
     </section>
 
     <section v-if="loadingPlayer" class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-4 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-5"><Skeleton shape="circle" size="4rem" /><div class="grid gap-2"><Skeleton width="10rem" height="1.5rem" /><Skeleton class="max-w-full" width="16rem" height="1rem" /></div></section>
@@ -232,9 +280,9 @@ onMounted(loadPlayerCard)
       <span class="grid size-11 shrink-0 place-items-center rounded-lg bg-(--color-surface-soft) text-primary"><i class="pi pi-user-plus" /></span>
       <div class="min-w-0">
         <h3 class="text-lg font-bold sm:text-xl">Scheda giocatore non collegata</h3>
-        <p class="mt-1 text-sm text-(--color-text-muted) sm:text-base">Quando il profilo verrà associato a un giocatore, qui troverai partite, vittorie e andamento.</p>
+        <p class="mt-1 text-sm text-(--color-text-muted) sm:text-base">Crea la tua identità sportiva per iscriverti ai tornei e seguire partite, vittorie e andamento.</p>
       </div>
-      <Button label="Vai ai giocatori" icon="pi pi-users" severity="secondary" outlined class="w-full sm:w-auto" @click="router.push({ name: 'players' })" />
+      <Button label="Crea profilo giocatore" icon="pi pi-user-plus" class="w-full sm:w-auto" @click="openPlayerCreation" />
     </section>
 
     <!------------------------------>
@@ -247,6 +295,23 @@ onMounted(loadPlayerCard)
         <small class="text-(--color-text-muted)">L’email dell’account non può essere modificata da qui.</small>
         <p v-if="error" class="text-sm text-red-700">{{ error }}</p>
         <div class="mt-2 grid grid-cols-2 gap-2 sm:flex sm:justify-end"><Button type="button" label="Annulla" severity="secondary" text @click="editOpen = false" /><Button type="submit" label="Salva modifiche" icon="pi pi-check" :loading="saving" /></div>
+      </form>
+    </Dialog>
+
+    <!------------------------------>
+    <!-- Section: Player creation dialog -->
+    <!------------------------------>
+    <Dialog v-model:visible="createPlayerOpen" modal header="Crea profilo giocatore" class="mx-3 w-full max-w-lg">
+      <form class="grid gap-4" @submit.prevent="createPlayerProfile">
+        <p class="text-sm leading-relaxed text-(--color-text-muted)">Questa scheda aggiunge l’attività sportiva al tuo account. Non modifica i permessi che hai nelle organizzazioni.</p>
+        <label for="profile-player-name" class="grid gap-2 text-sm font-bold">Nome e cognome<InputText id="profile-player-name" v-model="playerName" minlength="2" maxlength="80" autocomplete="name" fluid required /></label>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label for="profile-player-birth-date" class="grid gap-2 text-sm font-bold">Data di nascita <small class="font-normal text-(--color-text-muted)">Facoltativa</small><DatePicker input-id="profile-player-birth-date" v-model="playerBirthDate" date-format="dd/mm/yy" placeholder="gg/mm/aaaa" :max-date="today" fluid show-button-bar show-icon icon-display="input" /></label>
+          <label for="profile-player-phone" class="grid gap-2 text-sm font-bold">Telefono <small class="font-normal text-(--color-text-muted)">Facoltativo</small><InputText id="profile-player-phone" v-model="playerPhone" type="tel" autocomplete="tel" fluid /></label>
+        </div>
+        <label for="profile-player-club" class="grid gap-2 text-sm font-bold">Club di appartenenza <small class="font-normal text-(--color-text-muted)">Facoltativo</small><InputText id="profile-player-club" v-model="playerClub" fluid /></label>
+        <p v-if="playerError" class="text-sm text-red-700">{{ playerError }}</p>
+        <div class="grid grid-cols-2 gap-2 sm:flex sm:justify-end"><Button type="button" label="Annulla" severity="secondary" text @click="createPlayerOpen = false" /><Button type="submit" label="Crea profilo" icon="pi pi-check" :loading="creatingPlayer" /></div>
       </form>
     </Dialog>
 

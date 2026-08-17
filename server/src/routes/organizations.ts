@@ -215,10 +215,12 @@ organizationsRouter.post('/', async (req, res) => {
           memberships: { create: { profileId: profile.id, role: 'owner' } },
         },
       })
-      await tx.profile.update({
-        where: { id: profile.id },
-        data: { onboardingIntent: 'manager', onboardingCompletedAt: new Date() },
-      })
+      if (!profile.onboardingCompletedAt) {
+        await tx.profile.update({
+          where: { id: profile.id },
+          data: { onboardingIntent: 'manager', onboardingCompletedAt: new Date() },
+        })
+      }
       return created
     })
     res.status(201).json({ id: organization.id, name: organization.name, slug: organization.slug, visibility: organization.visibility, discoverable: organization.discoverable, latitude: organization.latitude, longitude: organization.longitude, join_code: organization.joinCode, role: 'owner' })

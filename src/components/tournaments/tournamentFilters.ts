@@ -11,6 +11,7 @@ export interface TournamentFilters {
   status: 'all' | TournamentStatus
   dateRange: Date[] | null
   organizationId: OrganizationFilter
+  organizerId: 'all' | string
 }
 
 export type TournamentFilterKey = keyof TournamentFilters

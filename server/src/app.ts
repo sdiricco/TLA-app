@@ -9,6 +9,7 @@ import { playersRouter } from './routes/players'
 import { tournamentsRouter } from './routes/tournaments'
 import { organizationsRouter } from './routes/organizations'
 import { requestsRouter } from './routes/requests'
+import { organizersRouter } from './routes/organizers'
 
 export function createApp() {
   const app = express()
@@ -40,6 +41,7 @@ export function createApp() {
   app.use('/api/organizations', organizationsRouter)
   app.use('/api/requests', requestsRouter)
   app.use('/api/players', playersRouter)
+  app.use('/api/organizers', organizersRouter)
   app.use('/api/tournaments', tournamentsRouter)
   app.use('/api/matches', matchesRouter)
 

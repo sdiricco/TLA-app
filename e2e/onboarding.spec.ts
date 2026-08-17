@@ -87,12 +87,13 @@ test('creates a player profile from the guided onboarding', async ({ page }) => 
   const payloads = await mockIncompleteAccount(page)
   await openOnboarding(page)
 
-  await expect(page.getByRole('heading', { name: 'Come vuoi iniziare?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Da cosa vuoi iniziare?' })).toBeVisible()
+  await expect(page.getByText('con lo stesso account puoi giocare e gestire uno o più club')).toBeVisible()
   await page.getByRole('button', { name: 'Crea profilo giocatore' }).click()
   await expect(page.getByRole('heading', { name: 'Crea il profilo giocatore' })).toBeVisible()
   await expect(page.getByLabel('Nome e cognome')).toHaveValue('Mario Rossi')
 
-  await page.getByLabel('Data di nascita Facoltativa').fill('1991-06-20')
+  await page.getByLabel('Data di nascita Facoltativa').fill('20/06/1991')
   await page.getByLabel('Telefono Facoltativo').fill('+39 333 123 4567')
   await page.getByLabel('Club di appartenenza Facoltativo').fill('TC Lucca')
   await page.getByRole('button', { name: 'Crea profilo e continua' }).click()

@@ -54,6 +54,27 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/players**', async (route) => {
     await route.fulfill({ json: { values: [], page: 0, perPage: 1, total: 24 } })
   })
+  await page.route('**/api/players/dashboard-player/matches', async (route) => {
+    await route.fulfill({
+      json: {
+        stats: { played: 8, wins: 6, losses: 2, win_rate: 75 },
+        recent_form: ['W', 'W', 'L'],
+        recent_matches: [],
+      },
+    })
+  })
+  await page.route('**/api/players/me', async (route) => {
+    await route.fulfill({
+      json: {
+        id: 'dashboard-player',
+        name: 'Simone Diricco',
+        ranking: 3,
+        club: 'TC Lucca',
+        user_id: 'admin-dashboard',
+        organization_id: null,
+      },
+    })
+  })
   await page.route('**/api/requests', async (route) => {
     await route.fulfill({
       json: [{
@@ -74,7 +95,7 @@ test('gives an administrator a clear operational overview', async ({ page }) => 
   await page.getByRole('button', { name: 'Continua in TLA' }).click()
 
   await expect(page).toHaveURL(/\/dashboard$/)
-  await expect(page.getByRole('heading', { name: /Simone/ })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: /Simone/ })).toBeVisible()
   await expect(page.getByText('TC Lucca', { exact: true }).first()).toBeVisible()
 
   const indicators = page.getByRole('region', { name: 'Indicatori principali' })
@@ -89,6 +110,8 @@ test('gives an administrator a clear operational overview', async ({ page }) => 
   await expect(page.getByText('Open di Primavera')).toBeVisible()
   await expect(page.getByText('Nuove luci per il campo 2')).toBeVisible()
   await expect(page.getByRole('link', { name: /Nuovo torneo/ })).toBeVisible()
+  await expect(page.getByText('La tua stagione')).toBeVisible()
+  await expect(page.getByText('75%', { exact: true })).toBeVisible()
 })
 
 test('keeps the dashboard useful and compact on mobile', async ({ page }) => {
@@ -96,9 +119,23 @@ test('keeps the dashboard useful and compact on mobile', async ({ page }) => {
   await page.goto('/#access_token=dashboard-mobile-token&type=signup')
   await page.getByRole('button', { name: 'Continua in TLA' }).click()
 
-  await expect(page.getByRole('heading', { name: /Simone/ })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: /Simone/ })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Navigazione mobile principale' }).getByRole('link', { name: 'Dashboard' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Priorità' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Tornei da seguire' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Accessi rapidi' })).toBeVisible()
+})
+
+test('recovers the greeting from the linked player for an older unnamed profile', async ({ page }) => {
+  await page.route('**/api/auth/me', async (route) => {
+    await route.fulfill({
+      json: { user: { id: 'admin-dashboard', email: 'admin@tla.local', role: 'admin' } },
+    })
+  })
+
+  await page.goto('/#access_token=dashboard-legacy-token&type=signup')
+  await page.getByRole('button', { name: 'Continua in TLA' }).click()
+
+  await expect(page.getByRole('heading', { level: 1, name: /Simone/ })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1 })).not.toContainText('admin')
 })

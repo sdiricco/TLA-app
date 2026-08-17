@@ -76,9 +76,20 @@ export async function getOrCreateProfile(
   })
 
   // The application profile is the source of truth after registration. Only
-  // backfill an empty profile from Auth metadata, so a later login cannot
-  // overwrite a name edited from the profile page with stale signup metadata.
-  if (!profile.name && name) {
+  // backfill an empty profile, so a later login cannot overwrite a name edited
+  // from the profile page with stale signup metadata. Older player onboarding
+  // stored the submitted name on the sports profile only, so use that as a
+  // second safe source for accounts created before the fix.
+  let fallbackName = name
+  if (!profile.name && !fallbackName) {
+    const globalPlayer = await prisma.player.findFirst({
+      where: { userId: profile.id, organizationId: null },
+      select: { name: true },
+    })
+    fallbackName = globalPlayer?.name.trim() || null
+  }
+
+  if (!profile.name && fallbackName) {
     profile = await prisma.profile.update({
       where: { id: profile.id },
       select: {
@@ -89,7 +100,7 @@ export async function getOrCreateProfile(
         onboardingIntent: true,
         onboardingCompletedAt: true,
       },
-      data: { name },
+      data: { name: fallbackName },
     })
   }
 

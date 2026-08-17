@@ -13,6 +13,34 @@ export interface ChangelogEntry {
 // the same pull request; see the product changelog policy in AGENTS.md.
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: '2026-08-17',
+    version: 'Organizzatori 1.0',
+    kind: 'feature',
+    title: 'Le persone dietro ogni torneo',
+    description: 'Ogni competizione rende ora riconoscibile chi la organizza e collega tutta la sua attività.',
+    items: [
+      'Organizzatore assegnato automaticamente alla creazione del torneo',
+      'Link alla scheda organizzatore nelle liste, in dashboard e nel dettaglio',
+      'Scheda pubblica con tutti i tornei organizzati',
+      'Nuovo filtro dei tornei per organizzatore',
+    ],
+  },
+  {
+    date: '2026-08-17',
+    version: 'Identità 1.1',
+    kind: 'improvement',
+    title: 'Giocare e organizzare con lo stesso account',
+    description: 'Identità personale, attività sportiva e permessi del club sono ora presentati come aspetti distinti e combinabili.',
+    items: [
+      'Nome e cognome mostrati in modo coerente senza ricavarli dall’email',
+      'Recupero automatico del nome dalla scheda giocatore per gli account esistenti',
+      'Percorsi giocatore e organizzatore chiariti come punti di partenza non esclusivi',
+      'Profilo giocatore creabile in seguito anche da chi gestisce un’organizzazione',
+      'Statistiche personali visibili in dashboard anche agli organizzatori che giocano',
+      'Calendari di onboarding e profilo uniformati ai componenti PrimeVue',
+    ],
+  },
+  {
     date: '2026-08-14',
     version: 'Onboarding 1.0',
     kind: 'feature',

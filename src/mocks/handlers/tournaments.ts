@@ -80,6 +80,7 @@ export const tournamentHandlers = [
     const name = url.searchParams.get('name')
     const category = url.searchParams.get('category')
     const status = url.searchParams.get('status')
+    const organizerId = url.searchParams.get('organizerId')
     const dateFrom = url.searchParams.get('dateFrom')
     const dateTo = url.searchParams.get('dateTo')
     const fromTime = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null
@@ -88,6 +89,7 @@ export const tournamentHandlers = [
       .filter((tournament) => matchesFilter(tournament.name, name))
       .filter((tournament) => (category ? tournament.category === category : true))
       .filter((tournament) => (status ? tournament.status === status : true))
+      .filter((tournament) => (organizerId ? tournament.organizer_id === organizerId : true))
       .filter((tournament) => {
         if (fromTime === null && toTime === null) return true
         const startTime = tournament.start_date ? new Date(tournament.start_date).getTime() : null
@@ -117,6 +119,8 @@ export const tournamentHandlers = [
       category: 'maschile',
       name: '',
       participant_limit: 32,
+      organizer_id: 'mock-organizer-1',
+      organizer: { id: 'mock-organizer-1', name: 'Giulia Bianchi' },
       ...tournamentBody,
       phases: createMockPhases(tournamentId, phaseInputs ?? [{
         name: body.format === 'round_robin' ? 'Girone unico' : 'Tabellone',

@@ -1,7 +1,7 @@
 # Product requirements
 
 Status: initial baseline
-Last reviewed: 2026-08-12
+Last reviewed: 2026-08-17
 
 ## Product goal
 
@@ -18,6 +18,10 @@ responsive application.
 | Player | Maintain an account, participate in organizations and view tournament activity. |
 | Organization admin | Manage organization data, players, tournaments, phases, draws and results. |
 
+Actors are capabilities rather than exclusive personas: the same authenticated
+account can have a linked player profile and administer one or more
+organizations.
+
 Authorization in the UI is a usability aid only. Every protected mutation must
 also be authorized by the API and database policies.
 
@@ -30,6 +34,7 @@ also be authorized by the API and database policies.
 | AUTH-001 | A user can register, sign in and sign out. | Invalid credentials show an actionable error; authenticated sessions survive navigation; logout removes local credentials. | Implemented | `e2e/auth.spec.ts` covers the public login form and registration entry. |
 | AUTH-002 | A visitor can enter in guest mode. | Guest access requires no credentials and cannot use member-only or admin-only actions. | Implemented | `e2e/auth.spec.ts` covers entry and tournament navigation. |
 | AUTH-003 | Admin-only operations are protected. | Non-admin users are redirected or denied in the UI, and the API independently rejects unauthorized mutations. | Partial | Add API authorization tests and route-level E2E coverage. |
+| AUTH-004 | A new account selects a non-exclusive starting path. | A user can begin as player, organizer or explorer and later add the other capabilities without losing existing organization permissions. | Implemented | `e2e/onboarding.spec.ts` and `e2e/profile-capabilities.spec.ts`. |
 
 ### Organizations
 
@@ -44,9 +49,11 @@ also be authorized by the API and database policies.
 | ID | Requirement | Acceptance criteria | Status | Verification |
 |---|---|---|---|---|
 | PLAYER-001 | Admins can create, edit and browse player records. | A player can include ranking, club, contact and profile information; invalid input is rejected. | Implemented | Manual; add CRUD E2E coverage. |
+| PLAYER-002 | An authenticated user can create a personal player profile. | The sports profile is linked to the account, preserves existing organization permissions and can be used for tournament enrollment. | Implemented | `e2e/profile-capabilities.spec.ts`. |
 | TOUR-001 | Admins can create and edit tournaments. | A tournament records identity, dates, location, category, status and organization scope where applicable. | Implemented | Manual; add form E2E coverage. |
 | TOUR-002 | Admins can register players in a tournament. | Duplicate registration is prevented and the tournament roster reflects changes. | Implemented | Manual; add roster API tests. |
 | TOUR-003 | Users can browse tournament information. | Guests and members can view permitted tournament lists, details, players and published results. | Implemented | Guest list entry is covered by `e2e/auth.spec.ts`. |
+| TOUR-004 | Every tournament identifies its organizer. | The creator is stored as organizer, links to a public profile with their organized tournaments, and can be used as a list filter without changing authorization privileges. | Implemented | `e2e/tournament-organizer.spec.ts`. |
 
 ### Competition and matches
 

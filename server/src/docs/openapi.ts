@@ -30,6 +30,16 @@ const playerSchema = {
 
 const tournamentCategoryEnum = ['maschile', 'femminile']
 
+const organizerSchema = {
+  type: 'object',
+  required: ['id', 'name'],
+  properties: {
+    id: { type: 'string' },
+    name: { type: 'string' },
+    tournaments_count: { type: 'integer', minimum: 0 },
+  },
+}
+
 const tournamentPhaseInputSchema = {
   type: 'object',
   required: ['name', 'format', 'group_count', 'output_count'],
@@ -87,6 +97,8 @@ const tournamentSchema = {
     regulation_name: { type: 'string', nullable: true },
     regulation_content_type: { type: 'string', nullable: true },
     regulation_size: { type: 'integer', nullable: true },
+    organizer_id: { type: 'string', nullable: true },
+    organizer: { allOf: [{ $ref: '#/components/schemas/Organizer' }], nullable: true },
     phases: {
       type: 'array',
       items: { $ref: '#/components/schemas/TournamentPhase' },
@@ -189,6 +201,7 @@ export const openApiSpec = {
     schemas: {
       User: userSchema,
       Player: playerSchema,
+      Organizer: organizerSchema,
       PlayerListResponse: {
         type: 'object',
         required: ['page', 'perPage', 'total', 'values'],
@@ -534,6 +547,7 @@ export const openApiSpec = {
           { name: 'name', in: 'query', required: false, schema: { type: 'string' } },
           { name: 'category', in: 'query', required: false, schema: { type: 'string', enum: tournamentCategoryEnum } },
           { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['upcoming', 'ongoing', 'completed'] } },
+          { name: 'organizerId', in: 'query', required: false, schema: { type: 'string' } },
           { name: 'page', in: 'query', required: false, schema: { type: 'integer', minimum: 0, default: 0 } },
           { name: 'perPage', in: 'query', required: false, schema: { type: 'integer', minimum: 1, default: 12 } },
         ],
@@ -595,6 +609,52 @@ export const openApiSpec = {
               },
             },
           },
+        },
+      },
+    },
+    '/organizers': {
+      get: {
+        summary: 'Organizzatori dei tornei visibili',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Organizzatori disponibili per navigazione e filtro',
+            content: {
+              'application/json': {
+                schema: { type: 'array', items: { $ref: '#/components/schemas/Organizer' } },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/organizers/{id}': {
+      get: {
+        summary: 'Scheda pubblica organizzatore',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: {
+            description: 'Profilo e tornei organizzati visibili',
+            content: {
+              'application/json': {
+                schema: {
+                  allOf: [
+                    { $ref: '#/components/schemas/Organizer' },
+                    {
+                      type: 'object',
+                      properties: {
+                        player_id: { type: 'string', nullable: true },
+                        photo_url: { type: 'string', nullable: true },
+                        tournaments: { type: 'array', items: { $ref: '#/components/schemas/Tournament' } },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          404: { description: 'Organizzatore non trovato' },
         },
       },
     },

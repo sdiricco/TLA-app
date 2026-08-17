@@ -5,6 +5,7 @@ TLA App is a client-side web application for **organising and managing tennis to
 ## Features at a glance
 
 - 🎾 Create and manage tournaments (knockout, round-robin, or mixed formats)
+- 🧭 Organizer profiles with attributed tournaments and list filtering
 - 👤 Player registry with seeding support
 - 🏆 Automatic draw generation with manual adjustment
 - 📊 Real-time standings and bracket visualisation
@@ -88,15 +89,14 @@ fly deploy
 
 ## Database
 
-The backend is prepared to use Prisma with PostgreSQL. The current schema covers:
+The backend uses Prisma with PostgreSQL. The schema separates account identity
+(`Profile`), sports identity (`Player`), organization access
+(`OrganizationMembership`), tournaments and their registrations, phases,
+groups and matches, plus the organization request workflow.
 
-- `Profile`
-- `Player`
-- `Tournament`
-- `TournamentPlayer`
-- `Match`
-
-User roles are stored in `profiles.role` and resolved by the backend.
+`profiles.role` is reserved for the platform-wide administrator capability.
+Organization permissions are scoped through `organization_memberships`; a
+profile can therefore be both a player and an organization owner or admin.
 
 Generate the Prisma client with:
 

@@ -45,7 +45,14 @@ function selectGlobalContext(): void {
   window.location.assign('/dashboard')
 }
 
-const displayName = computed(() => auth.user?.name || auth.user?.email || 'Utente')
+const displayName = computed(() => auth.user?.name?.trim() || 'Account TLA')
+const accountContext = computed(() => {
+  if (auth.isGuest) return 'Ospite'
+  if (organizations.activeOrganization?.role === 'owner') return 'Proprietario del club'
+  if (organizations.activeOrganization?.role === 'admin') return 'Amministratore del club'
+  if (organizations.activeOrganization) return 'Membro del club'
+  return auth.user?.role === 'admin' ? 'Amministratore piattaforma' : 'Account personale'
+})
 const otherOrganizations = computed(() =>
   organizations.organizations.filter((organization) => organization.id !== organizations.activeId),
 )
@@ -132,7 +139,7 @@ function toggleProfileMenu(event: Event): void {
         <div class="profile-avatar"><IconifyIcon icon="mdi:account" /></div>
         <div class="profile-copy">
           <span>{{ displayName }}</span>
-          <small>{{ auth.isAdmin ? 'Amministratore' : auth.isGuest ? 'Ospite' : 'Giocatore' }}</small>
+          <small>{{ accountContext }}</small>
         </div>
       </button>
 

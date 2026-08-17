@@ -62,6 +62,11 @@ export function serializeTournament(tournament: {
   regulationContentType: string | null
   regulationSize: bigint | null
   organizationId: string | null
+  organizerProfileId: string | null
+  organizer?: {
+    id: string
+    name: string | null
+  } | null
   createdAt: Date
   updatedAt: Date
 }): Tournament {
@@ -86,6 +91,10 @@ export function serializeTournament(tournament: {
     regulation_content_type: tournament.regulationContentType,
     regulation_size: tournament.regulationSize == null ? null : Number(tournament.regulationSize),
     organization_id: tournament.organizationId,
+    organizer_id: tournament.organizerProfileId,
+    organizer: tournament.organizer?.name
+      ? { id: tournament.organizer.id, name: tournament.organizer.name }
+      : null,
     created_at: tournament.createdAt.toISOString(),
     updated_at: tournament.updatedAt.toISOString(),
   }
@@ -112,6 +121,11 @@ export function serializeTournamentWithPlayers(tournament: {
   regulationContentType: string | null
   regulationSize: bigint | null
   organizationId: string | null
+  organizerProfileId: string | null
+  organizer?: {
+    id: string
+    name: string | null
+  } | null
   createdAt: Date
   updatedAt: Date
   players?: Array<{

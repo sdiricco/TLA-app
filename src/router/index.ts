@@ -187,6 +187,12 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'organizers/:id',
+          name: 'organizer-profile',
+          component: () => import('../views/OrganizerProfileView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'profile',
           name: 'profile',
           component: () => import('../views/ProfileView.vue'),

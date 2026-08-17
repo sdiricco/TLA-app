@@ -33,6 +33,9 @@ import {
 export const tournamentsRouter = Router()
 const TOURNAMENT_REGULATIONS_BUCKET = 'tournament-regulations'
 const MAX_REGULATION_SIZE = 6 * 1024 * 1024
+const tournamentOrganizerInclude = {
+  organizer: { select: { id: true, name: true } },
+} satisfies Prisma.TournamentInclude
 
 tournamentsRouter.use(requireAuth)
 tournamentsRouter.use(requireOrganization)
@@ -222,12 +225,13 @@ async function assertCanAddParticipant(tournamentId: string, playerId: string, o
 
 tournamentsRouter.get('/', async (req, res) => {
   try {
-    const { name, category, status, dateFrom, dateTo, page: pageParam, perPage: perPageParam } = req.query as {
+    const { name, category, status, dateFrom, dateTo, organizerId, page: pageParam, perPage: perPageParam } = req.query as {
       name?: string
       category?: string
       status?: string
       dateFrom?: string
       dateTo?: string
+      organizerId?: string
       page?: string
       perPage?: string
     }
@@ -253,6 +257,7 @@ tournamentsRouter.get('/', async (req, res) => {
         : {}),
       ...(category ? { category } : {}),
       ...(status ? { status } : {}),
+      ...(organizerId ? { organizerProfileId: organizerId } : {}),
       ...(fromDate
         ? {
             OR: [
@@ -268,6 +273,7 @@ tournamentsRouter.get('/', async (req, res) => {
       prisma.tournament.count({ where }),
       prisma.tournament.findMany({
         where,
+        include: tournamentOrganizerInclude,
         orderBy: [{ startDate: 'desc' }, { name: 'asc' }],
         skip: page * perPage,
         take: perPage,
@@ -290,6 +296,7 @@ tournamentsRouter.get('/:id', async (req, res) => {
   const tournament = await prisma.tournament.findFirst({
     where: { id: tournamentId, ...(await getVisibleTournamentWhere(req as OrganizationRequest)) },
     include: {
+      ...tournamentOrganizerInclude,
       players: { orderBy: { seed: 'asc' } },
       phases: {
         orderBy: { position: 'asc' },
@@ -360,6 +367,7 @@ tournamentsRouter.post(
           regulationContentType: contentType,
           regulationSize: BigInt(req.body.length),
         },
+        include: tournamentOrganizerInclude,
       })
       res.status(201).json(serializeTournament(updatedTournament))
     } catch (error) {
@@ -413,8 +421,10 @@ tournamentsRouter.get('/:id/regulation', async (req, res) => {
 
 tournamentsRouter.post('/', requireAdmin, async (req, res) => {
   try {
+    const authReq = req as AuthenticatedRequest & OrganizationRequest
     const data = req.body as TournamentCreate
-    const organizationId = contextOrganizationId(req as OrganizationRequest)
+    const organizationId = contextOrganizationId(authReq)
+    const organizer = await getOrCreateProfile(authReq.authUser!)
     const participantLimit = parseNullableInt(data.participant_limit)
     const groupCount = parseNullableInt(data.group_count)
     const qualifiersPerGroup = parseNullableInt(data.qualifiers_per_group)
@@ -430,6 +440,7 @@ tournamentsRouter.post('/', requireAdmin, async (req, res) => {
       const created = await tx.tournament.create({
         data: {
           organizationId,
+          organizerProfileId: organizer.id,
           name: data.name,
           location: data.location ?? null,
           registrationStartDate: parseDate(data.registration_start_date ?? null),
@@ -451,6 +462,7 @@ tournamentsRouter.post('/', requireAdmin, async (req, res) => {
       return tx.tournament.findUniqueOrThrow({
         where: { id: created.id },
         include: {
+          ...tournamentOrganizerInclude,
           players: true,
           phases: {
             orderBy: { position: 'asc' },
@@ -579,6 +591,7 @@ tournamentsRouter.put('/:id', requireAdmin, async (req, res) => {
       return tx.tournament.findUniqueOrThrow({
         where: { id: tournamentId },
         include: {
+          ...tournamentOrganizerInclude,
           players: { orderBy: { seed: 'asc' } },
           phases: {
             orderBy: { position: 'asc' },
@@ -666,6 +679,7 @@ tournamentsRouter.patch('/:id/publish', requireAdmin, async (req, res) => {
     const tournament = await prisma.tournament.update({
       where: { id: tournamentId },
       data: { published },
+      include: tournamentOrganizerInclude,
     })
     res.json(serializeTournament(tournament))
   } catch {
@@ -978,6 +992,7 @@ tournamentsRouter.post('/:id/phases/:phaseId/complete', requireAdmin, async (req
       return tx.tournament.findUniqueOrThrow({
         where: { id: tournamentId },
         include: {
+          ...tournamentOrganizerInclude,
           players: { orderBy: { seed: 'asc' } },
           phases: {
             orderBy: { position: 'asc' },

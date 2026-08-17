@@ -185,41 +185,53 @@ authRouter.post('/onboarding', requireAuth, async (req, res) => {
 
   try {
     const profile = await getOrCreateProfile(authUser)
-    if (!profile.onboardingCompletedAt) {
-      await prisma.$transaction(async (tx) => {
-        const claimed = await tx.profile.updateMany({
-          where: { id: profile.id, onboardingCompletedAt: null },
-          data: { onboardingIntent: intent, onboardingCompletedAt: new Date() },
-        })
-        if (claimed.count === 0 || intent !== 'player') return
+    const requestedName = typeof req.body?.player?.name === 'string' ? req.body.player.name.trim() : ''
+    const name = requestedName || profile.name?.trim() || profile.email
+    const birthDateValue = req.body?.player?.birth_date
+    const birthDate = birthDateValue ? new Date(String(birthDateValue)) : null
 
-        const existingPlayer = await tx.player.findFirst({
-          where: { userId: profile.id, organizationId: null },
-          select: { id: true },
-        })
-        if (existingPlayer) return
-
-        const requestedName = typeof req.body?.player?.name === 'string' ? req.body.player.name.trim() : ''
-        const name = requestedName || profile.name?.trim() || profile.email
-        if (name.length < 2 || name.length > 80) throw new Error('Il nome giocatore deve contenere da 2 a 80 caratteri')
-
-        const birthDateValue = req.body?.player?.birth_date
-        const birthDate = birthDateValue ? new Date(String(birthDateValue)) : null
-        if (birthDate && Number.isNaN(birthDate.getTime())) throw new Error('La data di nascita non è valida')
-
-        await tx.player.create({
-          data: {
-            userId: profile.id,
-            organizationId: null,
-            name,
-            ranking: 0,
-            birthDate,
-            club: typeof req.body?.player?.club === 'string' ? req.body.player.club.trim() || null : null,
-            phone: typeof req.body?.player?.phone === 'string' ? req.body.player.phone.trim() || null : null,
-          },
-        })
-      })
+    if (intent === 'player' && (name.length < 2 || name.length > 80)) {
+      throw new Error('Il nome giocatore deve contenere da 2 a 80 caratteri')
     }
+    if (intent === 'player' && birthDate && Number.isNaN(birthDate.getTime())) {
+      throw new Error('La data di nascita non è valida')
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (intent === 'explore') {
+        if (!profile.onboardingCompletedAt) {
+          await tx.profile.update({
+            where: { id: profile.id },
+            data: { onboardingIntent: 'explore', onboardingCompletedAt: new Date() },
+          })
+        }
+        return
+      }
+
+      const playerData = {
+        name,
+        birthDate,
+        club: typeof req.body?.player?.club === 'string' ? req.body.player.club.trim() || null : null,
+        phone: typeof req.body?.player?.phone === 'string' ? req.body.player.phone.trim() || null : null,
+      }
+      await tx.player.createMany({
+        data: [{ userId: profile.id, organizationId: null, ranking: 0, ...playerData }],
+        skipDuplicates: true,
+      })
+      await tx.player.updateMany({
+        where: { userId: profile.id, organizationId: null },
+        data: playerData,
+      })
+      await tx.profile.update({
+        where: { id: profile.id },
+        data: {
+          name,
+          ...(!profile.onboardingCompletedAt
+            ? { onboardingIntent: 'player', onboardingCompletedAt: new Date() }
+            : {}),
+        },
+      })
+    })
 
     const updated = await getOrCreateProfile(authUser)
     res.json({ user: serializeUser(updated) })

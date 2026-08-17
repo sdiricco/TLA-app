@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import moment from 'moment'
 import Button from 'primevue/button'
+import DatePicker from 'primevue/datepicker'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import { useAuthStore } from '@/stores/auth'
@@ -12,14 +14,15 @@ const router = useRouter()
 const auth = useAuthStore()
 const step = ref<OnboardingStep>('choice')
 const playerName = ref(auth.user?.name?.trim() ?? '')
-const birthDate = ref('')
+const birthDate = ref<Date | null>(null)
+const today = new Date()
 const club = ref('')
 const phone = ref('')
 
 async function createPlayerProfile(): Promise<void> {
   const completed = await auth.completeOnboarding('player', {
     name: playerName.value.trim(),
-    birth_date: birthDate.value || null,
+    birth_date: birthDate.value ? moment(birthDate.value).format('YYYY-MM-DD') : null,
     club: club.value.trim() || null,
     phone: phone.value.trim() || null,
   })
@@ -61,8 +64,8 @@ async function logout(): Promise<void> {
       <section v-if="step === 'choice'" class="my-auto py-10 sm:py-14" aria-labelledby="onboarding-title">
         <header class="mx-auto mb-7 max-w-2xl text-center sm:mb-10">
           <p class="mb-2 text-xs font-extrabold uppercase tracking-[0.18em] text-primary">Benvenuto in TLA</p>
-          <h1 id="onboarding-title" class="text-3xl font-bold leading-tight tracking-tight sm:text-5xl">Come vuoi iniziare?</h1>
-          <p class="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-(--color-text-muted) sm:text-base">Configuriamo soltanto ciò che ti serve. Potrai aggiungere le altre funzionalità in qualsiasi momento.</p>
+          <h1 id="onboarding-title" class="text-3xl font-bold leading-tight tracking-tight sm:text-5xl">Da cosa vuoi iniziare?</h1>
+          <p class="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-(--color-text-muted) sm:text-base">Non stai scegliendo un ruolo: con lo stesso account puoi giocare e gestire uno o più club. Configuriamo solo il tuo primo passo.</p>
         </header>
 
         <Message v-if="auth.error" severity="error" :closable="false" class="mx-auto mb-5 max-w-2xl">{{ auth.error }}</Message>
@@ -72,7 +75,7 @@ async function logout(): Promise<void> {
             <span class="grid size-12 place-items-center rounded-xl bg-primary-50 text-xl text-primary"><i class="pi pi-trophy" /></span>
             <p class="mt-5 text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-primary">Giocatore</p>
             <h2 class="mt-1 text-xl font-bold">Voglio giocare</h2>
-            <p class="mt-2 flex-1 text-sm leading-relaxed text-(--color-text-muted)">Crea la tua scheda sportiva, iscriviti ai tornei e segui risultati e statistiche.</p>
+            <p class="mt-2 flex-1 text-sm leading-relaxed text-(--color-text-muted)">Crea la tua scheda sportiva, iscriviti ai tornei e segui risultati e statistiche. Potrai creare anche un club in seguito.</p>
             <Button class="mt-5 w-full" label="Crea profilo giocatore" icon="pi pi-arrow-right" icon-pos="right" @click="step = 'player'" />
           </article>
 
@@ -80,7 +83,7 @@ async function logout(): Promise<void> {
             <span class="grid size-12 place-items-center rounded-xl bg-primary-50 text-xl text-primary"><i class="pi pi-building" /></span>
             <p class="mt-5 text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-primary">Organizzatore</p>
             <h2 class="mt-1 text-xl font-bold">Gestisco un club</h2>
-            <p class="mt-2 flex-1 text-sm leading-relaxed text-(--color-text-muted)">Crea uno spazio, invita i membri e gestisci tornei e giocatori come proprietario.</p>
+            <p class="mt-2 flex-1 text-sm leading-relaxed text-(--color-text-muted)">Crea uno spazio, invita i membri e gestisci tornei e giocatori. Potrai aggiungere anche la tua scheda sportiva.</p>
             <Button class="mt-5 w-full" label="Crea organizzazione" icon="pi pi-arrow-right" icon-pos="right" severity="secondary" outlined @click="createOrganization" />
           </article>
 
@@ -110,7 +113,7 @@ async function logout(): Promise<void> {
               <Message v-if="auth.error" severity="error" :closable="false">{{ auth.error }}</Message>
               <label for="onboarding-player-name" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Nome e cognome<InputText id="onboarding-player-name" v-model="playerName" minlength="2" maxlength="80" autocomplete="name" fluid required /></label>
               <div class="grid gap-4 sm:grid-cols-2">
-                <label for="onboarding-birth-date" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Data di nascita <small class="font-normal">Facoltativa</small><InputText id="onboarding-birth-date" v-model="birthDate" type="date" fluid /></label>
+                <label for="onboarding-birth-date" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Data di nascita <small class="font-normal">Facoltativa</small><DatePicker input-id="onboarding-birth-date" v-model="birthDate" date-format="dd/mm/yy" placeholder="gg/mm/aaaa" :max-date="today" fluid show-button-bar show-icon icon-display="input" /></label>
                 <label for="onboarding-phone" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Telefono <small class="font-normal">Facoltativo</small><InputText id="onboarding-phone" v-model="phone" type="tel" autocomplete="tel" placeholder="+39 333 123 4567" fluid /></label>
               </div>
               <label for="onboarding-club" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Club di appartenenza <small class="font-normal">Facoltativo</small><InputText id="onboarding-club" v-model="club" placeholder="Es. Tennis Club Aurora" fluid /></label>
