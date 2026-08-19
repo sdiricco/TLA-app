@@ -30,6 +30,7 @@
   } from '@/config/tournamentFormats';
   import { useAuthStore } from '@/stores/auth';
   import { useFeatureFlagsStore } from '@/stores/featureFlags';
+  import { useOrganizationsStore } from '@/stores/organizations';
   import { useTournamentFormDraftStore } from '@/stores/tournamentFormDraft';
   import { useTournamentsStore } from '@/stores/tournaments';
   import type {
@@ -47,6 +48,7 @@
   const router = useRouter();
   const auth = useAuthStore();
   const featureFlags = useFeatureFlagsStore();
+  const organizations = useOrganizationsStore();
   const draftStore = useTournamentFormDraftStore();
   const store = useTournamentsStore();
   const toast = useToast();
@@ -163,6 +165,13 @@
     ];
   });
   const isEditing = computed(() => editingId.value !== null);
+  const formDescription = computed(() => {
+    if (isEditing.value) return 'Aggiorna i dati del torneo';
+    if (organizations.activeOrganization) {
+      return `Crea un torneo per ${organizations.activeOrganization.name}`;
+    }
+    return 'Crea un torneo globale: ne sarai l’organizzatore e potrai gestirlo in autonomia';
+  });
 
   // Combines static format metadata with feature availability and current selection.
   const formatOptions = computed<TournamentFormatOption[]>(() =>
@@ -468,10 +477,20 @@
    */
 
   // Hydrates edit mode by adapting API fields to the form component contracts.
-  async function loadTournament(id: string): Promise<void> {
+  async function loadTournament(id: string): Promise<boolean> {
     loadingTournament.value = true;
     try {
       const tournament = await store.getById(id);
+      if (!tournament.can_manage) {
+        toast.add({
+          severity: 'warn',
+          summary: 'Accesso non consentito',
+          detail: 'Solo l’organizzatore o un amministratore del torneo può modificarlo.',
+          life: 4000,
+        });
+        await router.replace({ name: 'tournament-detail', params: { id } });
+        return false;
+      }
       const firstPhase = tournament.phases?.[0];
       form.value = {
         name: tournament.name,
@@ -509,8 +528,9 @@
             name: tournament.regulation_name,
             contentType: tournament.regulation_content_type ?? null,
             size: tournament.regulation_size ?? null,
-          }
+        }
         : null;
+      return true;
     } catch (error) {
       toast.add({
         severity: 'error',
@@ -519,6 +539,7 @@
         life: 3000,
       });
       await router.push({ name: 'tournaments' });
+      return false;
     } finally {
       loadingTournament.value = false;
     }
@@ -585,7 +606,7 @@
     async (id) => {
       editingId.value = id ? String(id) : null;
       const restoredDraft = draftStore.restore(draftContextKey());
-      if (restoredDraft) {
+      if (restoredDraft && !editingId.value) {
         form.value = restoredDraft.form;
         regulationFile.value = restoredDraft.regulationFile;
         existingRegulation.value = restoredDraft.existingRegulation;
@@ -597,7 +618,12 @@
         existingRegulation.value = null;
         return;
       }
-      await loadTournament(editingId.value);
+      const canEdit = await loadTournament(editingId.value);
+      if (canEdit && restoredDraft) {
+        form.value = restoredDraft.form;
+        regulationFile.value = restoredDraft.regulationFile;
+        existingRegulation.value = restoredDraft.existingRegulation;
+      }
     },
     { immediate: true }
   );
@@ -622,7 +648,7 @@
       />
       <PageHeader
         :title="isEditing ? 'Modifica torneo' : 'Nuovo torneo'"
-        :description="isEditing ? 'Aggiorna i dati del torneo' : 'Crea un nuovo torneo'"
+        :description="formDescription"
       />
     </div>
 

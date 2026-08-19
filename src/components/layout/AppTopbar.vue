@@ -28,19 +28,24 @@ const title = computed(() => {
   return 'Tornei'
 })
 
-const activeOrganizationName = computed(() => organizations.activeOrganization?.name ?? 'Tornei globali')
-const organizationFilterLabel = computed(() => organizations.activeOrganization?.name ?? 'I miei contenuti')
+const organizationFilterLabel = computed(() => organizations.activeOrganization?.name ?? 'Tutti i contenuti')
 const organizationMenuItems = computed(() => [
   {
-    label: 'I miei contenuti',
+    label: 'Tutti i contenuti',
     icon: organizations.activeOrganization ? 'pi pi-filter' : 'pi pi-check',
     command: selectGlobalContext,
   },
-  ...organizations.organizations.map((organization) => ({
-    label: organization.name,
-    icon: organization.id === organizations.activeId ? 'pi pi-check' : 'pi pi-building',
-    command: () => selectOrganization(organization.id),
-  })),
+  ...(organizations.organizations.length
+    ? organizations.organizations.map((organization) => ({
+        label: organization.name,
+        icon: organization.id === organizations.activeId ? 'pi pi-check' : 'pi pi-building',
+        command: () => selectOrganization(organization.id),
+      }))
+    : [{
+        label: 'Non sei iscritto a nessuna organizzazione',
+        icon: 'pi pi-info-circle',
+        disabled: true,
+      }]),
   { separator: true },
   {
     label: 'Gestisci organizzazioni',
@@ -68,8 +73,7 @@ const backNavigation = computed(() => {
   return null
 })
 const createAction = computed(() => {
-  if (!auth.isAdmin) return null
-  if (route.name === 'dashboard' || route.name === 'tournaments') {
+  if (auth.canCreateTournament && route.name === 'tournaments') {
     return {
       routeName: 'tournament-create' as const,
       label: 'Nuovo torneo',
@@ -77,7 +81,7 @@ const createAction = computed(() => {
       ariaLabel: 'Crea un nuovo torneo',
     }
   }
-  if (route.name === 'players') {
+  if (auth.isAdmin && route.name === 'players') {
     return {
       routeName: 'player-create' as const,
       label: 'Nuovo giocatore',
@@ -127,10 +131,9 @@ function goBack(): void {
     </button>
     <div class="topbar-copy">
       <span class="topbar-title">{{ displayedTitle }}</span>
-      <span class="topbar-organization hidden md:inline">{{ activeOrganizationName }}</span>
       <button
         type="button"
-        class="mobile-organization-filter md:hidden"
+        class="organization-filter"
         aria-haspopup="menu"
         :aria-label="`Filtra per organizzazione: ${organizationFilterLabel}`"
         @click="toggleOrganizationMenu"
@@ -139,7 +142,7 @@ function goBack(): void {
         <span>{{ organizationFilterLabel }}</span>
         <IconifyIcon icon="mdi:chevron-down" aria-hidden="true" />
       </button>
-      <Menu ref="organizationMenu" :model="organizationMenuItems" popup />
+      <Menu ref="organizationMenu" :model="organizationMenuItems" class="w-72!" popup />
     </div>
     <div class="topbar-actions">
       <button
@@ -182,16 +185,16 @@ function goBack(): void {
 }
 .topbar-copy { display: flex; min-width: 0; flex: 1; align-items: center; gap: 0.55rem; overflow: hidden; }
 .topbar-title { min-width: 0; overflow: hidden; color: var(--color-text); font-size: 0.92rem; font-weight: 800; letter-spacing: -0.02em; text-overflow: ellipsis; white-space: nowrap; }
-.topbar-organization { min-width: 0; overflow: hidden; color: var(--color-text-muted); font-size: 0.76rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.mobile-organization-filter { display: flex; min-width: 0; max-width: min(10rem, 42vw); height: 2rem; align-items: center; gap: .3rem; padding: 0 .5rem; border: 1px solid var(--color-border); border-radius: .6rem; background: transparent; color: var(--color-text-muted); cursor: pointer; }
-.mobile-organization-filter span { min-width: 0; overflow: hidden; font-size: .7rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-.mobile-organization-filter :deep(svg:first-child) { flex: 0 0 auto; color: var(--color-primary-600); }
-.mobile-organization-filter :deep(svg:last-child) { flex: 0 0 auto; font-size: .72rem; }
-.mobile-organization-filter:focus-visible { outline: 2px solid rgb(var(--color-primary-500-rgb) / 35%); outline-offset: 2px; }
+.organization-filter { display: flex; min-width: 0; max-width: min(10rem, 42vw); height: 2rem; align-items: center; gap: .3rem; padding: 0 .5rem; border: 1px solid var(--color-border); border-radius: .6rem; background: transparent; color: var(--color-text-muted); cursor: pointer; }
+.organization-filter:hover { border-color: var(--color-primary-300); color: var(--color-primary-700); }
+.organization-filter span { min-width: 0; overflow: hidden; font-size: .7rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.organization-filter :deep(svg:first-child) { flex: 0 0 auto; color: var(--color-primary-600); }
+.organization-filter :deep(svg:last-child) { flex: 0 0 auto; font-size: .72rem; }
+.organization-filter:focus-visible { outline: 2px solid rgb(var(--color-primary-500-rgb) / 35%); outline-offset: 2px; }
 .topbar-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 0.15rem; }
 .topbar-icon { display: grid; width: 2.5rem; height: 2.5rem; flex: 0 0 auto; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--color-text); cursor: pointer; }
 .topbar-icon:hover { color: var(--color-primary-600); }
 .topbar-icon:focus-visible { outline: 2px solid rgb(var(--color-primary-500-rgb) / 35%); outline-offset: 2px; }
 @media (max-width: 767px) { .app-topbar { padding-inline: 0.85rem; } }
-@media (min-width: 768px) { .mobile-organization-filter { display: none; } }
+@media (min-width: 768px) { .organization-filter { max-width: 14rem; padding-inline: .65rem; } }
 </style>

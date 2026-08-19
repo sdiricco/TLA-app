@@ -42,6 +42,7 @@ const selectedRemovePlayerIds = ref<string[]>([])
 const enrolledNameFilter = ref('')
 const enrolledClubFilter = ref('')
 const addingPlayer = ref(false)
+const canManageTournament = computed(() => tournament.value?.can_manage === true)
 
 // -----------------------------------------------------------------------------
 // Derived player collections
@@ -271,7 +272,7 @@ watch(
       <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 class="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{{ tournament.name }}</h1>
-          <p class="mt-2 text-sm text-(--color-text-muted) sm:text-base">Consulta {{ auth.isAdmin ? 'e gestisci ' : '' }}i giocatori iscritti al torneo.</p>
+          <p class="mt-2 text-sm text-(--color-text-muted) sm:text-base">Consulta {{ canManageTournament ? 'e gestisci ' : '' }}i giocatori iscritti al torneo.</p>
         </div>
         <strong class="shrink-0 text-sm text-(--color-text-muted)">
           {{ enrolledPlayers.length }} {{ enrolledPlayers.length === 1 ? 'iscritto' : 'iscritti' }}
@@ -300,7 +301,7 @@ watch(
     </div>
 
     <!-- Administrator player management -->
-    <template v-if="auth.isAdmin">
+    <template v-if="canManageTournament">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <span class="text-sm text-muted-color">
           {{ enrolledPlayers.length }} giocatori iscritti

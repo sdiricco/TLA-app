@@ -6,12 +6,16 @@ import Card from 'primevue/card'
 import { useToast } from 'primevue/usetoast'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import TournamentPhaseBuilder from '@/components/tournaments/TournamentPhaseBuilder.vue'
+import { useAuthStore } from '@/stores/auth'
 import { useTournamentFormDraftStore } from '@/stores/tournamentFormDraft'
+import { useTournamentsStore } from '@/stores/tournaments'
 import type { TournamentPhaseInput } from '@/types'
 
 const router = useRouter()
 const toast = useToast()
+const auth = useAuthStore()
 const draft = useTournamentFormDraftStore()
+const tournaments = useTournamentsStore()
 
 function createInitialPhase(inputCount: number): TournamentPhaseInput[] {
   const outputCount = Math.min(8, Math.max(1, Math.floor(inputCount / 2)))
@@ -135,6 +139,22 @@ async function cancel(): Promise<void> {
 onMounted(async () => {
   if (!draft.form || !draft.contextKey) {
     await router.replace({ name: 'tournament-create' })
+    return
+  }
+  if (draft.contextKey === 'create' && !auth.canCreateTournament) {
+    await router.replace({ name: 'tournaments' })
+    return
+  }
+  if (draft.contextKey.startsWith('edit:')) {
+    const tournamentId = draft.contextKey.slice('edit:'.length)
+    try {
+      const tournament = await tournaments.getById(tournamentId)
+      if (!tournament.can_manage) {
+        await router.replace({ name: 'tournament-detail', params: { id: tournamentId } })
+      }
+    } catch {
+      await router.replace({ name: 'tournaments' })
+    }
   }
 })
 </script>

@@ -2,7 +2,20 @@ import { expect, test } from '@playwright/test'
 
 test('lets an organizer add a player profile without losing club permissions', async ({ page }) => {
   let playerCreated = false
+  let accountDeleted = false
   let onboardingPayload: unknown
+  let updatePayload: Record<string, unknown> | null = null
+  let currentPlayer = {
+    id: 'profile-player',
+    name: 'Simone Diricco',
+    ranking: 0,
+    birth_date: '1991-06-20',
+    photo_url: null,
+    club: 'TC Lucca',
+    phone: '+39 333 123 4567',
+    user_id: 'organizer-player',
+    organization_id: null,
+  }
 
   await page.addInitScript(() => {
     localStorage.clear()
@@ -43,6 +56,10 @@ test('lets an organizer add a player profile without losing club permissions', a
       },
     })
   })
+  await page.route('**/api/auth/account', async (route) => {
+    accountDeleted = true
+    await route.fulfill({ status: 204 })
+  })
   await page.route('**/api/players/profile-player/matches', async (route) => {
     await route.fulfill({
       json: {
@@ -53,19 +70,14 @@ test('lets an organizer add a player profile without losing club permissions', a
     })
   })
   await page.route('**/api/players/me', async (route) => {
+    if (route.request().method() === 'PATCH') {
+      updatePayload = route.request().postDataJSON() as Record<string, unknown>
+      currentPlayer = { ...currentPlayer, ...updatePayload }
+      await route.fulfill({ json: currentPlayer })
+      return
+    }
     await route.fulfill({
-      json: playerCreated
-        ? {
-            id: 'profile-player',
-            name: 'Simone Diricco',
-            ranking: 0,
-            birth_date: '1991-06-20',
-            club: 'TC Lucca',
-            phone: '+39 333 123 4567',
-            user_id: 'organizer-player',
-            organization_id: null,
-          }
-        : null,
+      json: playerCreated ? currentPlayer : null,
     })
   })
 
@@ -89,4 +101,28 @@ test('lets an organizer add a player profile without losing club permissions', a
       phone: '+39 333 123 4567',
     },
   })
+
+  await page.getByRole('button', { name: 'Modifica profilo' }).click()
+  await page.getByLabel('Nome e cognome').fill('Simone D. Diricco')
+  await page.getByLabel('Telefono').fill('+39 333 765 4321')
+  await page.getByLabel('Club di appartenenza').fill('Tennis Club Lucca')
+  await page.getByRole('button', { name: 'Salva modifiche' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Simone D. Diricco', level: 1 })).toBeVisible()
+  expect(updatePayload).toEqual({
+    name: 'Simone D. Diricco',
+    birth_date: '1991-06-20',
+    club: 'Tennis Club Lucca',
+    phone: '+39 333 765 4321',
+    photo_url: null,
+  })
+
+  await page.getByRole('button', { name: 'Elimina account', exact: true }).click()
+  const deleteButton = page.getByRole('button', { name: 'Elimina definitivamente' })
+  await expect(deleteButton).toBeDisabled()
+  await page.getByLabel('Per confermare, digita simone@tla.local').fill('simone@tla.local')
+  await deleteButton.click()
+
+  await expect(page).toHaveURL(/\/login$/)
+  expect(accountDeleted).toBe(true)
 })

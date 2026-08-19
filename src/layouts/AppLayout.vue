@@ -36,6 +36,6 @@ const layout = useLayoutStore()
 </template>
 
 <style scoped>
-.app-content { padding: var(--app-page-padding); background: radial-gradient(circle at 100% 0, rgb(var(--color-primary-500-rgb) / 5%), transparent 30rem), var(--color-surface-ground); }
+.app-content { padding: var(--app-page-padding); background: var(--app-content-background); }
 @media (max-width: 767px) { .app-content { padding-bottom: 0.85rem; } }
 </style>

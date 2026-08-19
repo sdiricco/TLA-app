@@ -13,6 +13,92 @@ export interface ChangelogEntry {
 // the same pull request; see the product changelog policy in AGENTS.md.
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: '2026-08-19',
+    version: 'Preferenze 1.0',
+    kind: 'feature',
+    title: 'Tema chiaro, scuro o automatico',
+    description: 'L’aspetto dell’app è ora configurabile dalle Preferenze e rimane sincronizzato con il dispositivo.',
+    items: [
+      'Selettore Chiaro, Scuro e Sistema basato sui componenti PrimeVue',
+      'Preferenza salvata localmente e ripristinata a ogni accesso',
+      'Modalità Sistema aggiornata in tempo reale quando cambia il tema del dispositivo',
+      'Colori del browser e dei componenti PrimeVue coordinati con l’aspetto attivo',
+      'Sfondo della modalità scura reso neutro, senza gradazioni verdi nel contenuto principale',
+    ],
+  },
+  {
+    date: '2026-08-19',
+    version: 'Account 1.0',
+    kind: 'feature',
+    title: 'Cancellazione account self-service',
+    description: 'Il proprio account può ora essere eliminato definitivamente dalla pagina Profilo.',
+    items: [
+      'Conferma protetta dalla digitazione dell’indirizzo email',
+      'Dati sportivi personali anonimizzati conservando lo storico dei risultati dei club',
+      'Tornei globali personali e organizzazioni vuote rimossi insieme all’account',
+      'Protezione delle organizzazioni attive che richiedono prima un nuovo proprietario',
+    ],
+  },
+  {
+    date: '2026-08-19',
+    version: 'Profilo 1.1',
+    kind: 'feature',
+    title: 'Il tuo profilo ora si modifica direttamente dall’app',
+    description: 'Dati account e informazioni sportive sono raccolti in un unico form self-service.',
+    items: [
+      'Modifica autonoma di nome, foto, data di nascita, club e telefono',
+      'Aggiornamento riservato esclusivamente al proprietario della scheda giocatore',
+      'Nome dell’account sincronizzato automaticamente con l’identità sportiva',
+    ],
+  },
+  {
+    date: '2026-08-19',
+    version: 'Navigazione 1.1',
+    kind: 'improvement',
+    title: 'Contesto organizzazione sempre nell’header',
+    description: 'Il passaggio tra contenuti globali e club è ora disponibile in modo coerente dalla topbar.',
+    items: [
+      'Filtro organizzazione spostato dalla sidebar all’header su desktop e mobile',
+      'Contesto globale rinominato “Tutti i contenuti” con stato vuoto per chi non appartiene ancora a un’organizzazione',
+      'Creazione torneo rimossa dalla dashboard e mantenuta nella pagina Tornei',
+    ],
+  },
+  {
+    date: '2026-08-18',
+    version: 'Organizzatori 1.2',
+    kind: 'feature',
+    title: 'Tornei globali senza obbligo di creare un club',
+    description: 'Ogni account registrato può avviare una competizione personale e gestirla come organizzatore.',
+    items: [
+      'Creazione di tornei globali disponibile direttamente dalla pagina Tornei',
+      'Il creatore diventa automaticamente organizzatore e amministratore del proprio torneo',
+      'I tornei dei club restano riservati a proprietari e amministratori del club',
+    ],
+  },
+  {
+    date: '2026-08-18',
+    version: 'Identità 1.2',
+    kind: 'fix',
+    title: 'Nome e cognome coerenti nella scheda giocatore',
+    description: 'Il nome dell’account e quello della scheda sportiva restano ora sincronizzati.',
+    items: [
+      'Email segnaposto sostituita con il nome e cognome già presenti nel profilo',
+      'Modifiche future al nome propagate automaticamente alle schede giocatore collegate',
+    ],
+  },
+  {
+    date: '2026-08-18',
+    version: 'Organizzatori 1.1',
+    kind: 'improvement',
+    title: 'L’organizzatore gestisce il proprio torneo',
+    description: 'Il ruolo di organizzatore è ora visibile e operativo direttamente nella competizione.',
+    items: [
+      'Organizzatore evidenziato nel riepilogo del torneo con accesso alla sua scheda',
+      'Permessi di modifica, partecipanti, tabellone e risultati limitati al torneo organizzato',
+      'Amministratori del club e della piattaforma mantengono i rispettivi privilegi',
+    ],
+  },
+  {
     date: '2026-08-17',
     version: 'Organizzatori 1.0',
     kind: 'feature',

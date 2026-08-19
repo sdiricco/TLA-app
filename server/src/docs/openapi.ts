@@ -409,6 +409,19 @@ export const openApiSpec = {
         },
       },
     },
+    '/auth/account': {
+      delete: {
+        summary: 'Elimina definitivamente il proprio account',
+        description: 'Rimuove l’identità Supabase Auth, anonimizza le schede giocatore e cancella i contenuti globali posseduti esclusivamente dall’account.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          204: { description: 'Account eliminato' },
+          403: { description: 'Account registrato richiesto' },
+          409: { description: 'Trasferimento della proprietà di un’organizzazione richiesto' },
+          503: { description: 'Cancellazione non configurata o temporaneamente non disponibile' },
+        },
+      },
+    },
     '/auth/onboarding': {
       post: {
         summary: 'Completa la configurazione iniziale dell’account',
@@ -511,6 +524,53 @@ export const openApiSpec = {
         },
       },
     },
+    '/players/me': {
+      get: {
+        summary: 'Scheda giocatore collegata al mio account',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Scheda giocatore personale, oppure null se non è stata ancora creata',
+            content: {
+              'application/json': {
+                schema: { oneOf: [{ $ref: '#/components/schemas/Player' }, { type: 'null' }] },
+              },
+            },
+          },
+        },
+      },
+      patch: {
+        summary: 'Modifica la mia scheda giocatore',
+        description: 'Aggiorna esclusivamente la scheda collegata all’account autenticato. Il ranking rimane riservato agli amministratori.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', minLength: 2, maxLength: 80 },
+                  birth_date: { type: 'string', format: 'date', nullable: true },
+                  photo_url: { type: 'string', nullable: true },
+                  club: { type: 'string', maxLength: 120, nullable: true },
+                  phone: { type: 'string', maxLength: 40, nullable: true },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Scheda aggiornata',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Player' } } },
+          },
+          400: { description: 'Dati non validi' },
+          403: { description: 'Account richiesto' },
+          404: { description: 'Profilo giocatore non trovato' },
+        },
+      },
+    },
     '/players/{id}': {
       get: {
         summary: 'Dettaglio giocatore',
@@ -564,6 +624,7 @@ export const openApiSpec = {
       },
       post: {
         summary: 'Crea torneo',
+        description: 'Un account registrato può creare un torneo globale. Nel contesto di un club servono i permessi di proprietario o amministratore.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -601,8 +662,11 @@ export const openApiSpec = {
           },
         },
         responses: {
+          403: {
+            description: 'Account ospite oppure membro del club privo dei permessi richiesti',
+          },
           201: {
-            description: 'Torneo creato',
+            description: 'Torneo creato; il profilo autenticato è assegnato come organizzatore',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/Tournament' },

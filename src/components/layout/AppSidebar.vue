@@ -11,7 +11,6 @@ const router = useRouter()
 const auth = useAuthStore()
 const layout = useLayoutStore()
 const organizations = useOrganizationsStore()
-const organizationsOpen = ref(false)
 const profileMenu = ref()
 
 function isActive(to: string): boolean {
@@ -33,18 +32,6 @@ const profileItems = computed(() => [
   { label: 'Esci', icon: 'pi pi-sign-out', command: handleLogout },
 ])
 
-function selectOrganization(id: string): void {
-  organizations.select(id)
-  organizationsOpen.value = false
-  window.location.assign('/dashboard')
-}
-
-function selectGlobalContext(): void {
-  organizations.clearSelection()
-  organizationsOpen.value = false
-  window.location.assign('/dashboard')
-}
-
 const displayName = computed(() => auth.user?.name?.trim() || 'Account TLA')
 const accountContext = computed(() => {
   if (auth.isGuest) return 'Ospite'
@@ -53,10 +40,6 @@ const accountContext = computed(() => {
   if (organizations.activeOrganization) return 'Membro del club'
   return auth.user?.role === 'admin' ? 'Amministratore piattaforma' : 'Account personale'
 })
-const otherOrganizations = computed(() =>
-  organizations.organizations.filter((organization) => organization.id !== organizations.activeId),
-)
-
 async function handleLogout(): Promise<void> {
   await auth.logout()
   await router.push('/login')
@@ -75,48 +58,6 @@ function toggleProfileMenu(event: Event): void {
     </div>
 
     <nav class="sidebar-nav">
-      <div class="organization-switcher">
-        <div class="organization-header">
-          <span>FILTRO ORGANIZZAZIONE</span>
-          <RouterLink to="/organizations" @click="layout.closeSidebar()">Gestisci</RouterLink>
-        </div>
-
-        <button
-          class="organization-current"
-          type="button"
-          :aria-expanded="organizationsOpen"
-          @click="organizationsOpen = !organizationsOpen"
-        >
-          <span class="organization-current-icon"><IconifyIcon :icon="organizations.activeOrganization ? 'mdi:office-building-outline' : 'mdi:filter-variant'" /></span>
-          <span class="organization-current-copy">
-            <strong>{{ organizations.activeOrganization?.name ?? 'I miei contenuti' }}</strong>
-            <small v-if="organizations.activeOrganization">
-              {{ organizations.activeOrganization.role === 'owner' ? 'Proprietario' : organizations.activeOrganization.role === 'admin' ? 'Amministratore' : 'Membro' }}
-            </small>
-            <small v-else>Globali e mie organizzazioni</small>
-          </span>
-          <IconifyIcon v-if="otherOrganizations.length > 0" icon="mdi:chevron-down" class="organization-chevron" :class="{ open: organizationsOpen }" />
-        </button>
-
-        <div v-if="organizationsOpen && otherOrganizations.length > 0" class="organization-list">
-          <button
-            v-for="organization in otherOrganizations"
-            :key="organization.id"
-            type="button"
-            class="organization-option"
-            @click="selectOrganization(organization.id)"
-          >
-            <span class="organization-option-name">{{ organization.name }}</span>
-            <small>
-              {{ organization.role === 'owner' ? 'Proprietario' : organization.role === 'admin' ? 'Amministratore' : 'Membro' }}
-            </small>
-          </button>
-        </div>
-        <button v-if="organizationsOpen" type="button" class="organization-option" @click="selectGlobalContext">
-          <span class="organization-option-name">I miei contenuti</span>
-          <small>Globali e mie organizzazioni</small>
-        </button>
-      </div>
       <p>MENU</p>
       <ul>
         <li v-for="item in navItems" :key="item.to">
@@ -160,27 +101,6 @@ function toggleProfileMenu(event: Event): void {
 .brand-ball::before { left: -1rem; top: -0.15rem; }
 .brand-ball::after { right: -1rem; bottom: -0.15rem; }
 .sidebar-nav { flex: 1; overflow-y: auto; padding: 1.15rem 0.75rem; }
-.organization-switcher { display: grid; gap: .5rem; margin: 0 0 1.1rem; padding: 0 0 1rem; border-bottom: 1px solid rgb(var(--color-white-rgb) / 9%); }
-.organization-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
-.organization-header > span { color: rgb(var(--color-white-rgb) / 45%); font-size: .58rem; font-weight: 800; letter-spacing: .11em; }
-.organization-header a { color: rgb(var(--color-white-rgb) / 58%); font-size: .66rem; text-decoration: none; }
-.organization-switcher a:hover { color: var(--color-accent); }
-.organization-current { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .65rem; width: 100%; min-height: 3.25rem; padding: .55rem .65rem; border: 0; border-radius: .75rem; background: rgb(var(--color-white-rgb) / 4%); color: var(--color-white); text-align: left; cursor: pointer; transition: background 160ms ease; }
-.organization-current:hover { background: rgb(var(--color-white-rgb) / 8%); }
-.organization-current:disabled { cursor: default; }
-.organization-current-icon { display: grid; place-items: center; width: 1.55rem; height: 1.55rem; color: var(--color-accent); font-size: .72rem; }
-.organization-current-icon :deep(svg) { width: 1em; height: 1em; }
-.organization-current-copy { display: grid; min-width: 0; gap: .1rem; }
-.organization-current-copy strong { overflow: hidden; font-size: .74rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-.organization-current-copy small { color: rgb(var(--color-white-rgb) / 55%); font-size: .62rem; }
-.organization-chevron { color: rgb(var(--color-white-rgb) / 45%); font-size: .58rem; transition: transform 160ms ease; }
-.organization-chevron :deep(svg) { width: 1em; height: 1em; }
-.organization-chevron.open { transform: rotate(180deg); }
-.organization-list { display: grid; gap: .16rem; margin-left: 2.1rem; padding-top: .1rem; }
-.organization-option { display: grid; gap: .08rem; padding: .45rem .55rem; border: 0; border-radius: .6rem; background: transparent; color: rgb(var(--color-white-rgb) / 80%); text-align: left; cursor: pointer; }
-.organization-option:hover { background: rgb(var(--color-white-rgb) / 6%); color: var(--color-white); }
-.organization-option-name { overflow: hidden; font-size: .72rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.organization-option small { color: rgb(var(--color-white-rgb) / 48%); font-size: .6rem; }
 .sidebar-nav > p { margin: 0 0.55rem 0.55rem; color: rgb(var(--color-white-rgb) / 50%); font-size: 0.64rem; font-weight: 800; letter-spacing: 0.12em; }
 .sidebar-nav ul { display: flex; flex-direction: column; gap: 0.35rem; margin: 0; padding: 0; list-style: none; }
 .nav-link { display: flex; align-items: center; gap: 0.75rem; min-height: 3rem; padding: 0.5rem 0.65rem; border-radius: .75rem; color: rgb(var(--color-white-rgb) / 67%); font-size: 0.82rem; font-weight: 550; text-decoration: none; transition: 160ms ease; }

@@ -5,6 +5,7 @@ import { prisma } from '../db/prisma'
 import { requireAuth } from '../middleware/requireAuth'
 import { requireAdmin } from '../middleware/requireAdmin'
 import { requireOrganization, type OrganizationRequest } from '../middleware/requireOrganization'
+import { getOrCreateProfile } from '../lib/profileRepo'
 import { serializePlayer } from '../lib/serializers'
 import { visiblePlayerWhere as getVisiblePlayerWhere } from '../lib/visibility'
 import { visibleTournamentWhere as getVisibleTournamentWhere } from '../lib/visibility'
@@ -23,6 +24,23 @@ function parseNullableDate(value: unknown): Date | null | undefined {
   if (value === null || value === '') return null
   const date = new Date(String(value))
   return Number.isNaN(date.getTime()) ? null : date
+}
+
+function parseOwnProfileDate(value: unknown): Date | null | undefined {
+  if (value === undefined) return undefined
+  if (value === null || value === '') return null
+
+  const date = new Date(String(value))
+  if (Number.isNaN(date.getTime()) || date.getTime() > Date.now()) {
+    throw new Error('La data di nascita non è valida')
+  }
+  return date
+}
+
+function parseOptionalText(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined
+  if (value === null) return null
+  return String(value).trim() || null
 }
 
 function parseNonNegativeInt(value: unknown, fallback: number): number {
@@ -77,8 +95,79 @@ playersRouter.get('/me', async (req, res) => {
     return
   }
 
-  const player = await prisma.player.findFirst({ where: { userId, ...(await getVisiblePlayerWhere(authReq)) } })
+  const visibleWhere = await getVisiblePlayerWhere(authReq)
+  const player = await prisma.player.findFirst({
+    where: { userId, organizationId: null, ...visibleWhere },
+  }) ?? await prisma.player.findFirst({ where: { userId, ...visibleWhere } })
   res.json(player ? serializePlayer(player) : null)
+})
+
+playersRouter.patch('/me', async (req, res) => {
+  const authReq = req as OrganizationRequest
+  const authUser = authReq.authUser
+
+  if (!authUser || authUser.id === 'guest') {
+    res.status(403).json({ message: 'Accedi con un account per modificare il profilo giocatore' })
+    return
+  }
+
+  try {
+    const data = req.body as PlayerUpdate
+    const profile = await getOrCreateProfile(authUser)
+    const name = data.name === undefined ? undefined : data.name.trim()
+    const birthDate = parseOwnProfileDate(data.birth_date)
+    const club = parseOptionalText(data.club)
+    const phone = parseOptionalText(data.phone)
+    const photoUrl = parseOptionalText(data.photo_url)
+
+    if (name !== undefined && (name.length < 2 || name.length > 80)) {
+      res.status(400).json({ message: 'Il nome deve contenere da 2 a 80 caratteri' })
+      return
+    }
+    if (club && club.length > 120) {
+      res.status(400).json({ message: 'Il nome del club non può superare 120 caratteri' })
+      return
+    }
+    if (phone && phone.length > 40) {
+      res.status(400).json({ message: 'Il numero di telefono non può superare 40 caratteri' })
+      return
+    }
+
+    const player = await prisma.player.findFirst({
+      where: { userId: profile.id, organizationId: null },
+      select: { id: true },
+    }) ?? await prisma.player.findFirst({
+      where: { userId: profile.id },
+      select: { id: true },
+    })
+
+    if (!player) {
+      res.status(404).json({ message: 'Profilo giocatore non trovato' })
+      return
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (name !== undefined) {
+        await tx.profile.update({ where: { id: profile.id }, data: { name } })
+        await tx.player.updateMany({ where: { userId: profile.id }, data: { name } })
+      }
+
+      return tx.player.update({
+        where: { id: player.id },
+        data: {
+          ...(name !== undefined ? { name } : {}),
+          ...(birthDate !== undefined ? { birthDate } : {}),
+          ...(club !== undefined ? { club } : {}),
+          ...(phone !== undefined ? { phone } : {}),
+          ...(photoUrl !== undefined ? { photoUrl } : {}),
+        },
+      })
+    })
+
+    res.json(serializePlayer(updated))
+  } catch (error) {
+    res.status(400).json({ message: error instanceof Error ? error.message : 'Impossibile aggiornare il profilo giocatore' })
+  }
 })
 
 playersRouter.get('/', async (req, res) => {

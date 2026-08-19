@@ -29,7 +29,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
-    "test:server": "node --import tsx --test server/src/lib/supabaseAuth.test.ts"
+    "test:server": "node --import tsx --test server/src/lib/supabaseAuth.test.ts server/src/middleware/requireTournamentAdmin.test.ts"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",

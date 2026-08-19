@@ -100,6 +100,11 @@ export const authService: AuthService = {
       clearAuthToken()
     }
   },
+  deleteAccount: async () => {
+    await apiRequest(authApiClient, { url: '/auth/account', method: 'DELETE' })
+    clearGuestToken()
+    clearAuthToken()
+  },
   getCurrentUser: async () => {
     if (getGuestToken()) return guestUser
     if (!getAuthToken()) return null

@@ -52,6 +52,25 @@ export const authHandlers = [
     return HttpResponse.json({ message: 'Logout effettuato' })
   }),
 
+  http.delete('/api/auth/account', ({ request }) => {
+    const auth = request.headers.get('Authorization')
+    if (!auth?.startsWith('Bearer mock-jwt-token-') || !currentUser) {
+      return HttpResponse.json({ message: 'Non autorizzato' }, { status: 401 })
+    }
+    const userId = currentUser.id
+    mockPlayers.forEach((player) => {
+      if (player.user_id !== userId) return
+      player.user_id = null
+      player.name = 'Giocatore eliminato'
+      player.birth_date = null
+      player.photo_url = null
+      player.club = null
+      player.phone = null
+    })
+    currentUser = null
+    return new HttpResponse(null, { status: 204 })
+  }),
+
   http.post('/api/auth/onboarding', async ({ request }) => {
     const auth = request.headers.get('Authorization')
     if (!auth?.startsWith('Bearer mock-jwt-token-') || !currentUser) {

@@ -231,6 +231,7 @@ export interface Tournament {
   organization_id?: string | null
   organizer_id?: string | null
   organizer?: OrganizerSummary | null
+  can_manage?: boolean
   phases?: TournamentPhase[]
   created_at?: string
   updated_at?: string
@@ -382,6 +383,7 @@ export interface AuthService {
   resendConfirmation(email: string): Promise<void>
   loginAsGuest(): Promise<User>
   logout(): Promise<void>
+  deleteAccount(): Promise<void>
   getCurrentUser(): Promise<User | null>
   completeOnboarding(intent: 'player' | 'explore', player?: OnboardingPlayerInput): Promise<User>
 }
@@ -415,6 +417,7 @@ export interface PlayersService {
   update(id: string, data: PlayerUpdate): Promise<Player>
   remove(id: string): Promise<null>
   getMyPlayer(): Promise<Player | null>
+  updateMyPlayer(data: PlayerUpdate): Promise<Player>
 }
 
 export interface TournamentsService {

@@ -67,6 +67,7 @@
   --app-text: var(--color-text);
   --app-muted: var(--color-text-muted);
   --app-border: var(--color-border);
+  --app-content-background: radial-gradient(circle at 100% 0, rgb(var(--color-primary-500-rgb) / 5%), transparent 30rem), var(--color-surface-ground);
   --app-radius: 0;
   --app-page-padding: clamp(1.25rem, 2.5vw, 2.5rem);
   --app-card-padding: 1.25rem;
@@ -129,16 +130,17 @@
   --color-info-soft: #172c3d;
   --color-warning: #fbbf24;
   --color-shadow-rgb: 0 0 0;
-  --color-surface-ground: #171e1b;
-  --color-surface-card: #202824;
-  --color-surface-soft: #252f2a;
-  --color-surface-muted: #2b3731;
-  --color-border: #3d4b44;
-  --color-border-strong: #506159;
-  --color-text: #f3f7f5;
-  --color-text-muted: #bac7c1;
-  --color-text-subtle: #899990;
+  --color-surface-ground: #151719;
+  --color-surface-card: #1d2023;
+  --color-surface-soft: #24272b;
+  --color-surface-muted: #2a2e33;
+  --color-border: #383d43;
+  --color-border-strong: #4b525a;
+  --color-text: #f4f5f5;
+  --color-text-muted: #bdc2c6;
+  --color-text-subtle: #8d949a;
   --color-primary-soft-surface: color-mix(in srgb, var(--color-primary-500) 18%, var(--color-surface-card));
+  --app-content-background: var(--color-surface-ground);
 }
 
 :root.app-dark[data-court-theme="hard"] {

@@ -32,7 +32,7 @@ const resultValue = ref('')
 const winnerId = ref<string | null>(null)
 
 // Derived match and player data used by the arena.
-const canModify = computed(() => auth.isAdmin && !auth.isGuest)
+const canModify = computed(() => tournament.value?.can_manage === true && !auth.isGuest)
 const match = computed<Match | null>(() =>
   matchesStore.matches.find((entry) => entry.id === route.params['matchId']) ?? null,
 )

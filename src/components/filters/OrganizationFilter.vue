@@ -8,7 +8,7 @@ const model = defineModel<OrganizationFilter>({ default: 'mine' })
 const organizations = useOrganizationsStore()
 
 const options = computed(() => [
-  { label: 'I miei contenuti', value: 'mine' as OrganizationFilter, icon: 'mdi:account-group-outline' },
+  { label: 'Tutti i contenuti', value: 'mine' as OrganizationFilter, icon: 'mdi:account-group-outline' },
   { label: 'Solo contenuti globali', value: 'global' as OrganizationFilter, icon: 'mdi:earth' },
   ...organizations.organizations.map((organization) => ({
     label: organization.name,

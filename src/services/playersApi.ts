@@ -24,4 +24,6 @@ export const playersService: PlayersService = {
     apiRequest<Player>(apiClient, { url: `/players/${id}`, method: 'PUT', data }),
   remove: (id: string) => apiRequest<null>(apiClient, { url: `/players/${id}`, method: 'DELETE' }),
   getMyPlayer: () => apiRequest<Player | null>(apiClient, { url: '/players/me', method: 'GET' }),
+  updateMyPlayer: (data: PlayerUpdate) =>
+    apiRequest<Player>(apiClient, { url: '/players/me', method: 'PATCH', data }),
 }

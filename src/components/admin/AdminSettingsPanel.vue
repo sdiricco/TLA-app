@@ -20,6 +20,7 @@ withDefaults(defineProps<{
 
 const featureFlags = useFeatureFlagsStore()
 const theme = useThemeStore()
+const appearanceLabel = computed(() => ({ light: 'chiaro', dark: 'scuro', system: 'sistema' }[theme.appearance]))
 
 const formatCards = computed(() =>
   tournamentFormatDefinitions.map((definition) => {
@@ -87,9 +88,9 @@ function toggleCategory(category: TournamentCategory, enabled: boolean): void {
           <i class="pi pi-palette text-lg" />
         </span>
         <div class="min-w-0 flex-1">
-          <h4 class="m-0 font-bold">Erba · modalità chiara</h4>
+          <h4 class="m-0 font-bold">Erba · {{ appearanceLabel }}</h4>
           <p class="mb-0 mt-1 text-sm leading-relaxed text-(--color-text-muted)">
-            Le varianti colore e la modalità scura non sono ancora selezionabili.
+            L’aspetto si configura nella sezione Personalizzazione e viene applicato a tutta l’app.
           </p>
         </div>
         <Tag :value="theme.isDark ? 'Scuro' : 'Chiaro'" severity="secondary" />

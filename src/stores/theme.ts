@@ -1,50 +1,74 @@
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
+import { usePreferredDark } from '@vueuse/core'
 
 export type CourtTheme = 'grass'
+export type ColorSchemePreference = 'light' | 'dark' | 'system'
 
-const STORAGE_KEY = 'tla_court_theme'
-const DARK_MODE_STORAGE_KEY = 'tla_dark_mode'
-const themes: CourtTheme[] = ['grass']
+const THEME_STORAGE_KEY = 'tla_court_theme'
+const COLOR_SCHEME_STORAGE_KEY = 'tla_color_scheme'
+const LEGACY_DARK_MODE_STORAGE_KEY = 'tla_dark_mode'
 
-function getInitialTheme(): CourtTheme {
-  return 'grass'
-}
+function getInitialAppearance(): ColorSchemePreference {
+  if (typeof localStorage === 'undefined') return 'system'
 
-function getInitialDarkMode(): boolean {
-  return false
+  const stored = localStorage.getItem(COLOR_SCHEME_STORAGE_KEY)
+  if (stored === 'light' || stored === 'dark' || stored === 'system') return stored
+
+  // Older versions exposed no working selector but may have stored an active
+  // dark preference. Preserve only that explicit value; the legacy `false`
+  // was written automatically and should fall back to the system preference.
+  return localStorage.getItem(LEGACY_DARK_MODE_STORAGE_KEY) === 'true' ? 'dark' : 'system'
 }
 
 export const useThemeStore = defineStore('theme', () => {
-  const courtTheme = ref<CourtTheme>(getInitialTheme())
-  const isDark = ref(getInitialDarkMode())
+  const courtTheme = ref<CourtTheme>('grass')
+  const appearance = ref<ColorSchemePreference>(getInitialAppearance())
+  const systemPrefersDark = usePreferredDark()
+  const isDark = computed(() => appearance.value === 'dark' || (appearance.value === 'system' && systemPrefersDark.value))
 
-  function syncDarkMode(enabled: boolean): void {
+  function syncDocument(enabled: boolean): void {
+    if (typeof document === 'undefined') return
     document.documentElement.classList.toggle('app-dark', enabled)
     document.documentElement.dataset.colorScheme = enabled ? 'dark' : 'light'
+    document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+      ?.setAttribute('content', enabled ? '#171e1b' : '#f5f8f7')
   }
 
-  function applyTheme(theme: CourtTheme): void {
+  function applyTheme(): void {
     courtTheme.value = 'grass'
-    document.documentElement.dataset.courtTheme = 'grass'
+    if (typeof document !== 'undefined') document.documentElement.dataset.courtTheme = 'grass'
+  }
+
+  function setAppearance(value: ColorSchemePreference): void {
+    appearance.value = value
   }
 
   function toggleDarkMode(): void {
-    isDark.value = false
+    setAppearance(isDark.value ? 'light' : 'dark')
   }
 
-  applyTheme(courtTheme.value)
-  syncDarkMode(isDark.value)
+  applyTheme()
 
-  watch(courtTheme, (theme) => {
-    document.documentElement.dataset.courtTheme = 'grass'
-    if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, 'grass')
+  watch(appearance, (value) => {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem(COLOR_SCHEME_STORAGE_KEY, value)
+    localStorage.removeItem(LEGACY_DARK_MODE_STORAGE_KEY)
+  }, { immediate: true })
+
+  watch(isDark, syncDocument, { immediate: true })
+
+  watch(courtTheme, () => {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(THEME_STORAGE_KEY, 'grass')
+    applyTheme()
   })
 
-  watch(isDark, (enabled) => {
-    syncDarkMode(false)
-    if (typeof localStorage !== 'undefined') localStorage.setItem(DARK_MODE_STORAGE_KEY, 'false')
-  })
-
-  return { courtTheme, isDark, applyTheme, toggleDarkMode }
+  return {
+    courtTheme,
+    appearance,
+    isDark,
+    systemPrefersDark,
+    setAppearance,
+    toggleDarkMode,
+  }
 })

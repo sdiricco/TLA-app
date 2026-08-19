@@ -70,6 +70,7 @@ Before deploying, set these Fly secrets:
 
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
+- `SUPABASE_SECRET_KEY` (solo backend, necessario per la cancellazione degli account)
 - `DATABASE_URL`
 - `CORS_ORIGIN` is optional while we keep CORS open during this phase
 
@@ -83,7 +84,7 @@ Then deploy with:
 
 ```bash
 fly launch
-fly secrets set SUPABASE_URL=... SUPABASE_ANON_KEY=... DATABASE_URL=...
+fly secrets set SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_SECRET_KEY=... DATABASE_URL=...
 fly deploy
 ```
 

@@ -58,10 +58,11 @@ const greeting = computed(() => {
   return 'Buonasera'
 })
 const welcomeTitle = computed(() => firstName.value ? `${greeting.value}, ${firstName.value}` : greeting.value)
-const contextLabel = computed(() => organizations.activeOrganization?.name ?? 'tutti i tuoi contenuti')
+const contextLabel = computed(() => organizations.activeOrganization?.name ?? 'tutti i contenuti')
 const dashboardDescription = computed(() => {
   if (auth.isAdmin) return `Controlla le priorità di ${contextLabel.value} e porta avanti la competizione.`
   if (auth.isGuest) return 'Scopri tornei, giocatori e attività della community.'
+  if (auth.canCreateTournament) return 'Gestisci i tuoi tornei globali oppure partecipa alle competizioni della community.'
   return `Segui i tornei di ${contextLabel.value} e la tua attività sportiva.`
 })
 
@@ -162,20 +163,21 @@ const priorities = computed<DashboardPriority[]>(() => {
 const quickActions = computed<DashboardQuickAction[]>(() => {
   if (auth.isAdmin) {
     return [
-      { label: 'Nuovo torneo', description: 'Configura formato e iscrizioni', icon: 'pi pi-plus', to: { name: 'tournament-create' } },
+      { label: 'Tornei', description: 'Controlla competizioni e iscrizioni', icon: 'pi pi-trophy', to: { name: 'tournaments' } },
       { label: 'Nuovo giocatore', description: 'Aggiungi una scheda atleta', icon: 'pi pi-user-plus', to: { name: 'player-create' } },
       organizations.activeOrganization
         ? { label: 'Richieste', description: 'Gestisci il backlog del club', icon: 'pi pi-lightbulb', to: { name: 'requests' } }
         : { label: 'Organizzazioni', description: 'Gestisci i tuoi spazi', icon: 'pi pi-building', to: { name: 'organizations' } },
     ]
   }
-  return [
+  const actions: DashboardQuickAction[] = [
     { label: 'Trova un torneo', description: 'Scopri le prossime competizioni', icon: 'pi pi-search', to: { name: 'tournaments' } },
     { label: 'Giocatori', description: 'Consulta ranking e profili', icon: 'pi pi-users', to: { name: 'players' } },
     auth.isGuest
       ? { label: 'Organizzazioni', description: 'Esplora i club disponibili', icon: 'pi pi-map', to: { name: 'organizations-explore' } }
       : { label: 'Il mio profilo', description: 'Risultati e preferenze', icon: 'pi pi-user', to: { name: 'profile' } },
   ]
+  return actions.slice(0, 3)
 })
 
 function requestStatusLabel(status: OrganizationRequest['status']): string {
@@ -241,15 +243,7 @@ onMounted(loadDashboard)
         </div>
         <div class="flex flex-col gap-2 sm:flex-row lg:justify-end">
           <Button
-            v-if="auth.isAdmin"
-            label="Nuovo torneo"
-            icon="pi pi-plus"
-            class="border-(--color-accent)! bg-(--color-accent)! text-(--color-primary-900)!"
-            @click="$router.push({ name: 'tournament-create' })"
-          />
-          <Button
-            v-else
-            label="Esplora tornei"
+            label="Vai ai tornei"
             icon="pi pi-arrow-right"
             icon-pos="right"
             class="border-white/20! bg-white/10! text-white! hover:bg-white/15!"
@@ -340,7 +334,6 @@ onMounted(loadDashboard)
             <div>
               <i class="pi pi-calendar text-xl text-(--color-text-subtle)" />
               <p class="mt-2 text-sm text-(--color-text-muted)">Nessun torneo attivo o in programma.</p>
-              <Button v-if="auth.isAdmin" class="mt-3" label="Crea il primo torneo" icon="pi pi-plus" size="small" @click="$router.push({ name: 'tournament-create' })" />
             </div>
           </div>
         </section>

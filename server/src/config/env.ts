@@ -15,6 +15,7 @@ export const env = {
   databaseUrl: process.env.DATABASE_URL ?? '',
   supabaseUrl: requiredEnv.supabaseUrl ?? '',
   supabaseAnonKey: requiredEnv.supabaseAnonKey ?? '',
+  supabaseSecretKey: process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
 }
 
 export function assertEnv(): void {

@@ -79,14 +79,6 @@ function formatCurrency(value: number): string {
           <i class="pi pi-map-marker" />
           {{ tournament.location || 'Sede da definire' }}
         </p>
-        <RouterLink
-          v-if="tournament.organizer"
-          :to="{ name: 'organizer-profile', params: { id: tournament.organizer.id } }"
-          class="flex w-fit items-center gap-2 rounded-sm text-white/70 no-underline transition-colors hover:text-(--color-accent) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-        >
-          <i class="pi pi-user" />
-          <span>Organizzato da <strong class="font-semibold text-white/90">{{ tournament.organizer.name }}</strong></span>
-        </RouterLink>
       </div>
     </div>
 
@@ -136,6 +128,32 @@ function formatCurrency(value: number): string {
           :disabled="updatingVisibility"
           @click="$emit('visibilityChange')"
         />
+      </div>
+
+      <RouterLink
+        v-if="tournament.organizer"
+        :to="{ name: 'organizer-profile', params: { id: tournament.organizer.id } }"
+        class="group flex min-h-14 items-center gap-3 rounded-lg bg-white/10 px-3 py-2 no-underline transition-colors hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        :aria-label="`Apri la scheda dell'organizzatore ${tournament.organizer.name}`"
+      >
+        <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white/10 text-(--color-accent)">
+          <i class="pi pi-user-edit" />
+        </span>
+        <p class="grid min-w-0 flex-1 gap-0.5">
+          <small class="text-[0.65rem] font-extrabold uppercase tracking-wider text-white/55">Organizzatore</small>
+          <strong class="truncate text-sm text-white/90">{{ tournament.organizer.name }}</strong>
+        </p>
+        <i class="pi pi-chevron-right text-xs text-white/35 transition-transform group-hover:translate-x-0.5 group-hover:text-white/70" aria-hidden="true" />
+      </RouterLink>
+
+      <div v-else-if="canViewAdmin" class="flex min-h-14 items-center gap-3 rounded-lg bg-white/10 px-3 py-2">
+        <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white/10 text-(--color-accent)">
+          <i class="pi pi-user-edit" />
+        </span>
+        <p class="grid min-w-0 flex-1 gap-0.5">
+          <small class="text-[0.65rem] font-extrabold uppercase tracking-wider text-white/55">Organizzatore</small>
+          <strong class="truncate text-sm text-white/90">Da assegnare</strong>
+        </p>
       </div>
     </div>
 

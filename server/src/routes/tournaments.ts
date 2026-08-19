@@ -5,8 +5,12 @@ import type { TournamentCreate, TournamentUpdate } from '../../../src/types'
 import { env } from '../config/env'
 import { prisma } from '../db/prisma'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
-import { requireAdmin } from '../middleware/requireAdmin'
 import { requireOrganization, type OrganizationRequest } from '../middleware/requireOrganization'
+import {
+  canManageTournamentRecord,
+  requireTournamentAdmin,
+  requireTournamentCreator,
+} from '../middleware/requireTournamentAdmin'
 import { sortMatches } from '../lib/bracket'
 import { reconcileMatchProgression } from '../lib/matchProgression'
 import { buildTournamentMatchesResponse } from '../../../src/utils/matches'
@@ -308,12 +312,15 @@ tournamentsRouter.get('/:id', async (req, res) => {
     res.status(404).json({ message: 'Torneo non trovato' })
     return
   }
-  res.json(serializeTournamentWithPlayers(tournament))
+  res.json({
+    ...serializeTournamentWithPlayers(tournament),
+    can_manage: await canManageTournamentRecord(req as OrganizationRequest, tournament),
+  })
 })
 
 tournamentsRouter.post(
   '/:id/regulation',
-  requireAdmin,
+  requireTournamentAdmin,
   raw({ type: 'application/octet-stream', limit: MAX_REGULATION_SIZE }),
   async (req, res) => {
     const authReq = req as AuthenticatedRequest & OrganizationRequest
@@ -419,7 +426,7 @@ tournamentsRouter.get('/:id/regulation', async (req, res) => {
   res.send(file)
 })
 
-tournamentsRouter.post('/', requireAdmin, async (req, res) => {
+tournamentsRouter.post('/', requireTournamentCreator, async (req, res) => {
   try {
     const authReq = req as AuthenticatedRequest & OrganizationRequest
     const data = req.body as TournamentCreate
@@ -481,7 +488,7 @@ tournamentsRouter.post('/', requireAdmin, async (req, res) => {
   }
 })
 
-tournamentsRouter.put('/:id', requireAdmin, async (req, res) => {
+tournamentsRouter.put('/:id', requireTournamentAdmin, async (req, res) => {
   const body = req.body as TournamentUpdate & { playerIds?: string[] }
   const tournamentId = req.params['id'] as string
   const organizationId = contextOrganizationId(req as OrganizationRequest)
@@ -606,7 +613,7 @@ tournamentsRouter.put('/:id', requireAdmin, async (req, res) => {
   }
 })
 
-tournamentsRouter.delete('/:id', requireAdmin, async (req, res) => {
+tournamentsRouter.delete('/:id', requireTournamentAdmin, async (req, res) => {
   const tournamentId = req.params['id'] as string
   const organizationId = contextOrganizationId(req as OrganizationRequest)
   try {
@@ -618,7 +625,7 @@ tournamentsRouter.delete('/:id', requireAdmin, async (req, res) => {
   }
 })
 
-tournamentsRouter.post('/:id/players', requireAdmin, async (req, res) => {
+tournamentsRouter.post('/:id/players', requireTournamentAdmin, async (req, res) => {
   const { playerId } = req.body as { playerId: string }
   const tournamentId = req.params['id'] as string
   const organizationId = contextOrganizationId(req as OrganizationRequest)
@@ -652,7 +659,7 @@ tournamentsRouter.post('/:id/players', requireAdmin, async (req, res) => {
   res.status(204).send()
 })
 
-tournamentsRouter.delete('/:id/players/:playerId', requireAdmin, async (req, res) => {
+tournamentsRouter.delete('/:id/players/:playerId', requireTournamentAdmin, async (req, res) => {
   const tournamentId = req.params['id'] as string
   const playerId = req.params['playerId'] as string
   const organizationId = contextOrganizationId(req as OrganizationRequest)
@@ -669,7 +676,7 @@ tournamentsRouter.delete('/:id/players/:playerId', requireAdmin, async (req, res
   res.status(204).send()
 })
 
-tournamentsRouter.patch('/:id/publish', requireAdmin, async (req, res) => {
+tournamentsRouter.patch('/:id/publish', requireTournamentAdmin, async (req, res) => {
   const { published } = req.body as { published: boolean }
   const tournamentId = req.params['id'] as string
   const organizationId = contextOrganizationId(req as OrganizationRequest)
@@ -919,7 +926,7 @@ tournamentsRouter.get('/:id/matches', async (req, res) => {
   })
 })
 
-tournamentsRouter.post('/:id/bracket', requireAdmin, async (req, res) => {
+tournamentsRouter.post('/:id/bracket', requireTournamentAdmin, async (req, res) => {
   try {
     const tournamentId = req.params['id'] as string
     const requestedPhaseId =
@@ -961,7 +968,7 @@ tournamentsRouter.post('/:id/bracket', requireAdmin, async (req, res) => {
   }
 })
 
-tournamentsRouter.delete('/:id/matches', requireAdmin, async (req, res) => {
+tournamentsRouter.delete('/:id/matches', requireTournamentAdmin, async (req, res) => {
   const tournamentId = req.params['id'] as string
   const phaseId = typeof req.query['phaseId'] === 'string' ? req.query['phaseId'] : undefined
   const organizationId = contextOrganizationId(req as OrganizationRequest)
@@ -975,7 +982,7 @@ tournamentsRouter.delete('/:id/matches', requireAdmin, async (req, res) => {
   res.status(204).send()
 })
 
-tournamentsRouter.post('/:id/phases/:phaseId/complete', requireAdmin, async (req, res) => {
+tournamentsRouter.post('/:id/phases/:phaseId/complete', requireTournamentAdmin, async (req, res) => {
   const tournamentId = req.params['id'] as string
   const phaseId = req.params['phaseId'] as string
   const organizationId = contextOrganizationId(req as OrganizationRequest)

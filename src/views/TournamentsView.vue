@@ -78,7 +78,12 @@
   /**
    * Derived state
    */
-  const canViewAdmin = computed(() => auth.isAdmin);
+  const canCreateTournament = computed(() => auth.canCreateTournament);
+  const pageDescription = computed(() =>
+    organizationsStore.activeOrganization
+      ? `Gestisci le competizioni di ${organizationsStore.activeOrganization.name}.`
+      : 'Scopri i tornei globali o crea la tua competizione.'
+  );
   const hasMoreTournaments = computed(() => store.tournaments.length < store.total);
   const draftTournaments = computed(() =>
     store.tournaments.filter((tournament) => !tournament.published)
@@ -321,7 +326,7 @@
       <div class="min-w-0">
         <h1 class="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">Tornei</h1>
         <p class="mt-1 text-sm text-(--color-text-muted) sm:text-base">
-          Gestisci le competizioni della tua organizzazione.
+          {{ pageDescription }}
         </p>
       </div>
     </header>
@@ -431,7 +436,7 @@
     <TournamentEmptyState
       v-else-if="store.tournaments.length === 0"
       :filtered="hasQueryFilters"
-      :can-create="canViewAdmin && !auth.isGuest"
+      :can-create="canCreateTournament"
       @reset="clearAllQueryFilters"
       @create="openCreate"
     />

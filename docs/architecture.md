@@ -34,7 +34,12 @@ separate concerns:
   `member` capability in one organization.
 - `tournaments.organizer_profile_id` identifies the person who created and
   presents a tournament. This attribution is public inside the permitted
-  tournament scope, but it does not grant administrative permissions.
+  tournament scope and grants administration privileges only on that tournament.
+
+Any registered account can create a global tournament and becomes its scoped
+organizer. Creating a tournament in an organization instead requires an
+`owner` or `admin` membership in that organization. Guests cannot create
+tournaments, and platform administrator privileges remain exceptional.
 
 Player and organizer are therefore compatible capabilities, not mutually
 exclusive account roles. `profiles.role` is retained for the exceptional

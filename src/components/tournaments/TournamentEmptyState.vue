@@ -23,7 +23,7 @@ defineEmits<{
       {{ filtered ? 'Nessun torneo corrisponde ai filtri selezionati' : 'Nessun torneo disponibile' }}
     </h3>
     <p class="max-w-md text-sm text-(--color-text-muted)">
-      {{ filtered ? 'Prova ad ampliare la ricerca o ad azzerare i filtri.' : 'Crea la prima competizione della tua organizzazione.' }}
+      {{ filtered ? 'Prova ad ampliare la ricerca o ad azzerare i filtri.' : 'Crea la tua prima competizione oppure esplora i tornei disponibili.' }}
     </p>
     <div v-if="filtered || canCreate" class="mt-5 flex flex-wrap justify-center gap-2">
       <Button

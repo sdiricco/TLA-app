@@ -7,6 +7,7 @@ declare module 'vue-router' {
     public?: boolean
     requiresAuth?: boolean
     requiresAdmin?: boolean
+    requiresTournamentCreator?: boolean
     organizationSetup?: boolean
     allowsIncompleteOnboarding?: boolean
   }
@@ -119,19 +120,19 @@ const router = createRouter({
           path: 'tournaments/new',
           name: 'tournament-create',
           component: () => import('../views/TournamentFormView.vue'),
-          meta: { requiresAuth: true, requiresAdmin: true },
+          meta: { requiresAuth: true, requiresTournamentCreator: true },
         },
         {
           path: 'tournaments/phases/configure',
           name: 'tournament-phases-builder',
           component: () => import('../views/TournamentPhasesBuilderView.vue'),
-          meta: { requiresAuth: true, requiresAdmin: true },
+          meta: { requiresAuth: true },
         },
         {
           path: 'tournaments/:id/edit',
           name: 'tournament-edit',
           component: () => import('../views/TournamentFormView.vue'),
-          meta: { requiresAuth: true, requiresAdmin: true },
+          meta: { requiresAuth: true },
         },
         {
           path: 'tournaments/:id/players',
@@ -264,6 +265,10 @@ router.beforeEach(async (to) => {
 
   // Player trying to access admin-only route
   if (to.meta.requiresAdmin && !auth.isAdmin) {
+    return { name: 'tournaments' }
+  }
+
+  if (to.meta.requiresTournamentCreator && !auth.canCreateTournament) {
     return { name: 'tournaments' }
   }
 

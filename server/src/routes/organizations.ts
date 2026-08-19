@@ -262,7 +262,7 @@ organizationsRouter.post('/join', async (req, res) => {
       prisma.player.upsert({
         where: { organizationId_userId: { organizationId: organization.id, userId: profile.id } },
         create: { organizationId: organization.id, userId: profile.id, name: profile.name ?? profile.email, ranking: 0 },
-        update: {},
+        update: { name: profile.name ?? profile.email },
       }),
     ])
     res.json({ id: organization.id, name: organization.name, slug: organization.slug, visibility: organization.visibility, discoverable: organization.discoverable, latitude: organization.latitude, longitude: organization.longitude, join_code: '', role: 'member' })

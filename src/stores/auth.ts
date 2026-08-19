@@ -20,6 +20,11 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => user.value?.role === 'admin' || useOrganizationsStore().isAdmin)
   const isGuest = computed(() => user.value?.id === 'guest')
+  const canCreateTournament = computed(() => {
+    if (!user.value || isGuest.value) return false
+    const organizations = useOrganizationsStore()
+    return !organizations.activeId || isAdmin.value
+  })
 
   async function init(): Promise<void> {
     const callbackHandled = consumeSupabaseConfirmationCallback()
@@ -119,6 +124,15 @@ export const useAuthStore = defineStore('auth', () => {
     useOrganizationsStore().clear()
   }
 
+  async function deleteAccount(): Promise<void> {
+    await authService.deleteAccount()
+    user.value = null
+    registrationPending.value = null
+    emailConfirmation.value = { status: 'idle', message: '' }
+    error.value = null
+    useOrganizationsStore().clear()
+  }
+
   async function register(email: string, password: string, name?: string): Promise<void> {
     loading.value = true
     error.value = null
@@ -195,6 +209,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isAdmin,
     isGuest,
+    canCreateTournament,
     init,
     refresh,
     completeEmailConfirmation,
@@ -205,6 +220,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     resendConfirmation,
     logout,
+    deleteAccount,
     loginAsGuest,
     completeOnboarding,
   }

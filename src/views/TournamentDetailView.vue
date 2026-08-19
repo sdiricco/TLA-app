@@ -44,7 +44,7 @@ const enrolledPlayersCount = computed(() => {
   if (!tournament.value) return 0
   return tournament.value.playerIds?.length ?? tournament.value.tournament_players?.length ?? 0
 })
-const canViewAdmin = computed(() => auth.isAdmin)
+const canViewAdmin = computed(() => tournament.value?.can_manage === true)
 const isEnrolled = computed(() => enrollment.value?.enrolled ?? false)
 const enrolledPlayersLabel = computed(() => {
   const count = enrolledPlayersCount.value

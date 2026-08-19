@@ -40,6 +40,7 @@ const matchesStore = useMatchesStore()
 const auth = useAuthStore()
 const confirm = useConfirm()
 const toast = useToast()
+const canManageTournament = computed(() => tournament.value.can_manage === true)
 
 // -----------------------------------------------------------------------------
 // Local UI state
@@ -237,7 +238,7 @@ const activeRoundPosition = computed(() =>
 )
 const canCompletePhase = computed(
   () =>
-    auth.isAdmin
+    canManageTournament.value
     && activePhase.value?.status === 'active'
     && Boolean(nextPhase.value)
     && hasMatches.value
@@ -621,7 +622,7 @@ onMounted(loadDraw)
         />
       </label>
 
-      <div v-if="auth.isAdmin && !hasMatches" class="flex flex-wrap items-center gap-2">
+      <div v-if="canManageTournament && !hasMatches" class="flex flex-wrap items-center gap-2">
         <Button
           label="Genera girone"
           icon="pi pi-plus"
@@ -634,7 +635,7 @@ onMounted(loadDraw)
 
       <div v-if="!hasMatches" class="flex min-h-55 flex-col items-center justify-center gap-3 text-center text-muted-color">
         <i class="pi pi-calendar text-2xl" />
-        <p>Nessun girone generato.<template v-if="auth.isAdmin"> Clicca <strong>Genera girone</strong> per creare le giornate.</template></p>
+        <p>Nessun girone generato.<template v-if="canManageTournament"> Clicca <strong>Genera girone</strong> per creare le giornate.</template></p>
       </div>
 
       <template v-else>
@@ -659,7 +660,7 @@ onMounted(loadDraw)
             />
           </ButtonGroup>
           <Button
-            v-if="auth.isAdmin"
+            v-if="canManageTournament"
             icon="pi pi-ellipsis-h"
             size="small"
             severity="secondary"
@@ -787,7 +788,7 @@ onMounted(loadDraw)
     <!-- Section: Elimination bracket -->
     <!------------------------------>
     <template v-else>
-      <div v-if="auth.isAdmin && !hasMatches" class="flex items-center gap-2">
+      <div v-if="canManageTournament && !hasMatches" class="flex items-center gap-2">
           <Button
             label="Genera tabellone"
             icon="pi pi-plus"
@@ -800,7 +801,7 @@ onMounted(loadDraw)
 
       <div v-if="!hasMatches" class="flex min-h-55 flex-col items-center justify-center gap-3 text-center text-muted-color">
         <i class="pi pi-sitemap text-2xl" />
-        <p>Nessun tabellone generato.<template v-if="auth.isAdmin"> Clicca <strong>Genera tabellone</strong> per iniziare.</template></p>
+        <p>Nessun tabellone generato.<template v-if="canManageTournament"> Clicca <strong>Genera tabellone</strong> per iniziare.</template></p>
       </div>
 
       <div v-else class="flex flex-col gap-4">
@@ -835,7 +836,7 @@ onMounted(loadDraw)
               @click="downloadDrawPdf"
             />
             <Button
-              v-if="auth.isAdmin"
+              v-if="canManageTournament"
               icon="pi pi-ellipsis-h"
               size="small"
               severity="secondary"
@@ -882,7 +883,7 @@ onMounted(loadDraw)
                 :match="match"
                 :players-by-id="playersById"
                 :seeds-by-player-id="seedsByPlayerId"
-                :show-pending-status="auth.isAdmin"
+                :show-pending-status="canManageTournament"
                 @open="openMatchDetail(match)"
               />
             </div>
@@ -939,7 +940,7 @@ onMounted(loadDraw)
                     :match="match"
                     :players-by-id="playersById"
                     :seeds-by-player-id="seedsByPlayerId"
-                    :show-pending-status="auth.isAdmin"
+                    :show-pending-status="canManageTournament"
                     @open="openMatchDetail(match)"
                   />
                 </div>
@@ -970,7 +971,7 @@ onMounted(loadDraw)
         </p>
       </div>
       <Button
-        v-if="auth.isAdmin"
+        v-if="canManageTournament"
         label="Passa alla fase successiva"
         icon="pi pi-arrow-right"
         :disabled="!canCompletePhase"

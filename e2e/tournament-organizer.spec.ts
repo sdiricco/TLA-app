@@ -12,17 +12,19 @@ const tournament = {
   start_date: '2026-09-10',
   organizer_id: organizer.id,
   organizer: { id: organizer.id, name: organizer.name },
+  can_manage: true,
+  tournament_players: [],
 }
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.clear())
   await page.route('**/api/auth/me', async (route) => {
     await route.fulfill({
-      json: { user: { id: 'organizer-user', email: 'giulia@tla.local', name: organizer.name, role: 'admin' } },
+      json: { user: { id: organizer.id, email: 'giulia@tla.local', name: organizer.name, role: 'player' } },
     })
   })
   await page.route('**/api/organizations', async (route) => {
-    await route.fulfill({ json: [{ id: 'org-1', name: 'TC Lucca', role: 'owner', join_code: 'TCLUCCA' }] })
+    await route.fulfill({ json: [{ id: 'org-1', name: 'TC Lucca', role: 'member', join_code: 'TCLUCCA' }] })
   })
   await page.route('**/api/organizers**', async (route) => {
     await route.fulfill({ json: [organizer, { id: 'organizer-2', name: 'Marco Conti', tournaments_count: 2 }] })
@@ -38,8 +40,30 @@ test.beforeEach(async ({ page }) => {
     })
   })
   await page.route('**/api/tournaments**', async (route) => {
+    const pathname = new URL(route.request().url()).pathname
+    if (pathname.endsWith('/enrollment')) {
+      await route.fulfill({ json: { enrolled: false, player_id: null } })
+      return
+    }
+    if (pathname.endsWith(`/${tournament.id}`)) {
+      await route.fulfill({ json: tournament })
+      return
+    }
     await route.fulfill({ json: { values: [tournament], page: 0, perPage: 12, total: 1 } })
   })
+})
+
+test('the assigned organizer can administer the tournament without a global admin role', async ({ page }) => {
+  await page.goto('/#access_token=organizer-token&type=signup')
+  await page.getByRole('button', { name: 'Continua in TLA' }).click()
+  await page.getByRole('link', { name: 'Tornei', exact: true }).click()
+  await page.getByRole('button', { name: `Apri il torneo ${tournament.name}` }).click()
+
+  await expect(page.getByText('Organizzatore', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: `Apri la scheda dell'organizzatore ${organizer.name}` })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Cambia stato' })).toBeVisible()
+  await page.getByRole('button', { name: 'Altre azioni del torneo' }).click()
+  await expect(page.getByText('Modifica torneo', { exact: true })).toBeVisible()
 })
 
 test('filters by organizer and opens the organizer tournament profile', async ({ page }) => {

@@ -114,3 +114,22 @@ export async function resendSignupConfirmation(email: string, redirectTo?: strin
     throw new Error(extractSupabaseError(data))
   }
 }
+
+export async function deleteSupabaseUser(userId: string): Promise<void> {
+  if (!env.supabaseSecretKey) {
+    throw new Error('La cancellazione account non è configurata sul server')
+  }
+
+  const response = await fetch(`${env.supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    headers: {
+      apikey: env.supabaseSecretKey,
+      Authorization: `Bearer ${env.supabaseSecretKey}`,
+    },
+  })
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as SupabaseErrorResponse
+    throw new Error(extractSupabaseError(data))
+  }
+}

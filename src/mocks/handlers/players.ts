@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { mockPlayers } from '../data/players'
-import type { PaginatedResponse, Player, PlayerMatchHistory, PlayerSortField, SortOrder } from '../../types'
+import type { PaginatedResponse, Player, PlayerMatchHistory, PlayerSortField, PlayerUpdate, SortOrder } from '../../types'
 
 const players: Player[] = mockPlayers
 const GUEST_TOKEN = 'tla_guest_token'
@@ -79,6 +79,33 @@ export const playerHandlers = [
     const userId = auth.replace('Bearer mock-jwt-token-', '')
     const player = players.find((item) => item.user_id === userId)
     return player ? HttpResponse.json(player) : HttpResponse.json(null)
+  }),
+  http.patch('/api/players/me', async ({ request }) => {
+    const auth = request.headers.get('Authorization')
+    if (!auth?.startsWith('Bearer mock-jwt-token-')) {
+      return HttpResponse.json({ message: 'Non autorizzato' }, { status: 401 })
+    }
+    const userId = auth.replace('Bearer mock-jwt-token-', '')
+    const index = players.findIndex((item) => item.user_id === userId && !item.organization_id)
+    const fallbackIndex = players.findIndex((item) => item.user_id === userId)
+    const playerIndex = index >= 0 ? index : fallbackIndex
+    if (playerIndex < 0) {
+      return HttpResponse.json({ message: 'Profilo giocatore non trovato' }, { status: 404 })
+    }
+    const body = (await request.json()) as PlayerUpdate
+    const name = body.name?.trim()
+    if (name) {
+      players.forEach((item) => {
+        if (item.user_id === userId) item.name = name
+      })
+    }
+    players[playerIndex] = {
+      ...players[playerIndex]!,
+      ...body,
+      ...(name ? { name } : {}),
+      updated_at: new Date().toISOString(),
+    }
+    return HttpResponse.json(players[playerIndex])
   }),
   http.get('/api/players/:id/matches', ({ params }) => {
     const playerId = String(params['id'])

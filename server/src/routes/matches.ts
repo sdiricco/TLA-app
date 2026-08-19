@@ -1,8 +1,8 @@
 import { Router } from 'express'
 import { prisma } from '../db/prisma'
 import { requireAuth } from '../middleware/requireAuth'
-import { requireAdmin } from '../middleware/requireAdmin'
 import { requireOrganization, type OrganizationRequest } from '../middleware/requireOrganization'
+import { requireMatchTournamentAdmin } from '../middleware/requireTournamentAdmin'
 import { propagateMatchWinner } from '../lib/matchProgression'
 import { serializeMatch } from '../lib/serializers'
 import { Prisma } from '@prisma/client'
@@ -17,7 +17,7 @@ function visibleTournamentWhere(req: OrganizationRequest): Prisma.TournamentWher
   return organizationId ? { OR: [{ organizationId }, { organizationId: null }] } : { organizationId: null }
 }
 
-matchesRouter.patch('/:id/assign', requireAdmin, async (req, res) => {
+matchesRouter.patch('/:id/assign', requireMatchTournamentAdmin, async (req, res) => {
   const { slot, player_id } = req.body as { slot: 'player1_id' | 'player2_id'; player_id: string | null }
   const matchId = req.params['id'] as string
   const organizationId = (req as OrganizationRequest).organization?.id ?? null
@@ -49,7 +49,7 @@ matchesRouter.patch('/:id/assign', requireAdmin, async (req, res) => {
   }
 })
 
-matchesRouter.put('/:id', requireAdmin, async (req, res) => {
+matchesRouter.put('/:id', requireMatchTournamentAdmin, async (req, res) => {
   const { result, winner_id } = req.body as { result: string; winner_id: string }
   const matchId = req.params['id'] as string
   const organizationId = (req as OrganizationRequest).organization?.id ?? null

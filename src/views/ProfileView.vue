@@ -8,6 +8,7 @@ import DatePicker from 'primevue/datepicker'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Skeleton from 'primevue/skeleton'
+import PlayerPhotoPicker from '@/components/player/PlayerPhotoPicker.vue'
 import { playersService } from '@/services/playersApi'
 import { profilesService } from '@/services/profilesApi'
 import { useAuthStore } from '@/stores/auth'
@@ -24,7 +25,12 @@ const loadingPlayer = ref(true)
 const editOpen = ref(false)
 const infoOpen = ref(false)
 const createPlayerOpen = ref(false)
+const deleteAccountOpen = ref(false)
 const editName = ref('')
+const editBirthDate = ref<Date | null>(null)
+const editClub = ref('')
+const editPhone = ref('')
+const editPhotoUrl = ref('')
 const playerName = ref('')
 const playerBirthDate = ref<Date | null>(null)
 const playerClub = ref('')
@@ -32,6 +38,9 @@ const playerPhone = ref('')
 const saving = ref(false)
 const creatingPlayer = ref(false)
 const loggingOut = ref(false)
+const deletingAccount = ref(false)
+const deleteConfirmation = ref('')
+const deleteAccountError = ref<string | null>(null)
 const error = ref<string | null>(null)
 const playerError = ref<string | null>(null)
 const today = new Date()
@@ -48,13 +57,19 @@ const activityLabel = computed(() => {
   return capabilities.join(' · ') || 'Esploratore'
 })
 const organizationCount = computed(() => organizations.organizations.length)
+const canDeleteAccount = computed(() => deleteConfirmation.value.trim().toLowerCase() === email.value.toLowerCase())
 
 function initials(name: string): string {
   return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('')
 }
 
 function openEdit(): void {
-  editName.value = auth.user?.name?.trim() ?? ''
+  editName.value = auth.user?.name?.trim() || player.value?.name.trim() || ''
+  const birthDate = player.value?.birth_date ? moment(player.value.birth_date) : null
+  editBirthDate.value = birthDate?.isValid() ? birthDate.toDate() : null
+  editClub.value = player.value?.club ?? ''
+  editPhone.value = player.value?.phone ?? ''
+  editPhotoUrl.value = player.value?.photo_url ?? ''
   error.value = null
   editOpen.value = true
 }
@@ -99,8 +114,19 @@ async function saveProfile(): Promise<void> {
   saving.value = true
   error.value = null
   try {
-    const updated = await profilesService.updateMyProfile(editName.value.trim())
-    if (auth.user) auth.user.name = updated.name ?? editName.value.trim()
+    const name = editName.value.trim()
+    if (player.value) {
+      player.value = await playersService.updateMyPlayer({
+        name,
+        birth_date: editBirthDate.value ? moment(editBirthDate.value).format('YYYY-MM-DD') : null,
+        club: editClub.value.trim() || null,
+        phone: editPhone.value.trim() || null,
+        photo_url: editPhotoUrl.value || null,
+      })
+    } else {
+      await profilesService.updateMyProfile(name)
+    }
+    if (auth.user) auth.user.name = name
     editOpen.value = false
   } catch (requestError) {
     error.value = (requestError as Error).message
@@ -116,6 +142,28 @@ async function logout(): Promise<void> {
     await router.replace({ name: 'login' })
   } finally {
     loggingOut.value = false
+  }
+}
+
+function openDeleteAccount(): void {
+  deleteConfirmation.value = ''
+  deleteAccountError.value = null
+  deleteAccountOpen.value = true
+}
+
+async function deleteAccount(): Promise<void> {
+  if (!canDeleteAccount.value || deletingAccount.value) return
+
+  deletingAccount.value = true
+  deleteAccountError.value = null
+  try {
+    await auth.deleteAccount()
+    deleteAccountOpen.value = false
+    await router.replace({ name: 'login' })
+  } catch (requestError) {
+    deleteAccountError.value = (requestError as Error).message
+  } finally {
+    deletingAccount.value = false
   }
 }
 
@@ -153,7 +201,7 @@ onMounted(loadPlayerCard)
       </div>
 
       <div class="mt-5 grid grid-cols-2 gap-2 border-t border-(--color-border) pt-4 sm:flex sm:flex-wrap">
-        <Button label="Modifica profilo" icon="pi pi-pencil" class="w-full sm:w-auto" @click="openEdit" />
+        <Button label="Modifica profilo" icon="pi pi-pencil" class="w-full sm:w-auto" :disabled="loadingPlayer" @click="openEdit" />
         <Button label="Esci" icon="pi pi-sign-out" severity="secondary" text class="w-full sm:ml-auto sm:w-auto" :loading="loggingOut" @click="logout" />
       </div>
     </header>
@@ -286,15 +334,68 @@ onMounted(loadPlayerCard)
     </section>
 
     <!------------------------------>
+    <!-- Section: Account deletion -->
+    <!------------------------------>
+    <section class="grid gap-4 rounded-xl border border-red-200 bg-(--color-surface-card) p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5">
+      <div class="min-w-0">
+        <p class="mb-1 text-[0.65rem] font-extrabold tracking-[0.14em] text-red-700">GESTIONE ACCOUNT</p>
+        <h2 class="font-bold">Elimina il tuo account</h2>
+        <p class="mt-1 text-sm leading-relaxed text-(--color-text-muted)">Rimuove definitivamente accesso e dati personali. Questa operazione non può essere annullata.</p>
+      </div>
+      <Button label="Elimina account" icon="pi pi-trash" severity="danger" outlined class="w-full sm:w-auto" @click="openDeleteAccount" />
+    </section>
+
+    <!------------------------------>
     <!-- Section: Edit dialog -->
     <!------------------------------>
-    <Dialog v-model:visible="editOpen" modal header="Modifica profilo" class="mx-3 w-full max-w-md">
-      <form class="grid gap-3" @submit.prevent="saveProfile">
-        <label for="profile-name" class="text-sm font-bold">Nome visualizzato</label>
-        <InputText id="profile-name" v-model="editName" maxlength="80" autofocus fluid />
-        <small class="text-(--color-text-muted)">L’email dell’account non può essere modificata da qui.</small>
+    <Dialog v-model:visible="editOpen" modal header="Modifica profilo" class="mx-3 w-full max-w-2xl">
+      <form class="grid gap-5" @submit.prevent="saveProfile">
+        <section class="grid gap-4" aria-labelledby="account-data-title">
+          <div>
+            <h2 id="account-data-title" class="font-bold">Dati account</h2>
+            <p class="mt-1 text-sm text-(--color-text-muted)">Il nome è condiviso con la tua eventuale scheda giocatore.</p>
+          </div>
+          <label for="profile-name" class="grid gap-2 text-sm font-bold">
+            Nome e cognome
+            <InputText id="profile-name" v-model="editName" minlength="2" maxlength="80" autocomplete="name" autofocus fluid required />
+          </label>
+          <label for="profile-email" class="grid gap-2 text-sm font-bold">
+            Email
+            <InputText id="profile-email" :model-value="email" disabled fluid />
+            <small class="font-normal text-(--color-text-muted)">L’email usata per l’accesso non può essere modificata da qui.</small>
+          </label>
+        </section>
+
+        <section v-if="player" class="grid gap-4 border-t border-(--color-border) pt-5" aria-labelledby="player-data-title">
+          <div>
+            <h2 id="player-data-title" class="font-bold">Dati giocatore</h2>
+            <p class="mt-1 text-sm text-(--color-text-muted)">Informazioni personali mostrate nella tua scheda sportiva.</p>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label for="profile-birth-date" class="grid content-start gap-2 text-sm font-bold">
+              Data di nascita
+              <DatePicker input-id="profile-birth-date" v-model="editBirthDate" date-format="dd/mm/yy" placeholder="gg/mm/aaaa" :max-date="today" fluid show-button-bar show-icon icon-display="input" />
+            </label>
+            <label for="profile-phone" class="grid content-start gap-2 text-sm font-bold">
+              Telefono
+              <InputText id="profile-phone" v-model="editPhone" type="tel" maxlength="40" autocomplete="tel" placeholder="Es. 333 0000000" fluid />
+            </label>
+            <label for="profile-club" class="grid content-start gap-2 text-sm font-bold sm:col-span-2">
+              Club di appartenenza
+              <InputText id="profile-club" v-model="editClub" maxlength="120" placeholder="Es. TC Milano" fluid />
+            </label>
+          </div>
+          <div class="grid gap-2 text-sm font-bold">
+            Foto profilo
+            <PlayerPhotoPicker v-model="editPhotoUrl" />
+          </div>
+        </section>
+
+        <p v-else class="rounded-lg bg-(--color-surface-soft) p-3 text-sm text-(--color-text-muted)">
+          Crea una scheda giocatore per aggiungere data di nascita, club, telefono e foto sportiva.
+        </p>
         <p v-if="error" class="text-sm text-red-700">{{ error }}</p>
-        <div class="mt-2 grid grid-cols-2 gap-2 sm:flex sm:justify-end"><Button type="button" label="Annulla" severity="secondary" text @click="editOpen = false" /><Button type="submit" label="Salva modifiche" icon="pi pi-check" :loading="saving" /></div>
+        <div class="grid grid-cols-2 gap-2 border-t border-(--color-border) pt-4 sm:flex sm:justify-end"><Button type="button" label="Annulla" severity="secondary" text @click="editOpen = false" /><Button type="submit" label="Salva modifiche" icon="pi pi-check" :loading="saving" /></div>
       </form>
     </Dialog>
 
@@ -324,6 +425,32 @@ onMounted(loadPlayerCard)
         </div>
         <Button label="Vedi le novità" icon="pi pi-history" severity="secondary" outlined @click="infoOpen = false; router.push({ name: 'changelog' })" />
       </div>
+    </Dialog>
+
+    <!------------------------------>
+    <!-- Section: Account deletion dialog -->
+    <!------------------------------>
+    <Dialog v-model:visible="deleteAccountOpen" modal header="Elimina definitivamente l’account" :closable="!deletingAccount" class="mx-3 w-full max-w-lg">
+      <form class="grid gap-5" @submit.prevent="deleteAccount">
+        <div class="rounded-lg bg-red-50 p-4 text-sm leading-relaxed text-red-900">
+          <strong class="block">Questa azione è permanente.</strong>
+          <ul class="mt-2 list-disc space-y-1 pl-5">
+            <li>l’accesso e i dati personali verranno rimossi;</li>
+            <li>i tornei globali creati soltanto da te verranno eliminati;</li>
+            <li>partite e risultati dei club resteranno, con il giocatore anonimizzato;</li>
+            <li>eventuali organizzazioni con altri membri devono avere un altro proprietario.</li>
+          </ul>
+        </div>
+        <label for="delete-account-confirmation" class="grid gap-2 text-sm font-bold">
+          Per confermare, digita {{ email }}
+          <InputText id="delete-account-confirmation" v-model="deleteConfirmation" type="email" autocomplete="off" fluid :disabled="deletingAccount" />
+        </label>
+        <p v-if="deleteAccountError" role="alert" class="text-sm text-red-700">{{ deleteAccountError }}</p>
+        <div class="grid grid-cols-2 gap-2 border-t border-(--color-border) pt-4 sm:flex sm:justify-end">
+          <Button type="button" label="Annulla" severity="secondary" text :disabled="deletingAccount" @click="deleteAccountOpen = false" />
+          <Button type="submit" label="Elimina definitivamente" icon="pi pi-trash" severity="danger" :disabled="!canDeleteAccount" :loading="deletingAccount" />
+        </div>
+      </form>
     </Dialog>
   </main>
 </template>
