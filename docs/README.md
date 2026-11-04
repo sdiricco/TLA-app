@@ -8,7 +8,8 @@ plans must be labelled clearly so they are not mistaken for shipped behavior.
 
 | Document | Purpose |
 |---|---|
-| [Product requirements](requirements/product.md) | Actors, product scope, acceptance criteria and requirement IDs. |
+| [Project requirements](requiremnts/project-requirements.md) | Italian as-is requirements derived from the current application, API, data model and tests. |
+| [Gherkin scenarios](requiremnts/features/README.md) | Acceptance scenarios organized by domain and linked to requirement IDs. |
 | [Architecture](architecture.md) | Runtime boundaries and source-code responsibilities. |
 | [Technologies](technologies.md) | Main dependencies and why they are used. |
 | [E2E testing](testing/e2e.md) | Running, debugging and extending Playwright tests. |

@@ -136,4 +136,4 @@ with a suitable GitHub token when release analysis must be tested locally.
 | [Documentation index](docs/README.md) | Entry point and documentation conventions |
 | [Technologies](docs/technologies.md) | Frontend stack and build tooling |
 | [Architecture](docs/architecture.md) | Folder structure, layers and routing |
-| [Requirements](docs/requirements/product.md) | Product scope and traceable acceptance criteria |
+| [Requirements](docs/requiremnts/project-requirements.md) | Requisiti funzionali, non funzionali e criteri di accettazione tracciabili |
