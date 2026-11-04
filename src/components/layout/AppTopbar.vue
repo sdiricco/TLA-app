@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Menu from 'primevue/menu'
 import { useAuthStore } from '../../stores/auth'
 import { useOrganizationsStore } from '../../stores/organizations'
 import { useLayoutStore } from '../../stores/layout'
+import { useNotificationsStore } from '../../stores/notifications'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const organizations = useOrganizationsStore()
 const layout = useLayoutStore()
+const notifications = useNotificationsStore()
 const organizationMenu = ref()
 const title = computed(() => {
   if (route.path.startsWith('/dashboard')) return 'Dashboard'
@@ -20,6 +22,7 @@ const title = computed(() => {
   if (route.path.startsWith('/organizations')) return 'Organizzazioni'
   if (route.path.startsWith('/players')) return 'Giocatori'
   if (route.path.startsWith('/settings')) return 'Impostazioni'
+  if (route.path.startsWith('/notifications')) return 'Notifiche'
   if (route.path.startsWith('/changelog')) return 'Changelog'
   if (route.path.startsWith('/requests')) return 'Richieste'
   if (route.path.startsWith('/profile')) return 'Profilo'
@@ -28,10 +31,10 @@ const title = computed(() => {
   return 'Tornei'
 })
 
-const organizationFilterLabel = computed(() => organizations.activeOrganization?.name ?? 'Tutti i contenuti')
+const organizationFilterLabel = computed(() => organizations.activeOrganization?.name ?? 'Contenuti globali')
 const organizationMenuItems = computed(() => [
   {
-    label: 'Tutti i contenuti',
+    label: 'Contenuti globali',
     icon: organizations.activeOrganization ? 'pi pi-filter' : 'pi pi-check',
     command: selectGlobalContext,
   },
@@ -48,8 +51,8 @@ const organizationMenuItems = computed(() => [
       }]),
   { separator: true },
   {
-    label: 'Gestisci organizzazioni',
-    icon: 'pi pi-cog',
+    label: 'Organizzazioni',
+    icon: 'pi pi-building',
     command: () => void router.push({ name: 'organizations' }),
   },
 ])
@@ -66,7 +69,7 @@ const backNavigation = computed(() => {
     return { to: '/requests', label: 'Torna alle richieste' }
   }
 
-  if (route.name === 'settings' || route.name === 'changelog' || route.name === 'requests') {
+  if (route.name === 'settings' || route.name === 'changelog' || route.name === 'requests' || route.name === 'notifications') {
     return { to: '/profile', label: 'Torna al profilo' }
   }
 
@@ -115,6 +118,10 @@ function goBack(): void {
   if (!backNavigation.value) return
   void router.push(backNavigation.value.to)
 }
+
+onMounted(() => {
+  if (!auth.isGuest) void notifications.loadUnreadCount()
+})
 </script>
 
 <template>
@@ -145,6 +152,17 @@ function goBack(): void {
       <Menu ref="organizationMenu" :model="organizationMenuItems" class="w-72!" popup />
     </div>
     <div class="topbar-actions">
+      <Button
+        v-if="!auth.isGuest"
+        icon="pi pi-bell"
+        severity="secondary"
+        text
+        rounded
+        :badge="notifications.unreadCount ? String(notifications.unreadCount) : undefined"
+        aria-label="Apri notifiche"
+        title="Notifiche"
+        @click="router.push({ name: 'notifications' })"
+      />
       <button
         type="button"
         class="topbar-icon"

@@ -184,6 +184,21 @@ watch(() => route.params['id'], loadPlayer, { immediate: true })
               <h2 class="truncate text-2xl font-bold tracking-tight sm:text-3xl xl:text-4xl" :title="fullName">
                 {{ fullName }}
               </h2>
+              <p
+                v-if="player.email"
+                class="mt-2 flex min-w-0 items-center gap-2 text-sm text-white/75"
+                :title="player.email"
+              >
+                <i class="pi pi-envelope shrink-0" aria-hidden="true" />
+                <span class="truncate">{{ player.email }}</span>
+                <span class="hidden shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[0.625rem] font-bold uppercase tracking-wider text-white/55 sm:inline">
+                  temporaneo
+                </span>
+              </p>
+              <p v-else class="mt-2 flex items-center gap-2 text-sm text-white/45">
+                <i class="pi pi-link-slash" aria-hidden="true" />
+                Nessuna email collegata
+              </p>
               <p class="mt-2 text-sm text-white/60">Identità, contatti e informazioni sportive</p>
             </div>
           </div>

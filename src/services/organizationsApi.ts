@@ -10,4 +10,6 @@ export const organizationsService: OrganizationsService = {
   joinPublic: (id) => apiRequest<Organization>(apiClient, { url: '/organizations/join', method: 'POST', data: { organization_id: id } }),
   requestAccess: (id) => apiRequest<{ organization: Organization; status: 'pending' | 'approved' }>(apiClient, { url: `/organizations/${id}/request`, method: 'POST' }),
   update: (id, data: OrganizationUpdate) => apiRequest<Organization>(apiClient, { url: `/organizations/${id}`, method: 'PATCH', data: { ...data, regenerate_code: data.regenerateCode } }),
+  getInvitationCandidates: (id, query) => apiRequest(apiClient, { url: `/organizations/${id}/invitations/candidates`, method: 'GET', params: { q: query || undefined } }),
+  invitePlayer: (id, data) => apiRequest(apiClient, { url: `/organizations/${id}/invitations`, method: 'POST', data }),
 }

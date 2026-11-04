@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Toast from 'primevue/toast'
 import AppBottomNav from '../components/layout/AppBottomNav.vue'
@@ -8,6 +10,8 @@ import GlobalSearchDialog from '../components/layout/GlobalSearchDialog.vue'
 import { useLayoutStore } from '../stores/layout'
 
 const layout = useLayoutStore()
+const route = useRoute()
+const showTopbar = computed(() => !route.meta.hideTopbar)
 </script>
 
 <template>
@@ -18,7 +22,7 @@ const layout = useLayoutStore()
       </div>
 
       <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <AppTopbar />
+        <AppTopbar v-if="showTopbar" />
 
         <main class="app-content flex-1 overflow-y-auto">
           <RouterView />

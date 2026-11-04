@@ -3,7 +3,6 @@ import Button from 'primevue/button'
 import Drawer from 'primevue/drawer'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
-import OrganizationFilter from '@/components/filters/OrganizationFilter.vue'
 import type { PlayerSortField, SortOrder } from '@/types'
 import type { PlayerFilterOption, PlayerFilters } from './playerFilters'
 
@@ -30,13 +29,6 @@ defineEmits<{ reset: []; apply: [] }>()
           placeholder="Es. TC Milano"
           fluid
         />
-      </div>
-
-      <div class="flex min-w-0 flex-col gap-2">
-        <label for="player-organization-filter" class="text-xs font-bold text-(--color-text-muted)">
-          Organizzazione
-        </label>
-        <OrganizationFilter id="player-organization-filter" v-model="filters.organizationId" />
       </div>
 
       <div class="flex min-w-0 flex-col gap-2">

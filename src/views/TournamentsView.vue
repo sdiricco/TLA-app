@@ -103,7 +103,6 @@
       [
         appliedFilters.value.category !== 'all',
         completedDateRange.value !== null,
-        appliedFilters.value.organizationId !== 'mine',
         appliedFilters.value.organizerId !== 'all',
       ].filter(Boolean).length
   );
@@ -139,15 +138,6 @@
         label: `${moment(from).locale('it').format('D MMM YYYY')} – ${moment(to).locale('it').format('D MMM YYYY')}`,
       });
     }
-    if (filters.organizationId !== 'mine') {
-      const label =
-        filters.organizationId === 'global'
-          ? 'Contenuti globali'
-          : (organizationsStore.organizations.find(
-              (organization) => organization.id === filters.organizationId
-            )?.name ?? 'Organizzazione');
-      chips.push({ key: 'organizationId', label });
-    }
     if (filters.organizerId !== 'all') {
       const organizer = organizerOptions.value.find((option) => option.id === filters.organizerId);
       chips.push({ key: 'organizerId', label: organizer?.name ?? 'Organizzatore' });
@@ -166,7 +156,7 @@
       category: 'all',
       status: 'all',
       dateRange: null,
-      organizationId: 'mine',
+      organizationId: organizationsStore.activeId ?? 'global',
       organizerId: 'all',
     };
   }
@@ -212,7 +202,9 @@
   async function loadOrganizers(): Promise<void> {
     organizersLoading.value = true;
     try {
-      const organizers = await organizersService.getAll({ organizationId: 'mine' });
+      const organizers = await organizersService.getAll({
+        organizationId: appliedFilters.value.organizationId,
+      });
       organizerOptions.value = [
         { id: 'all', name: 'Tutti gli organizzatori' },
         ...organizers,
@@ -275,7 +267,7 @@
     if (key === 'category') filters.category = 'all';
     if (key === 'status') filters.status = 'all';
     if (key === 'dateRange') filters.dateRange = null;
-    if (key === 'organizationId') filters.organizationId = 'mine';
+    if (key === 'organizationId') filters.organizationId = organizationsStore.activeId ?? 'global';
     if (key === 'organizerId') filters.organizerId = 'all';
     appliedFilters.value = filters;
     void loadTournaments(0, store.perPage);

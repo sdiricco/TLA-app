@@ -10,6 +10,7 @@ declare module 'vue-router' {
     requiresTournamentCreator?: boolean
     organizationSetup?: boolean
     allowsIncompleteOnboarding?: boolean
+    hideTopbar?: boolean
   }
 }
 
@@ -67,7 +68,7 @@ const router = createRouter({
           path: 'organizations/new',
           name: 'organization-create',
           component: () => import('../views/OrganizationCreateView.vue'),
-          meta: { requiresAuth: true, organizationSetup: true },
+          meta: { requiresAuth: true, organizationSetup: true, hideTopbar: true },
         },
         {
           path: 'organizations/edit',
@@ -206,6 +207,12 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
+          path: 'notifications',
+          name: 'notifications',
+          component: () => import('../views/NotificationsView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'admin/feature-flags',
           name: 'admin-feature-flags',
           redirect: () => ({ name: 'settings' }),
@@ -253,7 +260,7 @@ router.beforeEach(async (to) => {
         // can show the real loading error instead of failing navigation.
       }
     }
-    if (auth.isGuest && (to.name === 'profile' || to.name === 'request-create')) {
+    if (auth.isGuest && (to.name === 'profile' || to.name === 'request-create' || to.name === 'notifications')) {
       return { name: organizations.activeOrganization ? 'tournaments' : 'organizations' }
     }
   }

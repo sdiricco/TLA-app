@@ -13,6 +13,93 @@ export interface ChangelogEntry {
 // the same pull request; see the product changelog policy in AGENTS.md.
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: '2026-11-04',
+    version: 'Incontri 1.1',
+    kind: 'improvement',
+    title: 'Dettaglio incontro più coerente e compatto',
+    description: 'La pagina del match riprende lo stile del torneo e lascia più spazio alle informazioni importanti.',
+    items: [
+      'Scheda dell’incontro allineata all’overview del torneo',
+      'Navigazione al torneo spostata nell’header con un pulsante compatto a sola icona',
+      'Spazio superiore della pagina ridotto',
+    ],
+  },
+  {
+    date: '2026-08-21',
+    version: 'Inviti 1.0.1',
+    kind: 'fix',
+    title: 'Accettazione inviti ripristinata',
+    description: 'L’ingresso in un’organizzazione ora completa correttamente membership e scheda giocatore del club.',
+    items: [
+      'Risolto l’errore database durante l’accettazione di un invito',
+      'Corretto anche l’ingresso alternativo tramite codice organizzazione',
+      'Unicità delle schede giocatore mantenuta senza creare duplicati',
+    ],
+  },
+  {
+    date: '2026-08-21',
+    version: 'Inviti 1.0',
+    kind: 'feature',
+    title: 'Inviti giocatore e notifiche in-app',
+    description: 'Gli amministratori possono invitare profili TLA senza creare manualmente duplicati nell’organizzazione.',
+    items: [
+      'Ricerca dei giocatori globali disponibili direttamente dalla lista dell’organizzazione',
+      'Invito tramite email associata a un account TLA con scheda giocatore',
+      'Centro notifiche con accettazione o rifiuto degli inviti ricevuti',
+      'Codice organizzazione mantenuto come alternativa rapida e condivisibile',
+    ],
+  },
+  {
+    date: '2026-08-21',
+    version: 'Giocatori 1.3',
+    kind: 'improvement',
+    title: 'Inviti contestuali per le nuove organizzazioni',
+    description: 'La lista giocatori vuota ora accompagna gli amministratori nel primo invito.',
+    items: [
+      'CTA “Invita giocatore” mostrata quando l’organizzazione non ha ancora profili',
+      'Codice invito copiabile direttamente dalla lista giocatori',
+      'Indicazioni chiare su ingresso nell’organizzazione e completamento della scheda sportiva',
+    ],
+  },
+  {
+    date: '2026-08-21',
+    version: 'Organizzazioni 1.1',
+    kind: 'improvement',
+    title: 'Form organizzazioni più chiari',
+    description: 'Creazione e modifica delle organizzazioni usano controlli PrimeVue riconoscibili e accessibili.',
+    items: [
+      'Menu di visibilità e reperibilità con icone e descrizioni esplicite',
+      'Campi di testo e selezione uniformati allo stile filled del design system',
+      'Label associate correttamente agli input dei menu a tendina',
+    ],
+  },
+  {
+    date: '2026-08-21',
+    version: 'Contesti 1.2',
+    kind: 'fix',
+    title: 'Organizzazioni isolate correttamente',
+    description: 'Il contesto scelto nell’header ora controlla in modo affidabile i contenuti mostrati in tutta l’app.',
+    items: [
+      'Giocatori e tornei globali esclusi quando è selezionata una singola organizzazione',
+      'Scelta “Contenuti globali” mantenuta anche dopo navigazione e ricaricamento',
+      'Contesto globale limitato ai contenuti che non appartengono a un’organizzazione',
+      'Filtro organizzazione rimosso dai pannelli secondari per evitare contesti in conflitto',
+      'Accesso diretto alla pagina Organizzazioni dal menu del contesto',
+      'Topbar rimossa dalla creazione di un’organizzazione per lasciare il form libero da filtri e ricerca non pertinenti',
+    ],
+  },
+  {
+    date: '2026-08-21',
+    version: 'Identità 1.3',
+    kind: 'improvement',
+    title: 'Verifica temporanea delle identità giocatore',
+    description: 'La scheda giocatore mostra temporaneamente l’email collegata per facilitare il controllo di eventuali profili duplicati.',
+    items: [
+      'Email dell’account visibile sotto il nome nella scheda giocatore',
+      'Stato esplicito per i giocatori senza un account collegato',
+    ],
+  },
+  {
     date: '2026-08-19',
     version: 'Preferenze 1.0',
     kind: 'feature',
@@ -59,7 +146,7 @@ export const changelogEntries: ChangelogEntry[] = [
     description: 'Il passaggio tra contenuti globali e club è ora disponibile in modo coerente dalla topbar.',
     items: [
       'Filtro organizzazione spostato dalla sidebar all’header su desktop e mobile',
-      'Contesto globale rinominato “Tutti i contenuti” con stato vuoto per chi non appartiene ancora a un’organizzazione',
+      'Contesto globale accessibile dall’header con stato vuoto per chi non appartiene ancora a un’organizzazione',
       'Creazione torneo rimossa dalla dashboard e mantenuta nella pagina Tornei',
     ],
   },

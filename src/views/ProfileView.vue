@@ -276,6 +276,11 @@ onMounted(loadPlayerCard)
           <p class="mt-0.5 text-xs text-(--color-text-muted)">Consulta le novità o chiedi assistenza.</p>
         </header>
         <nav aria-label="Informazioni e supporto">
+          <RouterLink :to="{ name: 'notifications' }" class="profile-menu-item">
+            <span class="profile-menu-icon"><i class="pi pi-bell" /></span>
+            <span class="profile-menu-copy"><strong>Notifiche</strong><small>Inviti e aggiornamenti da gestire</small></span>
+            <i class="pi pi-chevron-right profile-menu-arrow" />
+          </RouterLink>
           <RouterLink :to="{ name: 'changelog' }" class="profile-menu-item">
             <span class="profile-menu-icon"><i class="pi pi-history" /></span>
             <span class="profile-menu-copy"><strong>Changelog</strong><small>Novità, miglioramenti e correzioni</small></span>

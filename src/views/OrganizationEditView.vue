@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
@@ -20,14 +20,23 @@ const latitude = ref<number | null>(null)
 const longitude = ref<number | null>(null)
 const visibility = ref<OrganizationVisibility>('private')
 
-const visibilityOptions: Array<{ label: string; value: OrganizationVisibility }> = [
-  { label: 'Privata · solo con codice', value: 'private' },
-  { label: 'Pubblica · visibile nella ricerca', value: 'public' },
+interface OrganizationSelectOption<T> {
+  label: string
+  description: string
+  value: T
+  icon: string
+}
+
+const visibilityOptions: Array<OrganizationSelectOption<OrganizationVisibility>> = [
+  { label: 'Privata', description: 'Accesso con codice', value: 'private', icon: 'pi pi-lock' },
+  { label: 'Pubblica', description: 'Visibile nella ricerca', value: 'public', icon: 'pi pi-globe' },
 ]
-const discoverabilityOptions = [
-  { label: 'Visibile sulla mappa · consenti richieste', value: true },
-  { label: 'Nascosta · accesso solo con codice', value: false },
+const discoverabilityOptions: Array<OrganizationSelectOption<boolean>> = [
+  { label: 'Visibile sulla mappa', description: 'Consenti richieste di accesso', value: true, icon: 'pi pi-map-marker' },
+  { label: 'Nascosta', description: 'Accesso solo con codice', value: false, icon: 'pi pi-eye-slash' },
 ]
+const selectedVisibility = computed(() => visibilityOptions.find((option) => option.value === visibility.value) ?? visibilityOptions[0])
+const selectedDiscoverability = computed(() => discoverabilityOptions.find((option) => option.value === discoverable.value) ?? discoverabilityOptions[1])
 
 // Rehydrate the form whenever the active organization changes.
 function syncForm(): void {
@@ -102,14 +111,79 @@ watch(() => store.activeOrganization?.id, syncForm, { immediate: true })
     <!------------------------------>
     <form class="grid gap-3 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6" @submit.prevent="save">
       <Message v-if="message" :severity="message.includes('salvat') || message.includes('rigenerato') ? 'success' : 'error'" :closable="false">{{ message }}</Message>
-      <label for="edit-visibility" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Visibilità<Select id="edit-visibility" v-model="visibility" :options="visibilityOptions" option-label="label" option-value="value" fluid /></label>
-      <label v-if="visibility === 'private'" for="edit-discoverability" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Ricerca e richieste<Select id="edit-discoverability" v-model="discoverable" :options="discoverabilityOptions" option-label="label" option-value="value" fluid /></label>
+      <label for="edit-visibility" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">
+        Visibilità
+        <Select
+          input-id="edit-visibility"
+          v-model="visibility"
+          :options="visibilityOptions"
+          option-label="label"
+          option-value="value"
+          aria-label="Visibilità"
+          variant="filled"
+          fluid
+        >
+          <template #value>
+            <span class="flex items-center gap-3">
+              <i :class="selectedVisibility.icon" class="text-primary" aria-hidden="true" />
+              <span class="grid text-left">
+                <strong class="text-sm">{{ selectedVisibility.label }}</strong>
+                <small class="font-normal text-(--color-text-muted)">{{ selectedVisibility.description }}</small>
+              </span>
+            </span>
+          </template>
+          <template #option="{ option }">
+            <span class="flex items-center gap-3 py-1">
+              <i :class="option.icon" class="text-primary" aria-hidden="true" />
+              <span class="grid">
+                <strong class="text-sm">{{ option.label }}</strong>
+                <small class="text-(--color-text-muted)">{{ option.description }}</small>
+              </span>
+            </span>
+          </template>
+        </Select>
+      </label>
+      <label v-if="visibility === 'private'" for="edit-discoverability" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">
+        Ricerca e richieste
+        <Select
+          input-id="edit-discoverability"
+          v-model="discoverable"
+          :options="discoverabilityOptions"
+          option-label="label"
+          option-value="value"
+          aria-label="Ricerca e richieste"
+          variant="filled"
+          fluid
+        >
+          <template #value>
+            <span class="flex items-center gap-3">
+              <i :class="selectedDiscoverability.icon" class="text-primary" aria-hidden="true" />
+              <span class="grid text-left">
+                <strong class="text-sm">{{ selectedDiscoverability.label }}</strong>
+                <small class="font-normal text-(--color-text-muted)">{{ selectedDiscoverability.description }}</small>
+              </span>
+            </span>
+          </template>
+          <template #option="{ option }">
+            <span class="flex items-center gap-3 py-1">
+              <i :class="option.icon" class="text-primary" aria-hidden="true" />
+              <span class="grid">
+                <strong class="text-sm">{{ option.label }}</strong>
+                <small class="text-(--color-text-muted)">{{ option.description }}</small>
+              </span>
+            </span>
+          </template>
+        </Select>
+      </label>
       <div class="grid gap-2 text-sm font-bold text-(--color-text-muted)">
         <span>Posizione sulla mappa</span>
         <OrganizationMap :interactive="true" :latitude="latitude" :longitude="longitude" @location-change="setLocation" />
         <small class="text-xs font-normal leading-relaxed">Clicca sulla mappa per impostare o aggiornare la posizione.</small>
       </div>
-      <label for="edit-description" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Descrizione<Textarea id="edit-description" v-model="description" rows="4" maxlength="240" placeholder="Presenta brevemente la community" fluid /></label>
+      <label for="edit-description" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">
+        Descrizione
+        <Textarea id="edit-description" v-model="description" rows="4" maxlength="240" placeholder="Presenta brevemente la community" variant="filled" fluid />
+      </label>
       <Button type="submit" label="Salva modifiche" icon="pi pi-check" :loading="busy" fluid />
     </form>
 

@@ -98,7 +98,7 @@ test('keeps the organization filter above the primary mobile navigation', async 
   await page.goto('/#access_token=mobile-mock-jwt&type=signup')
   await page.getByRole('button', { name: 'Continua in TLA' }).click()
 
-  const organizationFilter = page.getByRole('button', { name: 'Filtra per organizzazione: Tutti i contenuti' })
+  const organizationFilter = page.getByRole('button', { name: 'Filtra per organizzazione: Contenuti globali' })
   await expect(organizationFilter).toBeVisible()
 
   const navigation = page.getByRole('navigation', { name: 'Navigazione mobile principale' })
@@ -110,7 +110,23 @@ test('keeps the organization filter above the primary mobile navigation', async 
 
   await organizationFilter.click()
   await expect(page.getByRole('menuitem', { name: 'Non sei iscritto a nessuna organizzazione' })).toBeVisible()
-  await expect(page.getByRole('menuitem', { name: 'Gestisci organizzazioni' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Organizzazioni' })).toBeVisible()
+
+  await page.getByRole('menuitem', { name: 'Organizzazioni' }).click()
+  await expect(page).toHaveURL(/\/organizations$/)
+  await expect(page.getByRole('heading', { name: 'I tuoi spazi' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Crea organizzazione' }).click()
+  await expect(page).toHaveURL(/\/organizations\/new$/)
+  await expect(page.getByRole('heading', { name: 'Crea un’organizzazione' })).toBeVisible()
+  await expect(page.locator('.app-topbar')).toHaveCount(0)
+
+  const visibilitySelect = page.getByRole('combobox', { name: 'Visibilità' })
+  await expect(visibilitySelect).toBeVisible()
+  await visibilitySelect.click()
+  await expect(page.getByRole('option', { name: /Pubblica/ })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('combobox', { name: 'Ricerca e richieste' })).toBeVisible()
 })
 
 test('allows guest access to the dashboard', async ({ page }) => {
@@ -143,7 +159,7 @@ test('allows a registered account to start a global tournament without a club', 
   await page.getByRole('button', { name: 'Continua in TLA' }).click()
 
   await expect(page.getByRole('button', { name: 'Nuovo torneo' })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Filtra per organizzazione: Tutti i contenuti' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Filtra per organizzazione: Contenuti globali' })).toBeVisible()
   await page.getByRole('link', { name: 'Tornei', exact: true }).first().click()
   await expect(page.getByRole('button', { name: 'Nuovo torneo' })).toBeVisible()
   await page.getByRole('button', { name: 'Nuovo torneo' }).click()

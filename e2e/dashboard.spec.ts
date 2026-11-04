@@ -39,7 +39,10 @@ const tournaments = [
 ]
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.clear())
+  await page.addInitScript((organizationId) => {
+    localStorage.clear()
+    localStorage.setItem('tla_organization_id', organizationId)
+  }, organization.id)
   await page.route('**/api/auth/me', async (route) => {
     await route.fulfill({
       json: { user: { id: 'admin-dashboard', email: 'admin@tla.local', name: 'Simone Diricco', role: 'admin' } },

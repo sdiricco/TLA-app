@@ -4,6 +4,9 @@ import { getOrCreateProfile } from './profileRepo'
 import type { OrganizationRequest } from '../middleware/requireOrganization'
 
 export type VisibilityFilter = 'mine' | 'global' | string
+export type ExplicitOrganizationScope =
+  | { organizationId: string | null }
+  | { id: { in: string[] } }
 
 function requestedFilter(req: OrganizationRequest): VisibilityFilter {
   const value = req.query.organizationId
@@ -20,15 +23,24 @@ async function membershipOrganizationIds(req: OrganizationRequest): Promise<stri
   return memberships.map(({ organizationId }) => organizationId)
 }
 
+export function explicitOrganizationScope(
+  filter: VisibilityFilter,
+  organizationIds: string[],
+): ExplicitOrganizationScope | null {
+  if (filter === 'mine') return null
+  if (filter === 'global') return { organizationId: null }
+  if (organizationIds.includes(filter)) return { organizationId: filter }
+  return { id: { in: [] } }
+}
+
 export async function visibleTournamentWhere(req: OrganizationRequest): Promise<Prisma.TournamentWhereInput> {
   const filter = requestedFilter(req)
-  if (filter === 'global') return { organizationId: null }
+  if (filter === 'global') return explicitOrganizationScope(filter, [])!
   if (!req.authUser || req.authUser.id === 'guest') return { organizationId: null }
 
   const organizationIds = await membershipOrganizationIds(req)
-  if (filter !== 'mine') {
-    return organizationIds.includes(filter) ? { OR: [{ organizationId: filter }, { organizationId: null }] } : { organizationId: null }
-  }
+  const explicitScope = explicitOrganizationScope(filter, organizationIds)
+  if (explicitScope) return explicitScope
   return {
     OR: [
       { organizationId: null },
@@ -40,13 +52,12 @@ export async function visibleTournamentWhere(req: OrganizationRequest): Promise<
 
 export async function visiblePlayerWhere(req: OrganizationRequest): Promise<Prisma.PlayerWhereInput> {
   const filter = requestedFilter(req)
-  if (filter === 'global') return { organizationId: null }
+  if (filter === 'global') return explicitOrganizationScope(filter, [])!
   if (!req.authUser || req.authUser.id === 'guest') return { organizationId: null }
 
   const organizationIds = await membershipOrganizationIds(req)
-  if (filter !== 'mine') {
-    return organizationIds.includes(filter) ? { OR: [{ organizationId: filter }, { organizationId: null }] } : { organizationId: null }
-  }
+  const explicitScope = explicitOrganizationScope(filter, organizationIds)
+  if (explicitScope) return explicitScope
   return {
     OR: [
       { organizationId: null },

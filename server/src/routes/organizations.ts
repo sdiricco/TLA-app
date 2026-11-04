@@ -253,18 +253,27 @@ organizationsRouter.post('/join', async (req, res) => {
       res.status(404).json({ message: 'Codice organizzazione non valido' })
       return
     }
-    await prisma.$transaction([
-      prisma.organizationMembership.upsert({
+    await prisma.$transaction(async (tx) => {
+      await tx.organizationMembership.upsert({
         where: { organizationId_profileId: { organizationId: organization.id, profileId: profile.id } },
         create: { organizationId: organization.id, profileId: profile.id, role: 'member' },
         update: {},
-      }),
-      prisma.player.upsert({
-        where: { organizationId_userId: { organizationId: organization.id, userId: profile.id } },
-        create: { organizationId: organization.id, userId: profile.id, name: profile.name ?? profile.email, ranking: 0 },
-        update: { name: profile.name ?? profile.email },
-      }),
-    ])
+      })
+      const existingPlayer = await tx.player.findFirst({
+        where: { organizationId: organization.id, userId: profile.id },
+        select: { id: true },
+      })
+      if (existingPlayer) {
+        await tx.player.update({
+          where: { id: existingPlayer.id },
+          data: { name: profile.name ?? profile.email },
+        })
+      } else {
+        await tx.player.create({
+          data: { organizationId: organization.id, userId: profile.id, name: profile.name ?? profile.email, ranking: 0 },
+        })
+      }
+    })
     res.json({ id: organization.id, name: organization.name, slug: organization.slug, visibility: organization.visibility, discoverable: organization.discoverable, latitude: organization.latitude, longitude: organization.longitude, join_code: '', role: 'member' })
   } catch (error) {
     res.status(400).json({ message: (error as Error).message })
@@ -292,6 +301,120 @@ organizationsRouter.post('/:id/request', async (req, res) => {
     res.status(201).json({ organization: serializePublicOrganization(organization), status: 'pending' })
   } catch (error) {
     res.status(400).json({ message: (error as Error).message })
+  }
+})
+
+organizationsRouter.get('/:id/invitations/candidates', requireOrganization, requireSelectedOrganization, requireAdmin, async (req, res) => {
+  const organizationId = (req as OrganizationRequest).organization!.id
+  if (organizationId !== req.params.id) {
+    res.status(403).json({ message: 'Organizzazione non autorizzata' })
+    return
+  }
+
+  const query = typeof req.query.q === 'string' ? req.query.q.trim() : ''
+  const candidates = await prisma.player.findMany({
+    where: {
+      organizationId: null,
+      userId: { not: null },
+      ...(query ? { name: { contains: query, mode: 'insensitive' } } : {}),
+      profile: {
+        is: {
+          memberships: { none: { organizationId } },
+          invitationsReceived: { none: { organizationId, status: 'pending' } },
+        },
+      },
+    },
+    select: {
+      id: true,
+      name: true,
+      club: true,
+      photoUrl: true,
+      userId: true,
+    },
+    orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    take: 30,
+  })
+
+  res.json(candidates.map((candidate) => ({
+    player_id: candidate.id,
+    profile_id: candidate.userId,
+    name: candidate.name,
+    club: candidate.club,
+    photo_url: candidate.photoUrl,
+  })))
+})
+
+organizationsRouter.post('/:id/invitations', requireOrganization, requireSelectedOrganization, requireAdmin, async (req, res) => {
+  const organizationId = (req as OrganizationRequest).organization!.id
+  if (organizationId !== req.params.id) {
+    res.status(403).json({ message: 'Organizzazione non autorizzata' })
+    return
+  }
+
+  try {
+    const sender = await profileFor(req as AuthenticatedRequest)
+    const playerId = typeof req.body?.player_id === 'string' ? req.body.player_id : ''
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : ''
+
+    const candidate = playerId
+      ? await prisma.player.findFirst({
+          where: { id: playerId, organizationId: null, userId: { not: null } },
+          include: { profile: true },
+        })
+      : email
+        ? await prisma.player.findFirst({
+            where: { organizationId: null, userId: { not: null }, profile: { is: { email: { equals: email, mode: 'insensitive' } } } },
+            include: { profile: true },
+          })
+        : null
+
+    if (!candidate?.profile) {
+      res.status(404).json({ message: 'Nessun giocatore TLA registrato con questi dati. Condividi il codice organizzazione.' })
+      return
+    }
+
+    const membership = await prisma.organizationMembership.findUnique({
+      where: { organizationId_profileId: { organizationId, profileId: candidate.profile.id } },
+    })
+    if (membership) {
+      res.status(409).json({ message: 'Questo giocatore fa già parte dell’organizzazione.' })
+      return
+    }
+
+    const invitation = await prisma.organizationInvitation.upsert({
+      where: {
+        organizationId_inviteeProfileId: {
+          organizationId,
+          inviteeProfileId: candidate.profile.id,
+        },
+      },
+      create: {
+        organizationId,
+        inviteeProfileId: candidate.profile.id,
+        invitedByProfileId: sender.id,
+        email: candidate.profile.email.toLowerCase(),
+      },
+      update: {
+        invitedByProfileId: sender.id,
+        email: candidate.profile.email.toLowerCase(),
+        status: 'pending',
+        readAt: null,
+        respondedAt: null,
+      },
+      include: { organization: { select: { name: true } } },
+    })
+
+    res.status(201).json({
+      id: invitation.id,
+      organization_id: invitation.organizationId,
+      organization_name: invitation.organization.name,
+      player_name: candidate.name,
+      status: invitation.status,
+      created_at: invitation.createdAt.toISOString(),
+    })
+  } catch (error) {
+    console.error('Failed to create organization invitation', error)
+    res.status(400).json({ message: error instanceof Error ? error.message : 'Impossibile inviare l’invito' })
   }
 })
 

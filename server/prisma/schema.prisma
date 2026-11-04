@@ -21,6 +21,8 @@ model Profile {
   requestComments       OrganizationRequestComment[]
   accessRequests        OrganizationAccessRequest[]
   organizedTournaments  Tournament[]                 @relation("TournamentOrganizer")
+  invitationsReceived   OrganizationInvitation[]     @relation("OrganizationInvitationRecipient")
+  invitationsSent       OrganizationInvitation[]     @relation("OrganizationInvitationSender")
   createdAt             DateTime                     @default(now()) @map("created_at")
   updatedAt             DateTime                     @updatedAt @map("updated_at")
 
@@ -44,10 +46,33 @@ model Organization {
   tournaments    Tournament[]
   requests       OrganizationRequest[]
   accessRequests OrganizationAccessRequest[]
+  invitations    OrganizationInvitation[]
   createdAt      DateTime                    @default(now()) @map("created_at")
   updatedAt      DateTime                    @updatedAt @map("updated_at")
 
   @@map("organizations")
+}
+
+model OrganizationInvitation {
+  id                 String       @id @default(uuid())
+  organizationId     String       @map("organization_id")
+  inviteeProfileId   String       @map("invitee_profile_id")
+  invitedByProfileId String?      @map("invited_by_profile_id")
+  email              String
+  status             String       @default("pending")
+  readAt             DateTime?    @map("read_at")
+  respondedAt        DateTime?    @map("responded_at")
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitee            Profile      @relation("OrganizationInvitationRecipient", fields: [inviteeProfileId], references: [id], onDelete: Cascade)
+  invitedBy          Profile?     @relation("OrganizationInvitationSender", fields: [invitedByProfileId], references: [id], onDelete: SetNull)
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+
+  @@unique([organizationId, inviteeProfileId])
+  @@index([inviteeProfileId, status, createdAt])
+  @@index([organizationId, status])
+  @@index([invitedByProfileId])
+  @@map("organization_invitations")
 }
 
 model OrganizationAccessRequest {
@@ -146,9 +171,9 @@ model Player {
   createdAt        DateTime                @default(now()) @map("created_at")
   updatedAt        DateTime                @updatedAt @map("updated_at")
 
-  @@unique([organizationId, userId])
   @@index([ranking])
   @@index([organizationId])
+  @@index([userId])
   @@map("players")
 }
 

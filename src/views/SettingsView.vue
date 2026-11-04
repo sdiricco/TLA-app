@@ -84,7 +84,7 @@ const appearanceIcon = computed(() => appearanceOptions.find(({ value }) => valu
             <span class="grid size-9 shrink-0 place-items-center rounded-md bg-(--color-surface-card) text-primary shadow-sm"><i class="pi pi-building" /></span>
             <div class="min-w-0">
               <dt class="text-xs font-extrabold tracking-wider text-(--color-text-subtle)">CONTESTO</dt>
-              <dd class="mt-1 truncate font-bold" :title="organizations.activeOrganization?.name ?? 'Tutti i contenuti'">{{ organizations.activeOrganization?.name ?? 'Tutti i contenuti' }}</dd>
+              <dd class="mt-1 truncate font-bold" :title="organizations.activeOrganization?.name ?? 'Contenuti globali'">{{ organizations.activeOrganization?.name ?? 'Contenuti globali' }}</dd>
             </div>
           </div>
         </dl>

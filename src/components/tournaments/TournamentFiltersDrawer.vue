@@ -4,7 +4,6 @@ import Button from 'primevue/button'
 import DatePicker from 'primevue/datepicker'
 import Drawer from 'primevue/drawer'
 import Select from 'primevue/select'
-import OrganizationFilter from '@/components/filters/OrganizationFilter.vue'
 import type { OrganizerSummary, TournamentCategory } from '@/types'
 import type { TournamentFilterOption, TournamentFilters } from './tournamentFilters'
 
@@ -30,13 +29,6 @@ const selectedOrganizer = computed(() =>
 <template>
   <Drawer v-model:visible="visible" position="right" header="Filtra tornei" class="w-full! sm:w-104!">
     <div class="flex flex-col gap-5">
-      <div class="flex min-w-0 flex-col gap-2">
-        <label for="tournament-organization-filter" class="text-xs font-bold text-(--color-text-muted)">
-          Organizzazione
-        </label>
-        <OrganizationFilter id="tournament-organization-filter" v-model="filters.organizationId" />
-      </div>
-
       <div class="flex min-w-0 flex-col gap-2">
         <label for="tournament-organizer-filter" class="text-xs font-bold text-(--color-text-muted)">
           Organizzatore

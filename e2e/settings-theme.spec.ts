@@ -25,6 +25,9 @@ test('persists light and dark preferences and follows the system theme', async (
   await page.route('**/api/organizations', async (route) => {
     await route.fulfill({ json: [] })
   })
+  await page.route('**/api/notifications/unread-count', async (route) => {
+    await route.fulfill({ json: { count: 0 } })
+  })
 
   await page.goto('/settings')
 

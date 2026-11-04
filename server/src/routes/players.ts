@@ -285,9 +285,11 @@ playersRouter.get('/:id/matches', async (req, res) => {
 })
 
 playersRouter.get('/:id', async (req, res) => {
+  const authReq = req as OrganizationRequest
   const playerId = req.params['id'] as string
   const player = await prisma.player.findFirst({
-    where: { id: playerId, ...(await getVisiblePlayerWhere(req as OrganizationRequest)) },
+    where: { id: playerId, ...(await getVisiblePlayerWhere(authReq)) },
+    include: { profile: { select: { email: true } } },
   })
 
   if (!player) {
@@ -295,7 +297,10 @@ playersRouter.get('/:id', async (req, res) => {
     return
   }
 
-  res.json(serializePlayer(player))
+  res.json(serializePlayer({
+    ...player,
+    profile: authReq.authUser?.id === 'guest' ? null : player.profile,
+  }))
 })
 
 playersRouter.post('/', requireAdmin, async (req, res) => {

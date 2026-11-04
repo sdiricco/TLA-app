@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { watchDebounced } from '@vueuse/core'
+import { useTimeoutFn, watchDebounced } from '@vueuse/core'
 import Button from 'primevue/button'
 import Chip from 'primevue/chip'
+import Dialog from 'primevue/dialog'
+import InputGroup from 'primevue/inputgroup'
 import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
 import Skeleton from 'primevue/skeleton'
+import Tab from 'primevue/tab'
+import TabList from 'primevue/tablist'
+import TabPanel from 'primevue/tabpanel'
+import TabPanels from 'primevue/tabpanels'
+import Tabs from 'primevue/tabs'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import PlayerFiltersDrawer from '@/components/players/PlayerFiltersDrawer.vue'
 import PlayerListItem from '@/components/players/PlayerListItem.vue'
@@ -13,7 +21,8 @@ import type { PlayerFilterOption, PlayerFilters } from '@/components/players/pla
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationsStore } from '@/stores/organizations'
 import { usePlayersStore } from '@/stores/players'
-import type { Player, PlayerSortField, SortOrder } from '@/types'
+import { organizationsService } from '@/services/organizationsApi'
+import type { OrganizationInviteCandidate, Player, PlayerSortField, SortOrder } from '@/types'
 
 interface ActivePlayerFilter {
   key: keyof PlayerFilters
@@ -27,16 +36,28 @@ const organizationsStore = useOrganizationsStore()
 const router = useRouter()
 const searchName = ref('')
 const filtersOpen = ref(false)
+const inviteOpen = ref(false)
+const inviteMessage = ref<string | null>(null)
+const inviteError = ref<string | null>(null)
+const inviteSearch = ref('')
+const inviteEmail = ref('')
+const inviteCandidates = ref<OrganizationInviteCandidate[]>([])
+const inviteLoading = ref(false)
+const invitingPlayerId = ref<string | null>(null)
+const invitingEmail = ref(false)
 const draftFilters = ref<PlayerFilters>(createDefaultFilters())
 const appliedFilters = ref<PlayerFilters>(createDefaultFilters())
 
 const canViewAdmin = computed(() => auth.isAdmin)
+const activeOrganization = computed(() => organizationsStore.activeOrganization)
+const canInvitePlayers = computed(() =>
+  !auth.isGuest && organizationsStore.isAdmin && activeOrganization.value !== null
+)
 const hasMorePlayers = computed(() => store.players.length < store.total)
 const activeFiltersCount = computed(() => [
   appliedFilters.value.club.trim() !== '',
   appliedFilters.value.sortBy !== 'ranking',
   appliedFilters.value.sortOrder !== 'asc',
-  appliedFilters.value.organizationId !== 'mine',
 ].filter(Boolean).length)
 
 const sortFieldOptions: PlayerFilterOption<PlayerSortField>[] = [
@@ -63,21 +84,25 @@ const activeFilterChips = computed<ActivePlayerFilter[]>(() => {
     const option = sortOrderOptions.find((item) => item.value === filters.sortOrder)
     if (option) chips.push({ key: 'sortOrder', label: option.label })
   }
-  if (filters.organizationId !== 'mine') {
-    const label = filters.organizationId === 'global'
-      ? 'Contenuti globali'
-      : organizationsStore.organizations.find((organization) => organization.id === filters.organizationId)?.name ?? 'Organizzazione'
-    chips.push({ key: 'organizationId', label })
-  }
   return chips
 })
 
 const hasQueryFilters = computed(() =>
   searchName.value.trim() !== '' || activeFiltersCount.value > 0
 )
+const { start: scheduleInviteMessageClear } = useTimeoutFn(
+  () => { inviteMessage.value = null },
+  3000,
+  { immediate: false },
+)
 
 function createDefaultFilters(): PlayerFilters {
-  return { club: '', sortBy: 'ranking', sortOrder: 'asc', organizationId: 'mine' }
+  return {
+    club: '',
+    sortBy: 'ranking',
+    sortOrder: 'asc',
+    organizationId: organizationsStore.activeId ?? 'global',
+  }
 }
 
 async function loadPlayers(page = 0, perPage = store.perPage): Promise<void> {
@@ -139,7 +164,7 @@ function removeFilter(key: ActivePlayerFilter['key']): void {
   if (key === 'club') filters.club = ''
   if (key === 'sortBy') filters.sortBy = 'ranking'
   if (key === 'sortOrder') filters.sortOrder = 'asc'
-  if (key === 'organizationId') filters.organizationId = 'mine'
+  if (key === 'organizationId') filters.organizationId = organizationsStore.activeId ?? 'global'
   appliedFilters.value = filters
   void loadPlayers(0, store.perPage)
 }
@@ -153,8 +178,91 @@ function openCreate(): void {
   void router.push({ name: 'player-create' })
 }
 
+function openInvite(): void {
+  if (!canInvitePlayers.value) return
+  inviteMessage.value = null
+  inviteError.value = null
+  inviteSearch.value = ''
+  inviteEmail.value = ''
+  inviteOpen.value = true
+  void loadInviteCandidates()
+}
+
+async function loadInviteCandidates(): Promise<void> {
+  const organizationId = activeOrganization.value?.id
+  if (!organizationId) return
+  inviteLoading.value = true
+  inviteError.value = null
+  try {
+    inviteCandidates.value = await organizationsService.getInvitationCandidates(organizationId, inviteSearch.value.trim())
+  } catch (error) {
+    inviteError.value = (error as Error).message
+  } finally {
+    inviteLoading.value = false
+  }
+}
+
+async function invitePlayer(candidate: OrganizationInviteCandidate): Promise<void> {
+  const organizationId = activeOrganization.value?.id
+  if (!organizationId) return
+  invitingPlayerId.value = candidate.player_id
+  inviteError.value = null
+  inviteMessage.value = null
+  try {
+    await organizationsService.invitePlayer(organizationId, { player_id: candidate.player_id })
+    inviteCandidates.value = inviteCandidates.value.filter((item) => item.player_id !== candidate.player_id)
+    inviteMessage.value = `Invito inviato a ${candidate.name}.`
+  } catch (error) {
+    inviteError.value = (error as Error).message
+  } finally {
+    invitingPlayerId.value = null
+  }
+}
+
+async function inviteByEmail(): Promise<void> {
+  const organizationId = activeOrganization.value?.id
+  const email = inviteEmail.value.trim().toLowerCase()
+  if (!organizationId) return
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    inviteError.value = 'Inserisci un indirizzo email valido.'
+    return
+  }
+  invitingEmail.value = true
+  inviteError.value = null
+  inviteMessage.value = null
+  try {
+    const invitation = await organizationsService.invitePlayer(organizationId, { email })
+    inviteMessage.value = `Invito inviato a ${invitation.player_name}.`
+    inviteEmail.value = ''
+    await loadInviteCandidates()
+  } catch (error) {
+    inviteError.value = (error as Error).message
+  } finally {
+    invitingEmail.value = false
+  }
+}
+
+async function copyInviteCode(): Promise<void> {
+  const code = activeOrganization.value?.join_code
+  if (!code) return
+
+  try {
+    await navigator.clipboard.writeText(code)
+    inviteMessage.value = 'Codice invito copiato.'
+  } catch {
+    inviteMessage.value = `Codice invito: ${code}`
+  }
+  scheduleInviteMessageClear()
+}
+
+function openOrganizationSettings(): void {
+  inviteOpen.value = false
+  void router.push({ name: 'organization-edit' })
+}
+
 onMounted(loadPlayers)
 watchDebounced(searchName, () => { void loadPlayers(0, store.perPage) }, { debounce: 300 })
+watchDebounced(inviteSearch, () => { if (inviteOpen.value) void loadInviteCandidates() }, { debounce: 300 })
 </script>
 
 <template>
@@ -247,11 +355,31 @@ watchDebounced(searchName, () => { void loadPlayers(0, store.perPage) }, { debou
 
     <div v-else-if="store.players.length === 0" class="flex min-h-72 flex-col items-center justify-center border border-dashed border-(--color-border) bg-(--color-surface-card) px-5 py-10 text-center">
       <span class="grid size-14 place-items-center rounded-full bg-primary-50 text-xl text-primary"><i class="pi pi-users" /></span>
-      <h3 class="mb-1 mt-4 text-lg font-bold">{{ hasQueryFilters ? 'Nessun giocatore corrisponde ai filtri selezionati' : 'Nessun giocatore disponibile' }}</h3>
-      <p class="max-w-md text-sm text-(--color-text-muted)">{{ hasQueryFilters ? 'Prova ad ampliare la ricerca o ad azzerare i filtri.' : 'Aggiungi il primo giocatore della tua organizzazione.' }}</p>
-      <div v-if="hasQueryFilters || (canViewAdmin && !auth.isGuest)" class="mt-5 flex flex-wrap justify-center gap-2">
+      <h3 class="mb-1 mt-4 text-lg font-bold">
+        {{ hasQueryFilters
+          ? 'Nessun giocatore corrisponde ai filtri selezionati'
+          : activeOrganization
+            ? `Ancora nessun giocatore in ${activeOrganization.name}`
+            : 'Nessun giocatore globale disponibile' }}
+      </h3>
+      <p class="max-w-md text-sm text-(--color-text-muted)">
+        {{ hasQueryFilters
+          ? 'Prova ad ampliare la ricerca o ad azzerare i filtri.'
+          : activeOrganization
+            ? 'Invita i giocatori a entrare nell’organizzazione e a completare la loro scheda sportiva.'
+            : 'I profili senza organizzazione compariranno qui.' }}
+      </p>
+      <div v-if="hasQueryFilters || canInvitePlayers || (canViewAdmin && !auth.isGuest)" class="mt-5 flex flex-wrap justify-center gap-2">
         <Button v-if="hasQueryFilters" label="Azzera filtri" icon="pi pi-filter-slash" severity="secondary" outlined @click="clearAllQueryFilters" />
-        <Button v-if="canViewAdmin && !auth.isGuest" label="Crea un giocatore" icon="pi pi-user-plus" @click="openCreate" />
+        <Button v-if="canInvitePlayers && !hasQueryFilters" label="Invita giocatore" icon="pi pi-send" @click="openInvite" />
+        <Button
+          v-if="canViewAdmin && !auth.isGuest && !activeOrganization && !hasQueryFilters"
+          label="Crea un giocatore"
+          icon="pi pi-user-plus"
+          severity="secondary"
+          outlined
+          @click="openCreate"
+        />
       </div>
     </div>
 
@@ -270,4 +398,78 @@ watchDebounced(searchName, () => { void loadPlayers(0, store.perPage) }, { debou
     @reset="clearDraftFilters"
     @apply="applyFilters"
   />
+
+  <!-- Section: Player invitation dialog -->
+  <Dialog v-model:visible="inviteOpen" modal header="Invita un giocatore" class="mx-3 w-full max-w-2xl">
+    <div class="grid gap-4">
+      <p class="text-sm leading-relaxed text-(--color-text-muted)">
+        Invita un profilo TLA in <strong class="text-(--color-text)">{{ activeOrganization?.name }}</strong>.
+        Riceverà una notifica e potrà scegliere se entrare nell’organizzazione.
+      </p>
+
+      <Message v-if="inviteMessage" severity="success" :closable="false">{{ inviteMessage }}</Message>
+      <Message v-if="inviteError" severity="error" :closable="false">{{ inviteError }}</Message>
+
+      <Tabs value="players">
+        <TabList>
+          <Tab value="players"><i class="pi pi-users mr-2" />Giocatori TLA</Tab>
+          <Tab value="email"><i class="pi pi-envelope mr-2" />Usa email</Tab>
+        </TabList>
+        <TabPanels class="px-0! pb-0!">
+          <TabPanel value="players">
+            <div class="grid gap-3">
+              <label for="invite-player-search" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">
+                Cerca nei giocatori globali
+                <InputText id="invite-player-search" v-model="inviteSearch" placeholder="Nome del giocatore" fluid />
+              </label>
+
+              <div v-if="inviteLoading" class="grid gap-2">
+                <Skeleton v-for="item in 3" :key="item" height="4.5rem" border-radius="0.75rem" />
+              </div>
+              <div v-else-if="inviteCandidates.length" class="grid max-h-72 gap-2 overflow-y-auto pr-1">
+                <article v-for="candidate in inviteCandidates" :key="candidate.player_id" class="flex items-center gap-3 rounded-lg border border-(--color-border) bg-(--color-surface-ground) p-3">
+                  <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-50 font-bold text-primary">{{ candidate.name.slice(0, 1).toUpperCase() }}</span>
+                  <div class="min-w-0 flex-1">
+                    <strong class="block truncate text-sm">{{ candidate.name }}</strong>
+                    <small class="block truncate text-(--color-text-muted)">{{ candidate.club || 'Club non specificato' }}</small>
+                  </div>
+                  <Button label="Invita" icon="pi pi-send" size="small" :loading="invitingPlayerId === candidate.player_id" @click="invitePlayer(candidate)" />
+                </article>
+              </div>
+              <Message v-else severity="secondary" :closable="false">
+                Nessun altro giocatore globale disponibile per questa organizzazione.
+              </Message>
+            </div>
+          </TabPanel>
+
+          <TabPanel value="email">
+            <form class="grid gap-3" @submit.prevent="inviteByEmail">
+              <label for="invite-player-email" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">
+                Email dell’account TLA
+                <InputText id="invite-player-email" v-model="inviteEmail" type="email" autocomplete="off" placeholder="giocatore@email.it" fluid />
+              </label>
+              <p class="text-xs leading-relaxed text-(--color-text-muted)">
+                L’indirizzo deve appartenere a un account TLA che ha già creato la propria scheda giocatore.
+              </p>
+              <Button type="submit" label="Invia invito" icon="pi pi-send" class="sm:justify-self-start" :loading="invitingEmail" />
+            </form>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+
+      <section class="grid gap-2 rounded-lg border border-(--color-border) bg-(--color-surface-ground) p-3">
+        <div class="flex items-center gap-2 text-sm font-bold"><i class="pi pi-share-alt text-primary" />In alternativa, condividi il codice</div>
+        <InputGroup v-if="activeOrganization?.join_code">
+          <InputText id="player-invite-code" :model-value="activeOrganization.join_code" readonly aria-label="Codice invito organizzazione" />
+          <Button label="Copia" icon="pi pi-copy" aria-label="Copia codice invito" @click="copyInviteCode" />
+        </InputGroup>
+        <small v-else class="text-(--color-text-muted)">Il codice può essere rigenerato dalle impostazioni dell’organizzazione.</small>
+      </section>
+    </div>
+
+    <template #footer>
+      <Button label="Gestisci organizzazione" icon="pi pi-cog" severity="secondary" text @click="openOrganizationSettings" />
+      <Button label="Chiudi" severity="secondary" outlined @click="inviteOpen = false" />
+    </template>
+  </Dialog>
 </template>

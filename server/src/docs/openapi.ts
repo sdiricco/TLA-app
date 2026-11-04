@@ -17,6 +17,7 @@ const playerSchema = {
   properties: {
     id: { type: 'string' },
     name: { type: 'string' },
+    email: { type: 'string', nullable: true, description: 'Email collegata, esposta temporaneamente solo nel dettaglio autenticato' },
     ranking: { type: 'integer' },
     birth_date: { type: 'string', nullable: true },
     photo_url: { type: 'string', nullable: true },
@@ -234,6 +235,27 @@ export const openApiSpec = {
       },
       Match: matchSchema,
       PlayerMatchHistory: playerMatchHistorySchema,
+      OrganizationInvitationNotification: {
+        type: 'object',
+        required: ['id', 'type', 'status', 'created_at', 'organization'],
+        properties: {
+          id: { type: 'string' },
+          type: { type: 'string', enum: ['organization_invitation'] },
+          status: { type: 'string', enum: ['pending', 'accepted', 'declined'] },
+          read_at: { type: 'string', format: 'date-time', nullable: true },
+          created_at: { type: 'string', format: 'date-time' },
+          organization: {
+            type: 'object',
+            required: ['id', 'name'],
+            properties: { id: { type: 'string' }, name: { type: 'string' } },
+          },
+          invited_by: {
+            type: 'object',
+            nullable: true,
+            properties: { id: { type: 'string' }, name: { type: 'string' } },
+          },
+        },
+      },
       TournamentMatchesResponse: {
         type: 'object',
         required: ['tournament', 'draw', 'rounds', 'matches'],
@@ -464,6 +486,80 @@ export const openApiSpec = {
           400: { description: 'Dati non validi' },
           403: { description: 'Account richiesto' },
         },
+      },
+    },
+    '/organizations/{id}/invitations/candidates': {
+      get: {
+        summary: 'Cerca giocatori globali invitabili nell’organizzazione selezionata',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'X-Organization-Id', in: 'header', required: true, schema: { type: 'string' } },
+          { name: 'q', in: 'query', required: false, schema: { type: 'string' } },
+        ],
+        responses: { 200: { description: 'Profili globali non ancora membri e senza invito pendente' }, 403: { description: 'Permessi amministrativi richiesti' } },
+      },
+    },
+    '/organizations/{id}/invitations': {
+      post: {
+        summary: 'Invita un giocatore registrato in un’organizzazione',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'X-Organization-Id', in: 'header', required: true, schema: { type: 'string' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: { player_id: { type: 'string' }, email: { type: 'string', format: 'email' } },
+                description: 'Fornire player_id oppure l’email di un account TLA con scheda giocatore globale.',
+              },
+            },
+          },
+        },
+        responses: { 201: { description: 'Invito creato' }, 404: { description: 'Giocatore TLA non trovato' }, 409: { description: 'Giocatore già membro' } },
+      },
+    },
+    '/notifications': {
+      get: {
+        summary: 'Notifiche dell’account autenticato',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Inviti ricevuti',
+            content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/OrganizationInvitationNotification' } } } },
+          },
+        },
+      },
+    },
+    '/notifications/unread-count': {
+      get: {
+        summary: 'Numero di inviti pendenti non letti',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Contatore notifiche' } },
+      },
+    },
+    '/notifications/{id}/read': {
+      patch: {
+        summary: 'Segna una notifica come letta',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 204: { description: 'Notifica letta' }, 404: { description: 'Notifica non trovata' } },
+      },
+    },
+    '/notifications/{id}/respond': {
+      post: {
+        summary: 'Accetta o rifiuta un invito a un’organizzazione',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', required: ['decision'], properties: { decision: { type: 'string', enum: ['accepted', 'declined'] } } } } },
+        },
+        responses: { 200: { description: 'Invito gestito' }, 409: { description: 'Scheda giocatore globale richiesta' } },
       },
     },
     '/players': {

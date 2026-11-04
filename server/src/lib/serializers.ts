@@ -23,12 +23,14 @@ export function serializePlayer(player: {
   phone: string | null
   userId: string | null
   organizationId: string | null
+  profile?: { email: string } | null
   createdAt: Date
   updatedAt: Date
 }): Player {
   return {
     id: player.id,
     name: player.name,
+    email: player.profile?.email ?? null,
     ranking: player.ranking,
     birth_date: toIso(player.birthDate),
     photo_url: player.photoUrl,

@@ -26,14 +26,23 @@ const discoverable = ref(false)
 const busy = ref(false)
 const error = ref<string | null>(null)
 
-const visibilityOptions: Array<{ label: string; value: OrganizationVisibility }> = [
-  { label: 'Privata · accesso con codice', value: 'private' },
-  { label: 'Pubblica · trovabile da tutti', value: 'public' },
+interface OrganizationSelectOption<T> {
+  label: string
+  description: string
+  value: T
+  icon: string
+}
+
+const visibilityOptions: Array<OrganizationSelectOption<OrganizationVisibility>> = [
+  { label: 'Privata', description: 'Accesso con codice', value: 'private', icon: 'pi pi-lock' },
+  { label: 'Pubblica', description: 'Trovabile da tutti', value: 'public', icon: 'pi pi-globe' },
 ]
-const discoverabilityOptions = [
-  { label: 'Visibile sulla mappa · consenti richieste', value: true },
-  { label: 'Nascosta · accesso solo con codice', value: false },
+const discoverabilityOptions: Array<OrganizationSelectOption<boolean>> = [
+  { label: 'Visibile sulla mappa', description: 'Consenti richieste di accesso', value: true, icon: 'pi pi-map-marker' },
+  { label: 'Nascosta', description: 'Accesso solo con codice', value: false, icon: 'pi pi-eye-slash' },
 ]
+const selectedVisibility = computed(() => visibilityOptions.find((option) => option.value === visibility.value) ?? visibilityOptions[0])
+const selectedDiscoverability = computed(() => discoverabilityOptions.find((option) => option.value === discoverable.value) ?? discoverabilityOptions[1])
 
 // Map coordinates are rounded before persistence to keep payloads stable.
 function setLocation(location: { latitude: number; longitude: number }): void {
@@ -96,22 +105,78 @@ async function createOrganization(): Promise<void> {
 
       <label for="organization-name" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">
         Nome organizzazione
-        <InputText id="organization-name" v-model="name" placeholder="Es. Tennis Club Aurora" minlength="2" fluid required />
+        <InputText id="organization-name" v-model="name" placeholder="Es. Tennis Club Aurora" minlength="2" variant="filled" fluid required />
       </label>
 
       <label for="organization-description" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">
         Descrizione
-        <Textarea id="organization-description" v-model="description" rows="4" maxlength="240" placeholder="Presenta brevemente la community" fluid />
+        <Textarea id="organization-description" v-model="description" rows="4" maxlength="240" placeholder="Presenta brevemente la community" variant="filled" fluid />
       </label>
 
       <label for="organization-visibility" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">
         Visibilità
-        <Select id="organization-visibility" v-model="visibility" :options="visibilityOptions" option-label="label" option-value="value" fluid />
+        <Select
+          input-id="organization-visibility"
+          v-model="visibility"
+          :options="visibilityOptions"
+          option-label="label"
+          option-value="value"
+          aria-label="Visibilità"
+          variant="filled"
+          fluid
+        >
+          <template #value>
+            <span class="flex items-center gap-3">
+              <i :class="selectedVisibility.icon" class="text-primary" aria-hidden="true" />
+              <span class="grid text-left">
+                <strong class="text-sm">{{ selectedVisibility.label }}</strong>
+                <small class="font-normal text-(--color-text-muted)">{{ selectedVisibility.description }}</small>
+              </span>
+            </span>
+          </template>
+          <template #option="{ option }">
+            <span class="flex items-center gap-3 py-1">
+              <i :class="option.icon" class="text-primary" aria-hidden="true" />
+              <span class="grid">
+                <strong class="text-sm">{{ option.label }}</strong>
+                <small class="text-(--color-text-muted)">{{ option.description }}</small>
+              </span>
+            </span>
+          </template>
+        </Select>
       </label>
 
       <label v-if="visibility === 'private'" for="organization-discoverability" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">
         Ricerca e richieste
-        <Select id="organization-discoverability" v-model="discoverable" :options="discoverabilityOptions" option-label="label" option-value="value" fluid />
+        <Select
+          input-id="organization-discoverability"
+          v-model="discoverable"
+          :options="discoverabilityOptions"
+          option-label="label"
+          option-value="value"
+          aria-label="Ricerca e richieste"
+          variant="filled"
+          fluid
+        >
+          <template #value>
+            <span class="flex items-center gap-3">
+              <i :class="selectedDiscoverability.icon" class="text-primary" aria-hidden="true" />
+              <span class="grid text-left">
+                <strong class="text-sm">{{ selectedDiscoverability.label }}</strong>
+                <small class="font-normal text-(--color-text-muted)">{{ selectedDiscoverability.description }}</small>
+              </span>
+            </span>
+          </template>
+          <template #option="{ option }">
+            <span class="flex items-center gap-3 py-1">
+              <i :class="option.icon" class="text-primary" aria-hidden="true" />
+              <span class="grid">
+                <strong class="text-sm">{{ option.label }}</strong>
+                <small class="text-(--color-text-muted)">{{ option.description }}</small>
+              </span>
+            </span>
+          </template>
+        </Select>
       </label>
 
       <div class="grid gap-2 text-sm font-bold text-(--color-text-muted)">

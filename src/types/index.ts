@@ -77,6 +77,35 @@ export interface OrganizationSearchResponse {
   has_more: boolean
 }
 
+export interface OrganizationInviteCandidate {
+  player_id: string
+  profile_id: string
+  name: string
+  club: string | null
+  photo_url: string | null
+}
+
+export interface OrganizationInvitationResult {
+  id: string
+  organization_id: string
+  organization_name: string
+  player_name: string
+  status: 'pending'
+  created_at: string
+}
+
+export type NotificationStatus = 'pending' | 'accepted' | 'declined'
+
+export interface AppNotification {
+  id: string
+  type: 'organization_invitation'
+  status: NotificationStatus
+  read_at: string | null
+  created_at: string
+  organization: { id: string; name: string }
+  invited_by: { id: string; name: string } | null
+}
+
 export type OrganizationRequestType = 'feature' | 'improvement' | 'bug'
 export type OrganizationRequestPriority = 'low' | 'medium' | 'high'
 export type OrganizationRequestStatus = 'open' | 'planned' | 'in_progress' | 'done' | 'rejected'
@@ -122,6 +151,7 @@ export interface OrganizationRequestComment {
 export interface Player {
   id: string
   name: string
+  email?: string | null
   ranking: number
   birth_date?: string | null
   photo_url?: string | null
@@ -396,6 +426,8 @@ export interface OrganizationsService {
   joinPublic(id: string): Promise<Organization>
   requestAccess(id: string): Promise<{ organization: Organization; status: 'pending' | 'approved' }>
   update(id: string, data: OrganizationUpdate): Promise<Organization>
+  getInvitationCandidates(id: string, query?: string): Promise<OrganizationInviteCandidate[]>
+  invitePlayer(id: string, data: { player_id?: string; email?: string }): Promise<OrganizationInvitationResult>
 }
 
 export interface RequestsService {

@@ -154,30 +154,31 @@ async function copyInviteCode(organization: Organization): Promise<void> {
           </div>
         </section>
 
-        <!------------------------------>
-        <!-- Section: User organizations -->
-        <!------------------------------>
-        <section v-if="!auth.isGuest" class="mt-4" aria-labelledby="my-organizations-title">
-          <header class="mb-3 flex items-start justify-between gap-4"><div><h2 id="my-organizations-title" class="text-lg font-bold">Le tue organizzazioni</h2><p class="mt-1 text-sm text-(--color-text-muted)">Seleziona lo spazio su cui vuoi lavorare.</p></div><span class="grid min-w-7 place-items-center bg-(--color-surface-soft) px-2 py-1 text-xs font-extrabold text-(--color-text-muted)">{{ store.organizations.length }}</span></header>
-          <div class="grid gap-2 md:grid-cols-2">
-            <article v-for="organization in store.organizations" :key="organization.id" class="flex min-w-0 items-center border" :class="organization.id === store.activeOrganization.id ? 'border-primary-300 bg-primary-50' : 'border-(--color-border) bg-(--color-surface-card)'">
-              <button type="button" class="flex min-w-0 flex-1 items-center gap-3 p-3 text-left" @click="store.select(organization.id)"><span class="grid size-9 shrink-0 place-items-center bg-(--color-surface-soft) text-primary"><i class="pi pi-building" /></span><span class="grid min-w-0 flex-1"><strong class="truncate text-sm">{{ organization.name }}</strong><small class="truncate text-xs text-(--color-text-muted)">{{ visibilityLabel(organization) }} · {{ roleLabel(organization.role) }}</small></span><span v-if="organization.id === store.activeOrganization.id" class="text-xs font-extrabold text-primary"><i class="pi pi-check" /> Attiva</span><i v-else class="pi pi-chevron-right text-xs text-(--color-text-subtle)" /></button>
-              <Button v-if="organization.join_code && ['owner', 'admin'].includes(organization.role)" icon="pi pi-copy" text rounded :aria-label="`Copia codice invito di ${organization.name}`" @click="copyInviteCode(organization)" />
-            </article>
-          </div>
-        </section>
-
-        <!-- Section: Next actions -->
-        <section class="mt-6" aria-labelledby="next-actions-title">
-          <header class="mb-3"><h2 id="next-actions-title" class="text-lg font-bold">{{ auth.isGuest ? 'Scopri altre community' : 'Aggiungi uno spazio' }}</h2><p class="mt-1 text-sm text-(--color-text-muted)">{{ auth.isGuest ? 'Spostati sulla mappa per trovare altri circoli.' : 'Cerca una community esistente oppure creane una nuova.' }}</p></header>
-          <div class="grid gap-2 md:grid-cols-3">
-            <button v-for="action in nextActions" :key="action.title" type="button" class="flex items-center gap-3 border border-(--color-border) p-3 text-left hover:border-primary-300 hover:bg-(--color-surface-card)" @click="action.run"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary"><i :class="action.icon" /></span><span class="grid min-w-0 flex-1"><strong class="text-sm">{{ action.title }}</strong><small class="text-xs text-(--color-text-muted)">{{ action.copy }}</small></span><i class="pi pi-arrow-right text-xs text-(--color-text-subtle)" /></button>
-          </div>
-        </section>
       </template>
 
+      <!------------------------------>
+      <!-- Section: User organizations -->
+      <!------------------------------>
+      <section v-if="!auth.isGuest && store.organizations.length" class="mt-4" aria-labelledby="my-organizations-title">
+        <header class="mb-3 flex items-start justify-between gap-4"><div><h2 id="my-organizations-title" class="text-lg font-bold">Le tue organizzazioni</h2><p class="mt-1 text-sm text-(--color-text-muted)">Seleziona lo spazio su cui vuoi lavorare.</p></div><span class="grid min-w-7 place-items-center bg-(--color-surface-soft) px-2 py-1 text-xs font-extrabold text-(--color-text-muted)">{{ store.organizations.length }}</span></header>
+        <div class="grid gap-2 md:grid-cols-2">
+          <article v-for="organization in store.organizations" :key="organization.id" class="flex min-w-0 items-center border" :class="organization.id === store.activeOrganization?.id ? 'border-primary-300 bg-primary-50' : 'border-(--color-border) bg-(--color-surface-card)'">
+            <button type="button" class="flex min-w-0 flex-1 items-center gap-3 p-3 text-left" @click="store.select(organization.id)"><span class="grid size-9 shrink-0 place-items-center bg-(--color-surface-soft) text-primary"><i class="pi pi-building" /></span><span class="grid min-w-0 flex-1"><strong class="truncate text-sm">{{ organization.name }}</strong><small class="truncate text-xs text-(--color-text-muted)">{{ visibilityLabel(organization) }} · {{ roleLabel(organization.role) }}</small></span><span v-if="organization.id === store.activeOrganization?.id" class="text-xs font-extrabold text-primary"><i class="pi pi-check" /> Attiva</span><i v-else class="pi pi-chevron-right text-xs text-(--color-text-subtle)" /></button>
+            <Button v-if="organization.join_code && ['owner', 'admin'].includes(organization.role)" icon="pi pi-copy" text rounded :aria-label="`Copia codice invito di ${organization.name}`" @click="copyInviteCode(organization)" />
+          </article>
+        </div>
+      </section>
+
+      <!-- Section: Next actions -->
+      <section v-if="store.activeOrganization || store.organizations.length" class="mt-6" aria-labelledby="next-actions-title">
+        <header class="mb-3"><h2 id="next-actions-title" class="text-lg font-bold">{{ auth.isGuest ? 'Scopri altre community' : 'Aggiungi uno spazio' }}</h2><p class="mt-1 text-sm text-(--color-text-muted)">{{ auth.isGuest ? 'Spostati sulla mappa per trovare altri circoli.' : 'Cerca una community esistente oppure creane una nuova.' }}</p></header>
+        <div class="grid gap-2 md:grid-cols-3">
+          <button v-for="action in nextActions" :key="action.title" type="button" class="flex items-center gap-3 border border-(--color-border) p-3 text-left hover:border-primary-300 hover:bg-(--color-surface-card)" @click="action.run"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary"><i :class="action.icon" /></span><span class="grid min-w-0 flex-1"><strong class="text-sm">{{ action.title }}</strong><small class="text-xs text-(--color-text-muted)">{{ action.copy }}</small></span><i class="pi pi-arrow-right text-xs text-(--color-text-subtle)" /></button>
+        </div>
+      </section>
+
       <!-- Section: Empty state -->
-      <section v-else class="grid justify-items-center gap-3 border border-(--color-border) bg-(--color-surface-card) px-4 py-12 text-center sm:py-16"><span class="grid size-14 place-items-center bg-primary-50 text-xl text-primary"><i class="pi pi-building" /></span><h2 class="text-xl font-bold">Nessuna organizzazione</h2><p class="max-w-lg text-(--color-text-muted)">{{ auth.isGuest ? 'Esplora la mappa per scegliere una community.' : 'Crea il tuo primo spazio oppure trovane uno sulla mappa.' }}</p><div class="mt-2 flex flex-col gap-2 sm:flex-row"><Button label="Esplora la mappa" icon="pi pi-map" severity="secondary" outlined @click="router.push({ name: 'organizations-explore' })" /><Button v-if="!auth.isGuest" label="Crea organizzazione" icon="pi pi-plus" @click="router.push({ name: 'organization-create' })" /></div></section>
+      <section v-if="!store.activeOrganization && !store.organizations.length" class="grid justify-items-center gap-3 border border-(--color-border) bg-(--color-surface-card) px-4 py-12 text-center sm:py-16"><span class="grid size-14 place-items-center bg-primary-50 text-xl text-primary"><i class="pi pi-building" /></span><h2 class="text-xl font-bold">Nessuna organizzazione</h2><p class="max-w-lg text-(--color-text-muted)">{{ auth.isGuest ? 'Esplora la mappa per scegliere una community.' : 'Crea il tuo primo spazio oppure trovane uno sulla mappa.' }}</p><div class="mt-2 flex flex-col gap-2 sm:flex-row"><Button label="Esplora la mappa" icon="pi pi-map" severity="secondary" outlined @click="router.push({ name: 'organizations-explore' })" /><Button v-if="!auth.isGuest" label="Crea organizzazione" icon="pi pi-plus" @click="router.push({ name: 'organization-create' })" /></div></section>
     </div>
 
     <!-- Section: Join dialog -->

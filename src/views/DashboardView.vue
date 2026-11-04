@@ -58,7 +58,7 @@ const greeting = computed(() => {
   return 'Buonasera'
 })
 const welcomeTitle = computed(() => firstName.value ? `${greeting.value}, ${firstName.value}` : greeting.value)
-const contextLabel = computed(() => organizations.activeOrganization?.name ?? 'tutti i contenuti')
+const contextLabel = computed(() => organizations.activeOrganization?.name ?? 'contenuti globali')
 const dashboardDescription = computed(() => {
   if (auth.isAdmin) return `Controlla le priorità di ${contextLabel.value} e porta avanti la competizione.`
   if (auth.isGuest) return 'Scopri tornei, giocatori e attività della community.'
@@ -207,7 +207,7 @@ async function loadPersonalActivity(): Promise<void> {
 async function loadDashboard(): Promise<void> {
   loading.value = true
   error.value = null
-  const organizationId = organizations.activeId ?? 'mine'
+  const organizationId = organizations.activeId ?? 'global'
   const [tournamentsResult, playersResult, requestsResult, personalResult] = await Promise.allSettled([
     tournamentsService.getAll({ page: 0, perPage: 100, organizationId }),
     playersService.getAll({ page: 0, perPage: 1, organizationId }),

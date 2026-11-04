@@ -19,6 +19,9 @@ test('allows a signed-in user to enroll from the tournament detail page', async 
   await page.route('**/api/organizations', async (route) => {
     await route.fulfill({ json: [] })
   })
+  await page.route('**/api/notifications/unread-count', async (route) => {
+    await route.fulfill({ json: { count: 0 } })
+  })
   await page.route('**/api/tournaments/test-tournament/enrollment', async (route) => {
     await route.fulfill({ json: { enrolled, player_id: enrolled ? 'player-1' : null } })
   })

@@ -26,6 +26,7 @@ const navItems = [
 
 const profileItems = computed(() => [
   { label: 'Profilo', icon: 'pi pi-user', command: () => void router.push({ name: 'profile' }) },
+  ...(!auth.isGuest ? [{ label: 'Notifiche', icon: 'pi pi-bell', command: () => void router.push({ name: 'notifications' }) }] : []),
   { label: 'Impostazioni', icon: 'pi pi-cog', command: () => void router.push({ name: 'settings' }) },
   { label: 'Changelog', icon: 'pi pi-history', command: () => void router.push({ name: 'changelog' }) },
   { label: 'Richieste', icon: 'pi pi-lightbulb', command: () => void router.push({ name: 'requests' }) },

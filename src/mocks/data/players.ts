@@ -4,6 +4,7 @@ export const mockPlayers: Player[] = [
   {
     id: 'p-1',
     name: 'Marco Rossi',
+    email: 'player@tla.local',
     ranking: 1,
     birth_date: '2001-04-12T00:00:00.000Z',
     photo_url: null,
@@ -14,6 +15,7 @@ export const mockPlayers: Player[] = [
   {
     id: 'p-2',
     name: 'Luca Bianchi',
+    email: 'luca.bianchi@tla.local',
     ranking: 2,
     birth_date: '2000-09-23T00:00:00.000Z',
     photo_url: null,
@@ -23,6 +25,7 @@ export const mockPlayers: Player[] = [
   {
     id: 'p-3',
     name: 'Giovanni Verdi',
+    email: 'giovanni.verdi@tla.local',
     ranking: 3,
     birth_date: '2003-02-05T00:00:00.000Z',
     photo_url: null,
@@ -32,6 +35,7 @@ export const mockPlayers: Player[] = [
   {
     id: 'p-4',
     name: 'Andrea Esposito',
+    email: 'andrea.esposito@tla.local',
     ranking: 4,
     birth_date: '1999-11-17T00:00:00.000Z',
     photo_url: null,
@@ -41,6 +45,7 @@ export const mockPlayers: Player[] = [
   {
     id: 'p-5',
     name: 'Filippo Russo',
+    email: 'filippo.russo@tla.local',
     ranking: 5,
     birth_date: '2002-07-29T00:00:00.000Z',
     photo_url: null,
@@ -50,6 +55,7 @@ export const mockPlayers: Player[] = [
   {
     id: 'p-6',
     name: 'Matteo Ferrari',
+    email: 'matteo.ferrari@tla.local',
     ranking: 6,
     birth_date: '2001-01-08T00:00:00.000Z',
     photo_url: null,
@@ -59,6 +65,7 @@ export const mockPlayers: Player[] = [
   {
     id: 'p-7',
     name: 'Davide Conti',
+    email: 'davide.conti@tla.local',
     ranking: 7,
     birth_date: '2004-06-15T00:00:00.000Z',
     photo_url: null,
@@ -68,6 +75,7 @@ export const mockPlayers: Player[] = [
   {
     id: 'p-8',
     name: 'Simone Ricci',
+    email: 'simone.ricci@tla.local',
     ranking: 8,
     birth_date: '2000-12-03T00:00:00.000Z',
     photo_url: null,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import moment from 'moment'
 import 'moment/locale/it.js'
@@ -10,6 +10,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
+import { useLayoutStore } from '@/stores/layout'
 import { useMatchesStore } from '@/stores/matches'
 import { usePlayersStore } from '@/stores/players'
 import { useTournamentsStore } from '@/stores/tournaments'
@@ -20,6 +21,7 @@ import { getPlayerInitials } from '@/utils/main'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const layout = useLayoutStore()
 const tournamentsStore = useTournamentsStore()
 const playersStore = usePlayersStore()
 const matchesStore = useMatchesStore()
@@ -73,6 +75,11 @@ async function loadPage(): Promise<void> {
     const tournamentId = route.params['id'] as string
     const loadedTournament = await tournamentsStore.getById(tournamentId)
     tournament.value = loadedTournament
+    layout.setTopbarContext({
+      title: 'Dettaglio incontro',
+      backTo: `/tournaments/${tournamentId}/draw`,
+      backLabel: `Torna a ${loadedTournament.name}`,
+    })
     await matchesStore.loadForTournament(tournamentId)
     const enrolledIds = [...(loadedTournament.tournament_players ?? [])]
       .sort((left, right) => (left.seed ?? Number.MAX_SAFE_INTEGER) - (right.seed ?? Number.MAX_SAFE_INTEGER))
@@ -107,6 +114,7 @@ async function saveResult(): Promise<void> {
 }
 
 watch(() => [route.params['id'], route.params['matchId']], loadPage, { immediate: true })
+onBeforeUnmount(layout.clearTopbarContext)
 </script>
 
 <template>
@@ -117,7 +125,6 @@ watch(() => [route.params['id'], route.params['matchId']], loadPage, { immediate
     <!-- Section: Header -->
     <header class="flex items-end justify-between gap-4">
       <div>
-        <Button label="Torna al torneo" icon="pi pi-arrow-left" text severity="secondary" @click="router.push({ name: 'tournament-detail', params: { id: route.params['id'] } })" />
         <p class="mb-2 hidden text-xs font-extrabold tracking-[0.16em] text-primary sm:block">MATCH CENTER</p>
         <h1 class="text-3xl font-bold tracking-tight sm:text-5xl">Dettaglio incontro</h1>
         <p v-if="tournament && match" class="mt-3 hidden text-(--color-text-muted) sm:block">{{ tournament.name }} · {{ roundLabel }}</p>
@@ -131,7 +138,7 @@ watch(() => [route.params['id'], route.params['matchId']], loadPage, { immediate
       <!------------------------------>
       <!-- Section: Match arena -->
       <!------------------------------>
-      <section class="overflow-hidden bg-linear-to-br from-primary-900 to-primary-800 p-4 text-white sm:p-8">
+      <section class="overflow-hidden rounded-lg bg-linear-to-b from-(--color-sidebar-start) to-(--color-sidebar-end) p-4 text-white sm:p-6 lg:p-8">
         <div class="flex items-center justify-between gap-4 border-b border-white/10 pb-4 text-xs font-bold text-white/50"><span class="flex items-center gap-2"><i class="pi pi-calendar" /> {{ roundLabel }}</span><strong v-if="match.result" class="rounded-full bg-(--color-accent) px-3 py-1.5 text-(--color-sidebar-on-accent)">{{ match.result }}</strong><span v-else>Risultato da inserire</span></div>
 
         <div class="grid items-center gap-4 py-5 md:grid-cols-[1fr_auto_1fr] md:gap-8">

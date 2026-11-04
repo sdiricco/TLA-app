@@ -32,11 +32,9 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     error.value = null
     try {
       organizations.value = await organizationsService.getAll()
-      if (!activeId.value || !organizations.value.some(item => item.id === activeId.value)) {
-        const firstId = organizations.value[0]?.id ?? null
-        activeId.value = firstId
-        if (firstId) localStorage.setItem(STORAGE_KEY, firstId)
-        else localStorage.removeItem(STORAGE_KEY)
+      if (activeId.value && !organizations.value.some(item => item.id === activeId.value)) {
+        activeId.value = null
+        localStorage.removeItem(STORAGE_KEY)
       }
       initialized.value = true
     } catch (e) {
