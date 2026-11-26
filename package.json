@@ -30,6 +30,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
+    "pretest:server": "npm run prisma:generate",
     "test:server": "node --import tsx --test server/src/*.test.ts server/src/**/*.test.ts"
   },
   "dependencies": {
