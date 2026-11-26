@@ -1,12 +1,15 @@
 <script setup lang="ts">
+// -----------------------------------------------------------------------------
+// Imports
+// -----------------------------------------------------------------------------
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import moment from 'moment'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import ProgressSpinner from 'primevue/progressspinner'
-import Select from 'primevue/select'
+import SelectButton from 'primevue/selectbutton'
+import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
 import { useLayoutStore } from '@/stores/layout'
@@ -16,7 +19,9 @@ import { useTournamentsStore } from '@/stores/tournaments'
 import type { Match, Player, TournamentWithPlayers } from '@/types'
 import { getPlayerInitials } from '@/utils/main'
 
-// Route services, stores and editable result state.
+// -----------------------------------------------------------------------------
+// State
+// -----------------------------------------------------------------------------
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
@@ -26,48 +31,99 @@ const playersStore = usePlayersStore()
 const matchesStore = useMatchesStore()
 const toast = useToast()
 const tournament = ref<TournamentWithPlayers | null>(null)
-const enrolledPlayers = ref<Player[]>([])
+const players = ref<Player[]>([])
 const loading = ref(true)
 const savingResult = ref(false)
 const resultValue = ref('')
 const winnerId = ref<string | null>(null)
 
-// Derived match and player data used by the arena.
+// -----------------------------------------------------------------------------
+// Derived state
+// -----------------------------------------------------------------------------
 const canModify = computed(() => tournament.value?.can_manage === true && !auth.isGuest)
 const match = computed<Match | null>(() =>
   matchesStore.matches.find((entry) => entry.id === route.params['matchId']) ?? null,
 )
 const hasBye = computed(() => Boolean(match.value && (!match.value.player1_id || !match.value.player2_id)))
-const playerById = computed(() => new Map(enrolledPlayers.value.map((player) => [player.id, player])))
-const player1 = computed(() => match.value?.player1_id ? playerById.value.get(match.value.player1_id) ?? null : null)
-const player2 = computed(() => match.value?.player2_id ? playerById.value.get(match.value.player2_id) ?? null : null)
-const effectiveWinnerId = computed(() => match.value?.winner_id ?? null)
+const isCompleted = computed(() => match.value?.status === 'completed')
+const playerById = computed(() => new Map(players.value.map((player) => [player.id, player])))
+const phase = computed(() =>
+  tournament.value?.phases?.find((entry) => entry.id === match.value?.phase_id) ?? null,
+)
 const roundLabel = computed(() =>
   matchesStore.rounds.find((round) => round.index === match.value?.round_index)?.name ?? 'Turno',
 )
-const arenaPlayers = computed(() => match.value ? [
-  { id: match.value.player1_id, player: player1.value },
-  { id: match.value.player2_id, player: player2.value },
-] : [])
+// Phase and group only add information when the tournament has more than one.
+const contextLabel = computed(() => {
+  const parts: string[] = []
+  if ((tournament.value?.phases?.length ?? 0) > 1 && phase.value) parts.push(phase.value.name)
+  const group = phase.value?.groups.find((entry) => entry.id === match.value?.group_id)
+  if (group && (phase.value?.groups.length ?? 0) > 1) parts.push(group.name)
+  return parts.join(' · ')
+})
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return '—'
-  const date = moment(value, moment.ISO_8601, true)
-  return date.isValid() ? date.locale('it').format('DD MMM YYYY') : '—'
+// Tennis scores are written from the winner's point of view ("6-4 3-6 7-5"),
+// so the first number of each set belongs to the winner. Without a winner the
+// score is read from player 1's side.
+const sets = computed<{ first: number; second: number; tiebreak: string | null }[]>(() =>
+  [...(match.value?.result ?? '').matchAll(/(\d+)\s*-\s*(\d+)\s*(\(\s*\d+(?:\s*-\s*\d+)?\s*\))?/g)].map((entry) => ({
+    first: Number(entry[1]),
+    second: Number(entry[2]),
+    tiebreak: entry[3]?.replace(/[()\s]/g, '') ?? null,
+  })),
+)
+const scoreboard = computed(() => {
+  if (!match.value) return []
+  const slots = [match.value.player1_id, match.value.player2_id]
+  const perspectiveId = match.value.winner_id ?? match.value.player1_id
+  return slots.map((id) => {
+    const ownSide = id !== null && id === perspectiveId
+    return {
+      id,
+      player: id ? playerById.value.get(id) ?? null : null,
+      isWinner: Boolean(id && match.value?.winner_id === id),
+      isLoser: Boolean(id && match.value?.winner_id && match.value.winner_id !== id),
+      games: sets.value.map((set) => {
+        const own = ownSide ? set.first : set.second
+        const other = ownSide ? set.second : set.first
+        return { value: own, won: own > other }
+      }),
+    }
+  })
+})
+const winnerOptions = computed(() =>
+  scoreboard.value
+    .filter((slot) => slot.id)
+    .map((slot) => ({ label: slot.player?.name ?? 'Giocatore', value: slot.id })),
+)
+const formDirty = computed(() =>
+  resultValue.value.trim() !== (match.value?.result ?? '') || winnerId.value !== (match.value?.winner_id ?? null),
+)
+
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
+function playerMeta(player: Player | null): string {
+  if (!player) return ''
+  return [player.club, player.ranking ? `#${player.ranking}` : null].filter(Boolean).join(' · ')
 }
 
-function formatAge(value: string | null | undefined): string {
-  if (!value) return '—'
-  const date = moment(value, moment.ISO_8601, true)
-  return date.isValid() ? `${moment().diff(date, 'years')} anni` : '—'
+// -----------------------------------------------------------------------------
+// Actions
+// -----------------------------------------------------------------------------
+// Matches are loaded per phase: look in the default phase first, then in the
+// other phases, so matches from any phase of the tournament can be opened.
+async function loadMatch(loadedTournament: TournamentWithPlayers, matchId: string): Promise<boolean> {
+  await matchesStore.loadForTournament(loadedTournament.id)
+  if (matchesStore.matches.some((entry) => entry.id === matchId)) return true
+  for (const candidate of loadedTournament.phases ?? []) {
+    if (candidate.id === matchesStore.activePhaseId) continue
+    await matchesStore.loadForTournament(loadedTournament.id, candidate.id)
+    if (matchesStore.matches.some((entry) => entry.id === matchId)) return true
+  }
+  return false
 }
 
-function getSlotName(playerId: string | null): string {
-  if (!playerId) return 'TBD'
-  return playerById.value.get(playerId)?.name ?? 'Giocatore non trovato'
-}
-
-// Tournament, draw and enrolled-player metadata are loaded together for the route.
 async function loadPage(): Promise<void> {
   loading.value = true
   try {
@@ -79,15 +135,14 @@ async function loadPage(): Promise<void> {
       backTo: `/tournaments/${tournamentId}/draw`,
       backLabel: `Torna a ${loadedTournament.name}`,
     })
-    await matchesStore.loadForTournament(tournamentId)
-    const enrolledIds = [...(loadedTournament.tournament_players ?? [])]
-      .sort((left, right) => (left.seed ?? Number.MAX_SAFE_INTEGER) - (right.seed ?? Number.MAX_SAFE_INTEGER))
-      .map((entry) => entry.player_id)
-    const loadedPlayers = await Promise.all(enrolledIds.map(async (playerId) => {
+    if (!(await loadMatch(loadedTournament, route.params['matchId'] as string)) || !match.value) {
+      throw new Error('Match not found')
+    }
+    const ids = [match.value.player1_id, match.value.player2_id].filter((id): id is string => Boolean(id))
+    const loadedPlayers = await Promise.all(ids.map(async (playerId) => {
       try { return await playersStore.getById(playerId) } catch { return null }
     }))
-    enrolledPlayers.value = loadedPlayers.filter((player): player is Player => Boolean(player))
-    if (!match.value) throw new Error('Match not found')
+    players.value = loadedPlayers.filter((player): player is Player => Boolean(player))
     resultValue.value = match.value.result ?? ''
     winnerId.value = match.value.winner_id
   } catch {
@@ -99,10 +154,10 @@ async function loadPage(): Promise<void> {
 }
 
 async function saveResult(): Promise<void> {
-  if (!canModify.value || !match.value || !resultValue.value || !winnerId.value) return
+  if (!canModify.value || !match.value || !resultValue.value.trim() || !winnerId.value) return
   savingResult.value = true
   try {
-    await matchesStore.enterResult(match.value.id, { result: resultValue.value, winner_id: winnerId.value })
+    await matchesStore.enterResult(match.value.id, { result: resultValue.value.trim(), winner_id: winnerId.value })
     await loadPage()
     toast.add({ severity: 'success', summary: 'Salvato', detail: 'Risultato aggiornato', life: 3000 })
   } catch (error) {
@@ -112,66 +167,131 @@ async function saveResult(): Promise<void> {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Lifecycle
+// -----------------------------------------------------------------------------
 watch(() => [route.params['id'], route.params['matchId']], loadPage, { immediate: true })
 onBeforeUnmount(layout.clearTopbarContext)
 </script>
 
 <template>
-  <!------------------------------>
-  <!-- Page layout -->
-  <!------------------------------>
-  <div class="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 text-(--color-text) sm:gap-6">
-    <!-- Section: Header -->
-    <header class="flex items-end justify-between gap-4">
-      <div>
-        <p class="mb-2 hidden text-xs font-extrabold tracking-[0.16em] text-primary sm:block">MATCH CENTER</p>
-        <h1 class="text-3xl font-bold tracking-tight sm:text-5xl">Dettaglio incontro</h1>
-        <p v-if="tournament && match" class="mt-3 hidden text-(--color-text-muted) sm:block">{{ tournament.name }} · {{ roundLabel }}</p>
-      </div>
-      <span v-if="match" class="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-extrabold uppercase" :class="match.status === 'completed' ? 'bg-primary-50 text-primary' : 'bg-(--color-surface-muted) text-(--color-text-muted)'"><i class="size-1.5 rounded-full bg-current" />{{ match.status === 'completed' ? 'Completato' : 'Da giocare' }}</span>
-    </header>
+  <div class="mx-auto flex w-full max-w-2xl flex-col gap-4 py-2 text-(--color-text)">
+    <div v-if="loading" class="flex min-h-60 items-center justify-center" role="status" aria-label="Caricamento dell'incontro">
+      <ProgressSpinner class="size-9" stroke-width="4" />
+    </div>
 
-    <div v-if="loading" class="flex min-h-90 flex-col items-center justify-center gap-3 text-xs text-(--color-text-muted)" role="status"><ProgressSpinner class="size-9" stroke-width="4" /><span>Prepariamo il match…</span></div>
-
-    <template v-else-if="match">
+    <template v-else-if="match && tournament">
       <!------------------------------>
-      <!-- Section: Match arena -->
+      <!-- Section: Match context -->
       <!------------------------------>
-      <section class="overflow-hidden rounded-lg bg-linear-to-b from-(--color-sidebar-start) to-(--color-sidebar-end) p-4 text-white sm:p-6 lg:p-8">
-        <div class="flex items-center justify-between gap-4 border-b border-white/10 pb-4 text-xs font-bold text-white/50"><span class="flex items-center gap-2"><i class="pi pi-calendar" /> {{ roundLabel }}</span><strong v-if="match.result" class="rounded-full bg-(--color-accent) px-3 py-1.5 text-(--color-sidebar-on-accent)">{{ match.result }}</strong><span v-else>Risultato da inserire</span></div>
-
-        <div class="grid items-center gap-4 py-5 md:grid-cols-[1fr_auto_1fr] md:gap-8">
-          <template v-for="(slot, index) in arenaPlayers" :key="index">
-            <article class="relative flex min-w-0 flex-col items-center text-center">
-              <span v-if="effectiveWinnerId === slot.id && slot.id" class="mb-3 inline-flex items-center gap-1 rounded-full bg-(--color-accent) px-2 py-1 text-xs font-extrabold text-(--color-sidebar-on-accent)"><i class="pi pi-trophy" /> VINCITORE</span>
-              <Avatar :label="slot.player ? getPlayerInitials(slot.player) : 'TBD'" :image="slot.player?.photo_url ?? undefined" shape="circle" class="size-20! sm:size-32!" :class="effectiveWinnerId === slot.id && slot.id ? 'ring-4 ring-(--color-accent)' : ''" />
-              <h2 class="mt-4 max-w-full truncate text-xl font-bold tracking-tight sm:text-3xl">{{ getSlotName(slot.id) }}</h2>
-              <p class="mt-2 flex items-center gap-2 text-xs text-white/50"><i class="pi pi-building-columns" /> {{ slot.player?.club ?? 'Club non disponibile' }}</p>
-              <div class="mt-4 grid w-full max-w-sm grid-cols-3 gap-1">
-                <div v-for="stat in [{ label: 'RANKING', value: `#${slot.player?.ranking ?? '—'}` }, { label: 'ETÀ', value: slot.player ? formatAge(slot.player.birth_date) : '—' }, { label: 'NASCITA', value: slot.player ? formatDate(slot.player.birth_date) : '—' }]" :key="stat.label" class="grid gap-1 bg-white/5 px-1 py-3"><small class="text-[0.6rem] font-extrabold tracking-wide text-white/35">{{ stat.label }}</small><strong class="truncate text-xs text-white/80">{{ stat.value }}</strong></div>
-              </div>
-            </article>
-            <div v-if="index === 0" class="grid size-12 place-items-center justify-self-center rounded-full border border-white/15 bg-white/10 text-xs font-black text-(--color-accent)">VS</div>
-          </template>
+      <header class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <RouterLink
+            :to="`/tournaments/${tournament.id}/draw`"
+            class="block truncate text-sm text-(--color-text-muted) hover:text-primary"
+          >
+            {{ tournament.name }}
+          </RouterLink>
+          <h1 class="mt-0.5 text-xl font-bold tracking-tight">{{ roundLabel }}</h1>
+          <p v-if="contextLabel" class="mt-0.5 text-sm text-(--color-text-muted)">{{ contextLabel }}</p>
         </div>
+        <Tag
+          :value="hasBye ? 'Passaggio diretto' : isCompleted ? 'Concluso' : 'Da giocare'"
+          :severity="isCompleted ? 'success' : 'secondary'"
+          class="shrink-0"
+        />
+      </header>
 
-        <div class="grid grid-cols-3 gap-1 border-t border-white/10 pt-4">
-          <div v-for="summary in [{ icon: 'pi pi-sitemap', label: 'TURNO', value: roundLabel }, { icon: 'pi pi-chart-bar', label: 'RISULTATO', value: match.result ?? 'Non ancora inserito' }, { icon: 'pi pi-trophy', label: 'VINCITORE', value: effectiveWinnerId ? getSlotName(effectiveWinnerId) : 'Da definire' }]" :key="summary.label" class="grid min-w-0 justify-items-center gap-2 border-r border-white/10 px-1 text-center last:border-0 sm:flex sm:items-center sm:justify-start sm:text-left"><span class="grid size-8 place-items-center bg-white/10 text-xs text-(--color-accent)"><i :class="summary.icon" /></span><p class="grid min-w-0"><small class="text-[0.6rem] font-extrabold tracking-wide text-white/35">{{ summary.label }}</small><strong class="truncate text-xs text-white/80">{{ summary.value }}</strong></p></div>
+      <!------------------------------>
+      <!-- Section: Scoreboard -->
+      <!------------------------------>
+      <section
+        class="overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface-card)"
+        aria-label="Segnapunti"
+      >
+        <div
+          v-for="(slot, index) in scoreboard"
+          :key="index"
+          class="flex items-center gap-3 px-4 py-3"
+          :class="[index > 0 ? 'border-t border-(--color-border)' : '', slot.isLoser ? 'text-(--color-text-muted)' : '']"
+        >
+          <Avatar
+            :label="slot.player ? getPlayerInitials(slot.player) : undefined"
+            :icon="slot.player ? undefined : 'pi pi-user'"
+            :image="slot.player?.photo_url ?? undefined"
+            shape="circle"
+            class="size-10! shrink-0 text-sm!"
+            :class="slot.isLoser ? 'opacity-60' : ''"
+          />
+          <div class="min-w-0 flex-1">
+            <RouterLink
+              v-if="slot.player"
+              :to="{ name: 'player-detail', params: { id: slot.player.id } }"
+              class="flex items-center gap-1.5 truncate font-semibold hover:text-primary"
+            >
+              <span class="truncate">{{ slot.player.name }}</span>
+              <i v-if="slot.isWinner" class="pi pi-trophy text-xs text-primary" aria-label="Vincitore" />
+            </RouterLink>
+            <p v-else class="font-semibold text-(--color-text-muted)">{{ slot.id ? 'Giocatore non trovato' : hasBye ? 'Bye' : 'Da definire' }}</p>
+            <p v-if="playerMeta(slot.player)" class="truncate text-xs text-(--color-text-muted)">{{ playerMeta(slot.player) }}</p>
+          </div>
+          <ol v-if="slot.games.length" class="flex shrink-0 gap-1" aria-label="Game per set">
+            <li
+              v-for="(game, setIndex) in slot.games"
+              :key="setIndex"
+              class="w-6 text-center text-lg tabular-nums"
+              :class="game.won ? 'font-bold text-(--color-text)' : 'text-(--color-text-muted)'"
+            >
+              {{ game.value }}
+            </li>
+          </ol>
         </div>
+        <p
+          v-if="!match.result && !hasBye"
+          class="border-t border-(--color-border) bg-(--color-surface-muted) px-4 py-2 text-xs text-(--color-text-muted)"
+        >
+          Risultato non ancora inserito
+        </p>
       </section>
 
       <!------------------------------>
-      <!-- Section: Match management -->
+      <!-- Section: Result entry -->
       <!------------------------------>
-      <section v-if="canModify && !hasBye" class="flex flex-col gap-4">
-        <header class="flex items-center gap-3"><span class="grid size-10 place-items-center bg-primary-50 text-primary"><i class="pi pi-sliders-h" /></span><div><p class="text-[0.65rem] font-extrabold tracking-[0.12em] text-primary">GESTIONE INCONTRO</p><h2 class="mt-1 font-bold">Aggiorna il match</h2></div></header>
-        <form class="flex max-w-2xl flex-col gap-4 border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-5" @submit.prevent="saveResult">
-          <header class="flex items-center gap-3 border-b border-(--color-surface-muted) pb-4"><span class="grid size-9 place-items-center bg-(--color-surface-muted) text-primary"><i class="pi pi-flag" /></span><div><h3 class="font-bold">Risultato finale</h3><p class="mt-1 text-xs text-(--color-text-subtle)">Inserisci il punteggio e indica chi ha vinto.</p></div></header>
-          <label for="match-result" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Risultato<InputText id="match-result" v-model="resultValue" placeholder="es. 6-3 6-4" fluid /></label>
-          <label for="match-winner" class="grid gap-2 text-sm font-bold text-(--color-text-muted)">Vincitore<Select id="match-winner" v-model="winnerId" :options="[player1, player2].filter(Boolean)" option-label="name" option-value="id" placeholder="Seleziona vincitore" fluid /></label>
-          <footer class="flex flex-col items-stretch justify-between gap-3 border-t border-(--color-surface-muted) pt-4 sm:flex-row sm:items-center"><span class="text-xs text-(--color-text-subtle)">Il vincitore avanzerà automaticamente</span><Button type="submit" label="Salva risultato" icon="pi pi-trophy" :loading="savingResult" :disabled="!resultValue || !winnerId" /></footer>
-        </form>
-      </section>
+      <form
+        v-if="canModify && !hasBye"
+        class="flex flex-col gap-4 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4"
+        @submit.prevent="saveResult"
+      >
+        <h2 class="font-semibold">{{ match.result ? 'Modifica risultato' : 'Inserisci risultato' }}</h2>
+        <div class="flex flex-col gap-1.5">
+          <label for="match-result" class="text-sm font-medium text-(--color-text-muted)">Punteggio</label>
+          <InputText id="match-result" v-model="resultValue" placeholder="es. 6-3 4-6 7-5" fluid />
+          <small class="text-xs text-(--color-text-muted)">Dal punto di vista del vincitore, un set alla volta.</small>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <span id="match-winner-label" class="text-sm font-medium text-(--color-text-muted)">Vincitore</span>
+          <SelectButton
+            v-model="winnerId"
+            :options="winnerOptions"
+            option-label="label"
+            option-value="value"
+            :allow-empty="false"
+            aria-labelledby="match-winner-label"
+            class="w-full"
+            :pt="{ pcToggleButton: { root: { class: 'flex-1 min-w-0' }, label: { class: 'truncate' } } }"
+          />
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <small class="text-xs text-(--color-text-muted)">Il vincitore passa al turno successivo.</small>
+          <Button
+            type="submit"
+            label="Salva"
+            icon="pi pi-check"
+            :loading="savingResult"
+            :disabled="!resultValue.trim() || !winnerId || !formDirty"
+          />
+        </div>
+      </form>
     </template>
   </div>
 </template>

@@ -14,6 +14,19 @@ export interface ChangelogEntry {
 export const changelogEntries: ChangelogEntry[] = [
   {
     date: '2026-11-26',
+    version: 'Tornei 1.3',
+    kind: 'improvement',
+    title: 'Dettaglio incontro più chiaro',
+    description: 'L’incontro si legge come un tabellone segnapunti, e il tabellone non perde più i giocatori.',
+    items: [
+      'Dettaglio incontro compatto: i due giocatori con i game di ogni set e il vincitore in evidenza',
+      'Inserimento del risultato più rapido, con il vincitore scelto con un tocco',
+      'Si aprono anche gli incontri delle fasi successive alla prima',
+      'Corretto il tabellone che in alcuni tornei conclusi chiedeva di iscrivere almeno 2 giocatori',
+    ],
+  },
+  {
+    date: '2026-11-26',
     version: 'Esplora 1.1',
     kind: 'improvement',
     title: 'Mappa dei circoli e stile più pulito',
