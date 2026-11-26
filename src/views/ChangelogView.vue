@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import moment from 'moment'
-import 'moment/locale/it.js'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import PageHeader from '@/components/layout/PageHeader.vue'

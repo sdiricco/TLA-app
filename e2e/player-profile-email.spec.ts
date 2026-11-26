@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+// @req-partial PLY-005 NFR-003
+
 test('shows the linked account email on the player profile', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.clear()

@@ -1,27 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useAuthStore } from '../../stores/auth'
 
 const route = useRoute()
-const auth = useAuthStore()
 const isOrganizationFlow = computed(() => route.name === 'organizations-explore' || route.name === 'organization-create' || route.name === 'organization-edit')
-const profilePaths = ['/profile', '/settings', '/changelog', '/requests']
-
-const navItems = computed(() => {
-  const primaryItems = [
-    { label: 'Dashboard', icon: 'mdi:view-dashboard-outline', to: '/dashboard' },
-    { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
-    { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
-  ]
-  const profileItem = { label: 'Profilo', icon: 'mdi:account-outline', to: '/profile' }
-
-  return auth.isGuest ? primaryItems : [...primaryItems, profileItem]
-})
+// Account pages are reached from the avatar menu in the topbar.
+const navItems = [
+  { label: 'Dashboard', icon: 'mdi:view-dashboard-outline', to: '/dashboard' },
+  { label: 'Tornei', icon: 'mdi:trophy-outline', to: '/tournaments' },
+  { label: 'Giocatori', icon: 'mdi:account-group-outline', to: '/players' },
+]
 
 function isActive(to: string): boolean {
   if (to === '/') return route.path === to
-  if (to === '/profile') return profilePaths.some((path) => route.path.startsWith(path))
   return route.path.startsWith(to)
 }
 </script>

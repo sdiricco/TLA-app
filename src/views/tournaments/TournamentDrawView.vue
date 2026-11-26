@@ -3,7 +3,6 @@ import { computed, onMounted, ref, watch, type CSSProperties } from 'vue'
 import { useRouter } from 'vue-router'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
-import ButtonGroup from 'primevue/buttongroup'
 import Drawer from 'primevue/drawer'
 import Menu from 'primevue/menu'
 import type { MenuItem } from 'primevue/menuitem'
@@ -14,6 +13,7 @@ import TabList from 'primevue/tablist'
 import Tabs from 'primevue/tabs'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
+import DrawViewSwitch from '@/components/tournaments/DrawViewSwitch.vue'
 import TournamentMatchCard from '@/components/tournaments/TournamentMatchCard.vue'
 import { useTournamentDetail } from '@/components/tournaments/tournamentDetailContext'
 import { matchesService } from '@/services/matchesApi'
@@ -53,6 +53,16 @@ const completingPhase = ref(false)
 const activeBracketRound = ref(0)
 const bracketViewMode = ref<'rounds' | 'global'>('rounds')
 const roundRobinViewMode = ref<'schedule' | 'standings'>('schedule')
+// Both draws offer a focused view and an overview; the segmented control keeps
+// them visible without competing with the round tabs.
+const bracketViewOptions: Array<{ label: string; value: 'rounds' | 'global'; icon: string }> = [
+  { label: 'Turni', value: 'rounds', icon: 'pi pi-list' },
+  { label: 'Tabellone', value: 'global', icon: 'pi pi-sitemap' },
+]
+const roundRobinViewOptions: Array<{ label: string; value: 'schedule' | 'standings'; icon: string }> = [
+  { label: 'Giornate', value: 'schedule', icon: 'pi pi-calendar' },
+  { label: 'Classifica', value: 'standings', icon: 'pi pi-list' },
+]
 const selectedPhaseId = ref<string | null>(
   tournament.value.phases?.find((phase) => phase.status === 'active')?.id
     ?? tournament.value.phases?.[0]?.id
@@ -170,6 +180,18 @@ const bracketRoundTabs = computed(() => {
 const activeBracketMatches = computed(() =>
   visibleMatches.value.filter((match) => match.round_index === activeBracketRound.value),
 )
+const activeRoundCompletedCount = computed(
+  () => activeBracketMatches.value.filter((match) => match.status === 'completed').length,
+)
+// Rounds whose matches are all played get a check mark in the tabs.
+const completedRoundIndexes = computed(() => new Set(
+  bracketRoundTabs.value
+    .filter((tab) => {
+      const roundMatches = visibleMatches.value.filter((match) => match.round_index === tab.index)
+      return roundMatches.length > 0 && roundMatches.every((match) => match.status === 'completed')
+    })
+    .map((tab) => tab.index),
+))
 const roundRobinStandings = computed(() =>
   enrolledPlayers.value
     .map((player) => {
@@ -244,13 +266,29 @@ const canCompletePhase = computed(
     && hasMatches.value
     && matchesStore.matches.every((match) => match.status === 'completed'),
 )
-const drawActions = computed<MenuItem[]>(() => [{
-  label: isRoundRobin.value ? 'Azzera girone' : 'Azzera tabellone',
-  icon: 'pi pi-refresh',
-  class: 'text-red-600',
-  disabled: auth.isGuest || resettingDraw.value,
-  command: confirmResetDraw,
-}])
+// The PDF export is public; resetting the draw is reserved to managers.
+const drawActions = computed<MenuItem[]>(() => {
+  const actions: MenuItem[] = []
+  if (!isRoundRobin.value && hasMatches.value) {
+    actions.push({
+      label: downloadingPdf.value ? 'Preparazione PDF…' : 'Scarica tabellone',
+      icon: 'pi pi-download',
+      disabled: downloadingPdf.value,
+      command: downloadDrawPdf,
+    })
+  }
+  if (canManageTournament.value && hasMatches.value) {
+    if (actions.length > 0) actions.push({ separator: true })
+    actions.push({
+      label: isRoundRobin.value ? 'Azzera girone' : 'Azzera tabellone',
+      icon: 'pi pi-refresh',
+      class: 'text-red-600',
+      disabled: auth.isGuest || resettingDraw.value,
+      command: confirmResetDraw,
+    })
+  }
+  return actions
+})
 
 // -----------------------------------------------------------------------------
 // Global bracket geometry
@@ -313,6 +351,21 @@ function getGlobalMatchStyle(roundIndex: number, position: number): CSSPropertie
 }
 
 // -----------------------------------------------------------------------------
+// Current round
+// Opens the earliest round that still has matches to play, so the draw lands
+// where the action is; a finished draw opens on its last round (the final).
+// -----------------------------------------------------------------------------
+function focusCurrentRound(): void {
+  const tabs = bracketRoundTabs.value
+  if (tabs.length === 0) {
+    activeBracketRound.value = 0
+    return
+  }
+  const openRound = tabs.find((tab) => !completedRoundIndexes.value.has(tab.index))
+  activeBracketRound.value = (openRound ?? tabs[tabs.length - 1]!).index
+}
+
+// -----------------------------------------------------------------------------
 // Data loading
 // Player metadata and matches are independent requests and can run in parallel.
 // -----------------------------------------------------------------------------
@@ -323,6 +376,7 @@ async function loadDraw(): Promise<void> {
       playersStore.fetchAll({ page: 0, perPage: 100 }),
       matchesStore.loadForTournament(tournament.value.id, selectedPhaseId.value ?? undefined),
     ])
+    focusCurrentRound()
   } catch (error) {
     toast.add({ severity: 'error', summary: 'Errore', detail: (error as Error).message, life: 4000 })
   } finally {
@@ -352,7 +406,7 @@ async function createEmptyBracket(): Promise<void> {
       activePhasePlayersCount.value,
       activePhase.value?.id,
     )
-    activeBracketRound.value = 0
+    focusCurrentRound()
     toast.add({
       severity: 'success',
       summary: isRoundRobin.value ? 'Girone generato' : 'Tabellone generato',
@@ -432,7 +486,7 @@ async function completeCurrentPhase(): Promise<void> {
     const activated = updated.phases?.find((phase) => phase.status === 'active')
     selectedPhaseId.value = activated?.id ?? null
     selectedGroupId.value = null
-    activeBracketRound.value = 0
+    focusCurrentRound()
     toast.add({
       severity: 'success',
       summary: 'Fase conclusa',
@@ -466,12 +520,8 @@ function changeRound(direction: -1 | 1): void {
   if (nextRound) activeBracketRound.value = nextRound.index
 }
 
-// A regenerated or reset draw always starts from its first available round.
-watch(
-  () => matchesStore.numRounds,
-  () => { activeBracketRound.value = 0 },
-  { immediate: true },
-)
+// A regenerated or reset draw changes its rounds: move back to the open one.
+watch(() => matchesStore.numRounds, focusCurrentRound)
 
 watch(activePhase, (phase) => {
   selectedGroupId.value = phase?.format === 'round_robin' ? phase.groups[0]?.id ?? null : null
@@ -480,12 +530,10 @@ watch(activePhase, (phase) => {
 watch(selectedPhaseId, async (phaseId, previousPhaseId) => {
   if (!phaseId || phaseId === previousPhaseId) return
   await matchesStore.loadForTournament(tournament.value.id, phaseId)
-  activeBracketRound.value = 0
+  focusCurrentRound()
 })
 
-watch(selectedGroupId, () => {
-  activeBracketRound.value = bracketRoundTabs.value[0]?.index ?? 0
-})
+watch(selectedGroupId, focusCurrentRound)
 
 // Initial loading starts only when this child route is actually visited.
 onMounted(loadDraw)
@@ -641,32 +689,16 @@ onMounted(loadDraw)
       <template v-else>
         <!-- Schedule and standings navigation -->
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <ButtonGroup>
-            <Button
-              label="Giornate"
-              icon="pi pi-calendar"
-              size="small"
-              :severity="roundRobinViewMode === 'schedule' ? 'primary' : 'secondary'"
-              :outlined="roundRobinViewMode !== 'schedule'"
-              @click="roundRobinViewMode = 'schedule'"
-            />
-            <Button
-              label="Classifica"
-              icon="pi pi-list"
-              size="small"
-              :severity="roundRobinViewMode === 'standings' ? 'primary' : 'secondary'"
-              :outlined="roundRobinViewMode !== 'standings'"
-              @click="roundRobinViewMode = 'standings'"
-            />
-          </ButtonGroup>
+          <DrawViewSwitch v-model="roundRobinViewMode" :options="roundRobinViewOptions" aria-label="Visualizzazione del girone" />
           <Button
-            v-if="canManageTournament"
-            icon="pi pi-ellipsis-h"
+            v-if="drawActions.length > 0"
+            icon="pi pi-ellipsis-v"
             size="small"
             severity="secondary"
             text
+            rounded
             aria-label="Altre azioni sul girone"
-            :disabled="auth.isGuest"
+            aria-haspopup="true"
             @click="drawActionsMenu?.toggle($event)"
           />
         </div>
@@ -807,50 +839,27 @@ onMounted(loadDraw)
       <div v-else class="flex flex-col gap-4">
         <!-- Bracket toolbar -->
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <ButtonGroup>
-            <Button
-              label="Vista turni"
-              icon="pi pi-list"
-              size="small"
-              :severity="bracketViewMode === 'rounds' ? 'primary' : 'secondary'"
-              :outlined="bracketViewMode !== 'rounds'"
-              @click="bracketViewMode = 'rounds'"
-            />
-            <Button
-              label="Vista globale"
-              icon="pi pi-sitemap"
-              size="small"
-              :severity="bracketViewMode === 'global' ? 'primary' : 'secondary'"
-              :outlined="bracketViewMode !== 'global'"
-              @click="bracketViewMode = 'global'"
-            />
-          </ButtonGroup>
-          <div class="flex items-center gap-1">
-            <Button
-              label="Scarica PDF"
-              icon="pi pi-download"
-              size="small"
-              severity="secondary"
-              outlined
-              :loading="downloadingPdf"
-              @click="downloadDrawPdf"
-            />
-            <Button
-              v-if="canManageTournament"
-              icon="pi pi-ellipsis-h"
-              size="small"
-              severity="secondary"
-              text
-              aria-label="Altre azioni sul tabellone"
-              :disabled="auth.isGuest"
-              @click="drawActionsMenu?.toggle($event)"
-            />
-          </div>
+          <DrawViewSwitch v-model="bracketViewMode" :options="bracketViewOptions" aria-label="Visualizzazione del tabellone" />
+          <Button
+            v-if="drawActions.length > 0"
+            icon="pi pi-ellipsis-v"
+            size="small"
+            severity="secondary"
+            text
+            rounded
+            aria-label="Altre azioni sul tabellone"
+            aria-haspopup="true"
+            @click="drawActionsMenu?.toggle($event)"
+          />
         </div>
 
         <!-- Bracket grouped by round -->
         <div v-if="bracketViewMode === 'rounds'" class="flex flex-col gap-4">
-          <Tabs v-model:value="activeBracketRound" scrollable>
+          <Tabs
+            v-model:value="activeBracketRound"
+            scrollable
+            class="[&_.p-tab]:bg-transparent! [&_.p-tablist]:bg-transparent! [&_.p-tablist-content]:bg-transparent! [&_.p-tablist-nav-button]:bg-(--color-surface-card)! [&_.p-tablist-tab-list]:bg-transparent!"
+          >
             <TabList>
               <Tab
               v-for="tab in bracketRoundTabs"
@@ -859,7 +868,10 @@ onMounted(loadDraw)
               :title="tab.fullLabel"
               class="min-w-16 whitespace-nowrap"
               >
-                {{ tab.label }}
+                <span class="inline-flex items-center gap-1.5">
+                  <i v-if="completedRoundIndexes.has(tab.index)" class="pi pi-check text-[0.65rem] text-primary" aria-hidden="true" />
+                  {{ tab.label }}
+                </span>
               </Tab>
             </TabList>
           </Tabs>
@@ -868,14 +880,12 @@ onMounted(loadDraw)
             Nessun incontro disponibile per questo turno.
           </div>
           <div v-else class="flex flex-col gap-3">
-            <div class="flex items-center justify-between gap-3">
-              <h2 class="text-sm font-bold uppercase tracking-wide text-muted-color">
-                {{ bracketRoundTabs.find((tab) => tab.index === activeBracketRound)?.fullLabel }}
-              </h2>
-              <span class="rounded-full bg-surface-100 px-2.5 py-1 text-xs font-semibold text-muted-color">
-                {{ activeBracketMatches.length }} incontri
+            <h2 class="flex flex-wrap items-baseline gap-x-2 text-base font-bold">
+              {{ bracketRoundTabs.find((tab) => tab.index === activeBracketRound)?.fullLabel }}
+              <span class="text-sm font-medium text-muted-color">
+                {{ activeRoundCompletedCount }} di {{ activeBracketMatches.length }} giocati
               </span>
-            </div>
+            </h2>
             <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <TournamentMatchCard
                 v-for="match in activeBracketMatches"

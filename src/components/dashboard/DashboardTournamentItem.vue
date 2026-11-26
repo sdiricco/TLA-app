@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import moment from 'moment'
-import 'moment/locale/it.js'
 import Tag from 'primevue/tag'
 import { tournamentFormatLabels } from '@/config/tournamentFormats'
 import type { Tournament, TournamentStatus } from '@/types'

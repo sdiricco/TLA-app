@@ -10,6 +10,12 @@ export interface OnboardingPlayerInput {
   phone?: string | null
 }
 
+export interface Impersonator {
+  id: string
+  email: string
+  name: string | null
+}
+
 export interface User {
   id: string
   email: string
@@ -17,6 +23,27 @@ export interface User {
   role: UserRole
   onboardingCompleted?: boolean
   onboardingIntent?: OnboardingIntent
+  // Present when a platform admin is using the app as this user.
+  impersonator?: Impersonator | null
+}
+
+export interface AdminUser {
+  id: string
+  email: string
+  name: string | null
+  role: UserRole
+  onboarding_completed: boolean
+  created_at: string
+  last_sign_in_at: string | null
+  email_confirmed: boolean
+  player: { id: string; photo_url: string | null } | null
+}
+
+export interface AdminUserCreate {
+  email: string
+  password: string
+  name?: string
+  role?: UserRole
 }
 
 export interface RegistrationResult {
@@ -304,9 +331,18 @@ export interface TournamentPlayer {
   enrolled_at?: string
 }
 
+export interface TournamentWinner {
+  id: string
+  name: string
+  photo_url: string | null
+  club: string | null
+}
+
 export interface TournamentWithPlayers extends Tournament {
   tournament_players?: TournamentPlayer[]
   playerIds?: string[]
+  // Decided by the last phase; null while the outcome is still open.
+  winner?: TournamentWinner | null
 }
 
 export interface TournamentEnrollment {

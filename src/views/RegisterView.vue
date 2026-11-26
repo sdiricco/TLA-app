@@ -42,7 +42,7 @@ async function handleSubmit(): Promise<void> {
       <!------------------------------>
       <section class="flex min-h-svh flex-col justify-start px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-10 md:min-h-0 md:justify-center md:p-10 xl:p-16">
         <div class="mb-10 flex items-center gap-3 text-xl font-extrabold text-primary-900 md:hidden" aria-hidden="true">
-          <span class="grid size-8 place-items-center rounded-full bg-(--color-accent) shadow-md"><i class="pi pi-circle-fill text-[0.4rem] text-primary-800" /></span>
+          <img src="/favicon.svg?v=2" alt="" class="size-8" />
           <span>TLA</span>
         </div>
 

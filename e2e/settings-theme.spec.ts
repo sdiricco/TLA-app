@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+// @req-covered UX-004
+
 test('persists light and dark preferences and follows the system theme', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.addInitScript(() => {
@@ -28,27 +30,31 @@ test('persists light and dark preferences and follows the system theme', async (
   await page.route('**/api/notifications/unread-count', async (route) => {
     await route.fulfill({ json: { count: 0 } })
   })
+  // The topbar account menu loads the linked player card.
+  await page.route('**/api/players/me', async (route) => {
+    await route.fulfill({ json: null })
+  })
 
   await page.goto('/settings')
 
   await expect(page.locator('html')).toHaveClass(/app-dark/)
-  await expect(page.getByText('Preferenza salvata: Sistema')).toBeVisible()
+  await expect(page.getByRole('radio', { name: 'Sistema' })).toHaveAttribute('aria-checked', 'true')
   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--color-surface-ground').trim())).toBe('#151719')
   await expect.poll(() => page.locator('.app-content').evaluate((element) => getComputedStyle(element).backgroundImage)).toBe('none')
 
-  await page.getByRole('button', { name: 'Chiaro' }).click()
+  await page.getByRole('radio', { name: 'Chiaro' }).click()
   await expect(page.locator('html')).not.toHaveClass(/app-dark/)
   await expect.poll(() => page.evaluate(() => localStorage.getItem('tla_color_scheme'))).toBe('light')
 
   await page.reload()
   await expect(page.locator('html')).not.toHaveClass(/app-dark/)
 
-  await page.getByRole('button', { name: 'Sistema' }).click()
+  await page.getByRole('radio', { name: 'Sistema' }).click()
   await expect(page.locator('html')).toHaveClass(/app-dark/)
   await page.emulateMedia({ colorScheme: 'light' })
   await expect(page.locator('html')).not.toHaveClass(/app-dark/)
 
-  await page.getByRole('button', { name: 'Scuro' }).click()
+  await page.getByRole('radio', { name: 'Scuro' }).click()
   await expect(page.locator('html')).toHaveClass(/app-dark/)
   await expect.poll(() => page.evaluate(() => localStorage.getItem('tla_color_scheme'))).toBe('dark')
 })

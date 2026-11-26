@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+
+// @req-covered TRN-001 TRN-002 TRN-009
+// @req-partial AUTH-009 NFR-002
 import type { OrganizationRequest } from './requireOrganization'
 import { canCreateTournamentInContext, canManageTournamentRecord } from './requireTournamentAdmin'
 

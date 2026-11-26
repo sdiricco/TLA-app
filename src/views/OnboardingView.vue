@@ -52,7 +52,7 @@ async function logout(): Promise<void> {
     <div class="mx-auto flex min-h-[calc(100svh-2rem)] w-full max-w-5xl flex-col sm:min-h-[calc(100svh-4rem)]">
       <header class="flex items-center justify-between gap-4">
         <div class="flex items-center gap-3 text-lg font-extrabold text-primary-900">
-          <span class="grid size-9 place-items-center rounded-full bg-(--color-accent) shadow-sm"><i class="pi pi-circle-fill text-[0.42rem] text-primary-800" /></span>
+          <img src="/favicon.svg?v=2" alt="" class="size-9" />
           <span>TLA</span>
         </div>
         <Button label="Esci" icon="pi pi-sign-out" severity="secondary" text size="small" @click="logout" />

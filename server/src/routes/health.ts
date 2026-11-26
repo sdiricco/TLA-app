@@ -2,35 +2,49 @@ import { Router } from 'express'
 import { prisma } from '../db/prisma'
 import { env } from '../config/env'
 
-export const healthRouter = Router()
+type HealthDependencies = {
+  databaseUrl: string
+  queryDatabase: () => Promise<unknown>
+}
 
-healthRouter.get('/health', (_req, res) => {
-  res.json({
-    ok: true,
-    service: 'tla-api',
-  })
-})
+export function createHealthRouter(dependencies: HealthDependencies = {
+  databaseUrl: env.databaseUrl,
+  queryDatabase: () => prisma.$queryRaw`SELECT 1`,
+}) {
+  const healthRouter = Router()
 
-healthRouter.get('/health/db', async (_req, res) => {
-  if (!env.databaseUrl) {
-    res.status(503).json({
-      ok: false,
-      database: 'not-configured',
-    })
-    return
-  }
-
-  try {
-    await prisma.$queryRaw`SELECT 1`
+  healthRouter.get('/health', (_req, res) => {
     res.json({
       ok: true,
-      database: 'reachable',
+      service: 'tla-api',
     })
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      database: 'unreachable',
-      message: error instanceof Error ? error.message : 'Database check failed',
-    })
-  }
-})
+  })
+
+  healthRouter.get('/health/db', async (_req, res) => {
+    if (!dependencies.databaseUrl) {
+      res.status(503).json({
+        ok: false,
+        database: 'not-configured',
+      })
+      return
+    }
+
+    try {
+      await dependencies.queryDatabase()
+      res.json({
+        ok: true,
+        database: 'reachable',
+      })
+    } catch (error) {
+      res.status(500).json({
+        ok: false,
+        database: 'unreachable',
+        message: error instanceof Error ? error.message : 'Database check failed',
+      })
+    }
+  })
+
+  return healthRouter
+}
+
+export const healthRouter = createHealthRouter()

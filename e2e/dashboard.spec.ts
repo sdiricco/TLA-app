@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test'
 
+// @req-covered UX-001
+// @req-partial UX-002 NFR-005
+
 const organization = {
   id: 'org-dashboard',
   name: 'TC Lucca',

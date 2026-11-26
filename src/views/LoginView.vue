@@ -25,7 +25,8 @@ const password = ref('')
 // -----------------------------------------------------------------------------
 async function handleSubmit(): Promise<void> {
   await auth.login(email.value, password.value)
-  if (auth.isAuthenticated) await router.push('/')
+  // Platform admins land on the administration area after signing in.
+  if (auth.isAuthenticated) await router.push(auth.isPlatformAdmin ? { name: 'admin' } : '/')
 }
 
 async function handleGuestLogin(): Promise<void> {
@@ -61,9 +62,7 @@ async function handleGuestLogin(): Promise<void> {
           class="mb-14 flex items-center gap-3 text-xl font-extrabold tracking-tight text-primary-900 sm:mb-20 md:hidden"
           aria-hidden="true"
         >
-          <span class="grid size-8 place-items-center rounded-full bg-(--color-accent) shadow-md">
-            <i class="pi pi-circle-fill text-[0.4rem] text-primary-800" />
-          </span>
+          <img src="/favicon.svg?v=2" alt="" class="size-8" />
           <span>TLA</span>
         </div>
 

@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+// @req-partial TRN-007 TRN-008 TRN-009
+
 const organizer = { id: 'organizer-1', name: 'Giulia Bianchi', tournaments_count: 1 }
 const tournament = {
   id: 'organized-tournament',

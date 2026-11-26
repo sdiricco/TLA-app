@@ -8,13 +8,17 @@ import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAut
 import { requireAdmin } from '../middleware/requireAdmin'
 import { requireOrganization, requireSelectedOrganization, type OrganizationRequest as OrganizationContextRequest } from '../middleware/requireOrganization'
 import { sanitizeRequestDescription } from '../lib/requestDescription'
+import {
+  decodeRequestImage,
+  parseRequestComment,
+  parseRequestCreateInput,
+  requestPriorities,
+  requestStatuses,
+  requestTypes,
+} from '../lib/requestValidation'
 
 export const requestsRouter = Router()
 requestsRouter.use(requireAuth, requireOrganization, requireSelectedOrganization)
-
-const requestTypes = new Set(['feature', 'improvement', 'bug'])
-const priorities = new Set(['low', 'medium', 'high'])
-const statuses = new Set(['open', 'planned', 'in_progress', 'done', 'rejected'])
 
 function serializeRequest(row: {
   id: string
@@ -56,19 +60,14 @@ const requestInclude = (profileId?: string) => ({
 })
 
 async function uploadRequestImage(dataUrl: unknown, pathWithoutExtension: string, token: string): Promise<string | null> {
-  if (dataUrl == null || dataUrl === '') return null
-  if (typeof dataUrl !== 'string') throw new Error('Immagine non valida')
-  const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/)
-  if (!match) throw new Error('Usa un’immagine JPG, PNG, WEBP o GIF')
-  const contentType = match[1]
-  const buffer = Buffer.from(match[2], 'base64')
-  if (buffer.length > 5 * 1024 * 1024) throw new Error('L’immagine deve essere più piccola di 5 MB')
-  const extension = contentType === 'image/jpeg' ? 'jpg' : contentType.split('/')[1]
+  const image = decodeRequestImage(dataUrl)
+  if (!image) return null
+  const { buffer, contentType, extension } = image
   const path = `${pathWithoutExtension}.${extension}`
   const response = await fetch(`${env.supabaseUrl}/storage/v1/object/request-images/${path}`, {
     method: 'POST',
     headers: { apikey: env.supabaseAnonKey, Authorization: `Bearer ${token}`, 'Content-Type': contentType, 'x-upsert': 'false' },
-    body: buffer,
+    body: Uint8Array.from(buffer),
   })
   if (!response.ok) throw new Error('Impossibile caricare l’immagine')
   return `${env.supabaseUrl}/storage/v1/object/public/request-images/${path}`
@@ -98,7 +97,7 @@ requestsRouter.get('/', async (req, res) => {
   const organization = organizationId(req as OrganizationContextRequest)
   const authReq = req as AuthenticatedRequest
   const profileId = authReq.authUser?.id !== 'guest' ? authReq.authUser?.id : undefined
-  const status = typeof req.query.status === 'string' && statuses.has(req.query.status) ? req.query.status : undefined
+  const status = typeof req.query.status === 'string' && requestStatuses.has(req.query.status) ? req.query.status : undefined
   const type = typeof req.query.type === 'string' && requestTypes.has(req.query.type) ? req.query.type : undefined
   const requests = await prisma.organizationRequest.findMany({
     where: { organizationId: organization, ...(status ? { status } : {}), ...(type ? { type } : {}) },
@@ -163,18 +162,11 @@ requestsRouter.post('/', async (req, res) => {
     res.status(403).json({ message: 'Registrati per creare una richiesta' })
     return
   }
-  const title = typeof req.body?.title === 'string' ? req.body.title.trim() : ''
-  let description: string | null
+  let input: ReturnType<typeof parseRequestCreateInput>
   try {
-    description = sanitizeRequestDescription(req.body?.description)
+    input = parseRequestCreateInput(req.body)
   } catch (error) {
-    res.status(400).json({ message: error instanceof Error ? error.message : 'Descrizione non valida' })
-    return
-  }
-  const type = requestTypes.has(req.body?.type) ? req.body.type : 'improvement'
-  const priority = priorities.has(req.body?.priority) ? req.body.priority : 'medium'
-  if (title.length < 3) {
-    res.status(400).json({ message: 'Inserisci un titolo di almeno 3 caratteri' })
+    res.status(400).json({ message: error instanceof Error ? error.message : 'Richiesta non valida' })
     return
   }
   const profile = await getOrCreateProfile(authReq.authUser)
@@ -191,10 +183,10 @@ requestsRouter.post('/', async (req, res) => {
       id: requestId,
       organizationId: organizationId(authReq),
       createdById: profile.id,
-      title,
-      description: description || null,
-      type,
-      priority,
+      title: input.title,
+      description: input.description || null,
+      type: input.type,
+      priority: input.priority,
       imageUrl,
     },
     include: requestInclude(profile.id),
@@ -230,9 +222,11 @@ requestsRouter.post('/:id/comments', async (req, res) => {
     res.status(403).json({ message: 'Registrati per commentare una richiesta' })
     return
   }
-  const body = typeof req.body?.body === 'string' ? req.body.body.trim() : ''
-  if (!body || body.length > 2000) {
-    res.status(400).json({ message: 'Il commento deve contenere da 1 a 2000 caratteri' })
+  let body: string
+  try {
+    body = parseRequestComment(req.body?.body)
+  } catch (error) {
+    res.status(400).json({ message: error instanceof Error ? error.message : 'Commento non valido' })
     return
   }
   const request = await prisma.organizationRequest.findFirst({ where: { id: String(req.params.id), organizationId: organizationId(authReq) }, select: { id: true } })
@@ -252,8 +246,8 @@ requestsRouter.patch('/:id', requireAdmin, async (req, res) => {
   const organization = organizationId(req as OrganizationContextRequest)
   const requestId = String(req.params.id)
   const data: { status?: string; priority?: string; type?: string; title?: string; description?: string | null } = {}
-  if (typeof req.body?.status === 'string' && statuses.has(req.body.status)) data.status = req.body.status
-  if (typeof req.body?.priority === 'string' && priorities.has(req.body.priority)) data.priority = req.body.priority
+  if (typeof req.body?.status === 'string' && requestStatuses.has(req.body.status)) data.status = req.body.status
+  if (typeof req.body?.priority === 'string' && requestPriorities.has(req.body.priority)) data.priority = req.body.priority
   if (typeof req.body?.type === 'string' && requestTypes.has(req.body.type)) data.type = req.body.type
   if (typeof req.body?.title === 'string' && req.body.title.trim().length >= 3) data.title = req.body.title.trim()
   if (typeof req.body?.description === 'string' || req.body?.description === null) {

@@ -2,7 +2,6 @@
 import { nextTick, ref, watch } from 'vue'
 import { watchDebounced } from '@vueuse/core'
 import moment from 'moment'
-import 'moment/locale/it.js'
 import Avatar from 'primevue/avatar'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'

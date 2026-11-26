@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+// @req-partial ORG-007 ORG-010 DATA-004 UX-003
+
 const organization = {
   id: 'club-context',
   name: 'TC Lucca',

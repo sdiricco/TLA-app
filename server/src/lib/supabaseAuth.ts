@@ -133,3 +133,33 @@ export async function deleteSupabaseUser(userId: string): Promise<void> {
     throw new Error(extractSupabaseError(data))
   }
 }
+
+// Creates an already confirmed account through the GoTrue Admin API, so users
+// added by a platform admin can sign in without the email verification step.
+export async function createConfirmedSupabaseUser(email: string, password: string, name?: string): Promise<SupabaseAuthUser> {
+  if (!env.supabaseSecretKey) {
+    throw new Error('La creazione utenti non è configurata sul server: manca SUPABASE_SECRET_KEY')
+  }
+
+  const response = await fetch(`${env.supabaseUrl}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: {
+      apikey: env.supabaseSecretKey,
+      Authorization: `Bearer ${env.supabaseSecretKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email: email.trim(),
+      password,
+      email_confirm: true,
+      user_metadata: name?.trim() ? { name: name.trim() } : {},
+    }),
+  })
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as SupabaseErrorResponse
+    throw new Error(extractSupabaseError(data))
+  }
+
+  return (await response.json()) as SupabaseAuthUser
+}

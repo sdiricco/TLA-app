@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import moment from 'moment'
-import 'moment/locale/it.js'
 import Button from 'primevue/button'
 import type { TournamentWithPlayers } from '@/types'
 

@@ -26,6 +26,7 @@ import {
 import {
   completeTournamentPhase,
   createTournamentPhases,
+  findTournamentWinner,
   generatePhaseMatches,
   normalizeTournamentPhases,
   removePlayerFromFirstPhase,
@@ -312,9 +313,14 @@ tournamentsRouter.get('/:id', async (req, res) => {
     res.status(404).json({ message: 'Torneo non trovato' })
     return
   }
+  const [canManage, winner] = await Promise.all([
+    canManageTournamentRecord(req as OrganizationRequest, tournament),
+    findTournamentWinner(prisma, tournament.id),
+  ])
   res.json({
     ...serializeTournamentWithPlayers(tournament),
-    can_manage: await canManageTournamentRecord(req as OrganizationRequest, tournament),
+    can_manage: canManage,
+    winner,
   })
 })
 

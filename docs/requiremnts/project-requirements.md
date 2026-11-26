@@ -268,6 +268,11 @@ ogni scenario ai requisiti di questa pagina.
 
 Copertura automatica osservata:
 
+La tracciabilità viene verificata con `npm run test:requirements`. Le
+annotazioni `@req-covered` indicano criteri completamente verificati, mentre
+`@req-partial` rende esplicita una copertura incompleta senza assimilarla a un
+requisito soddisfatto integralmente.
+
 | Area | Evidenza principale |
 |---|---|
 | Accesso, registrazione, conferma email e ospite | `e2e/auth.spec.ts` |

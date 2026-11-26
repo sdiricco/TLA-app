@@ -25,3 +25,20 @@ export function clearGuestToken(): void {
   localStorage.removeItem(GUEST_TOKEN_KEY)
 }
 
+
+// Platform-admin "login as": the id of the impersonated user travels as a
+// header on every request. Session storage keeps it from outliving the tab.
+const IMPERSONATION_KEY = 'tla_impersonate_user_id'
+export const IMPERSONATION_HEADER = 'X-Impersonate-User-Id'
+
+export function getImpersonatedUserId(): string | null {
+  return sessionStorage.getItem(IMPERSONATION_KEY)
+}
+
+export function setImpersonatedUserId(userId: string): void {
+  sessionStorage.setItem(IMPERSONATION_KEY, userId)
+}
+
+export function clearImpersonatedUserId(): void {
+  sessionStorage.removeItem(IMPERSONATION_KEY)
+}

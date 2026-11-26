@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+// @req-covered NFR-009
+
 const port = 4173
 const baseURL = `http://127.0.0.1:${port}`
 

@@ -7,6 +7,7 @@ declare module 'vue-router' {
     public?: boolean
     requiresAuth?: boolean
     requiresAdmin?: boolean
+    requiresPlatformAdmin?: boolean
     requiresTournamentCreator?: boolean
     organizationSetup?: boolean
     allowsIncompleteOnboarding?: boolean
@@ -46,6 +47,19 @@ const router = createRouter({
       name: 'onboarding-organization',
       component: () => import('../views/OrganizationCreateView.vue'),
       meta: { requiresAuth: true, allowsIncompleteOnboarding: true },
+    },
+    // Platform backoffice: standalone, outside the app shell (no app navigation).
+    {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('../views/ManageView.vue'),
+      meta: { requiresAuth: true, requiresPlatformAdmin: true },
+    },
+    {
+      path: '/admin/feature-flags',
+      name: 'admin-feature-flags',
+      redirect: () => ({ name: 'admin' }),
+      meta: { requiresAuth: true, requiresPlatformAdmin: true },
     },
     {
       path: '/',
@@ -212,12 +226,6 @@ const router = createRouter({
           component: () => import('../views/NotificationsView.vue'),
           meta: { requiresAuth: true },
         },
-        {
-          path: 'admin/feature-flags',
-          name: 'admin-feature-flags',
-          redirect: () => ({ name: 'settings' }),
-          meta: { requiresAuth: true, requiresAdmin: true },
-        },
       ],
     },
   ],
@@ -273,6 +281,11 @@ router.beforeEach(async (to) => {
   // Player trying to access admin-only route
   if (to.meta.requiresAdmin && !auth.isAdmin) {
     return { name: 'tournaments' }
+  }
+
+  // Platform admin area: club owners/admins must not reach it.
+  if (to.meta.requiresPlatformAdmin && !auth.isPlatformAdmin) {
+    return { name: 'dashboard' }
   }
 
   if (to.meta.requiresTournamentCreator && !auth.canCreateTournament) {

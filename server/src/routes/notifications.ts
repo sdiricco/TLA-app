@@ -1,6 +1,13 @@
 import { Router } from 'express'
 import { prisma } from '../db/prisma'
 import { getOrCreateProfile } from '../lib/profileRepo'
+import {
+  acceptOrganizationInvitation,
+  countUnreadInvitations,
+  declineOrganizationInvitation,
+  listInvitationNotifications,
+  markInvitationRead,
+} from '../lib/organizationInvitations'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
 
 export const notificationsRouter = Router()
@@ -11,42 +18,10 @@ async function profileFor(req: AuthenticatedRequest) {
   return getOrCreateProfile(req.authUser)
 }
 
-function serializeInvitation(invitation: {
-  id: string
-  status: string
-  readAt: Date | null
-  createdAt: Date
-  organization: { id: string; name: string }
-  invitedBy: { id: string; name: string | null; email: string } | null
-}) {
-  return {
-    id: invitation.id,
-    type: 'organization_invitation',
-    status: invitation.status,
-    read_at: invitation.readAt?.toISOString() ?? null,
-    created_at: invitation.createdAt.toISOString(),
-    organization: invitation.organization,
-    invited_by: invitation.invitedBy
-      ? { id: invitation.invitedBy.id, name: invitation.invitedBy.name ?? invitation.invitedBy.email }
-      : null,
-  }
-}
-
-const invitationInclude = {
-  organization: { select: { id: true, name: true } },
-  invitedBy: { select: { id: true, name: true, email: true } },
-} as const
-
 notificationsRouter.get('/', async (req, res) => {
   try {
     const profile = await profileFor(req as AuthenticatedRequest)
-    const invitations = await prisma.organizationInvitation.findMany({
-      where: { inviteeProfileId: profile.id, status: { in: ['pending', 'accepted', 'declined'] } },
-      include: invitationInclude,
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    })
-    res.json(invitations.map(serializeInvitation))
+    res.json(await listInvitationNotifications(prisma, profile.id))
   } catch (error) {
     res.status(400).json({ message: error instanceof Error ? error.message : 'Impossibile caricare le notifiche' })
   }
@@ -55,9 +30,7 @@ notificationsRouter.get('/', async (req, res) => {
 notificationsRouter.get('/unread-count', async (req, res) => {
   try {
     const profile = await profileFor(req as AuthenticatedRequest)
-    const count = await prisma.organizationInvitation.count({
-      where: { inviteeProfileId: profile.id, status: 'pending', readAt: null },
-    })
+    const count = await countUnreadInvitations(prisma, profile.id)
     res.json({ count })
   } catch {
     res.json({ count: 0 })
@@ -67,11 +40,8 @@ notificationsRouter.get('/unread-count', async (req, res) => {
 notificationsRouter.patch('/:id/read', async (req, res) => {
   try {
     const profile = await profileFor(req as AuthenticatedRequest)
-    const result = await prisma.organizationInvitation.updateMany({
-      where: { id: req.params.id, inviteeProfileId: profile.id },
-      data: { readAt: new Date() },
-    })
-    if (!result.count) {
+    const updated = await markInvitationRead(prisma, profile.id, req.params.id)
+    if (!updated) {
       res.status(404).json({ message: 'Notifica non trovata' })
       return
     }
@@ -108,45 +78,9 @@ notificationsRouter.post('/:id/respond', async (req, res) => {
         return
       }
 
-      await prisma.$transaction(async (tx) => {
-        await tx.organizationMembership.upsert({
-          where: { organizationId_profileId: { organizationId: invitation.organizationId, profileId: profile.id } },
-          create: { organizationId: invitation.organizationId, profileId: profile.id, role: 'member' },
-          update: {},
-        })
-        const existingPlayer = await tx.player.findFirst({
-          where: { organizationId: invitation.organizationId, userId: profile.id },
-          select: { id: true },
-        })
-        const playerData = {
-          name: globalPlayer.name,
-          birthDate: globalPlayer.birthDate,
-          photoUrl: globalPlayer.photoUrl,
-          club: globalPlayer.club,
-          phone: globalPlayer.phone,
-        }
-        if (existingPlayer) {
-          await tx.player.update({ where: { id: existingPlayer.id }, data: playerData })
-        } else {
-          await tx.player.create({
-            data: {
-              ...playerData,
-              ranking: globalPlayer.ranking,
-              organizationId: invitation.organizationId,
-              userId: profile.id,
-            },
-          })
-        }
-        await tx.organizationInvitation.update({
-          where: { id: invitation.id },
-          data: { status: 'accepted', readAt: new Date(), respondedAt: new Date() },
-        })
-      })
+      await acceptOrganizationInvitation(prisma, profile.id, invitation, globalPlayer)
     } else {
-      await prisma.organizationInvitation.update({
-        where: { id: invitation.id },
-        data: { status: 'declined', readAt: new Date(), respondedAt: new Date() },
-      })
+      await declineOrganizationInvitation(prisma, invitation.id)
     }
 
     res.json({ id: invitation.id, status: decision, organization_id: invitation.organizationId })

@@ -47,6 +47,28 @@ platform-wide administrator permission; ordinary organization permissions come
 from memberships. `onboarding_intent` records the user's starting path and must
 not be used for authorization.
 
+### Platform administration and "login as"
+
+Platform administrators (`profiles.role = 'admin'`) land after sign-in on the
+backoffice at `/admin`: a standalone page outside the app shell (no app
+navigation or in-app tools) that lists users and offers "Entra nell'app" to use
+the app with the admin's own account. Tournament configuration stays in the
+app's settings. The backoffice is backed by `/api/admin/*` (`requirePlatformAdmin`: club roles never
+qualify). User creation and deletion go through the Supabase Auth Admin API and
+need `SUPABASE_SECRET_KEY` on the server.
+
+An administrator can use the app as another non-admin user. The client keeps
+the target id in `sessionStorage` and sends it as the `X-Impersonate-User-Id`
+header next to the admin's own bearer token. `requireAuth` verifies the token,
+re-reads the caller's role from the database on every request, and only then
+replaces `req.authUser` with the target, keeping the real caller in
+`req.impersonator`. Every existing permission check therefore evaluates the
+impersonated user. `/auth/me` returns the impersonator so the UI shows a
+permanent banner; admin tools and account deletion are refused while
+impersonating, and each start is logged by the server. Supabase Storage
+uploads still forward the admin's token, so files uploaded during an
+impersonation belong to the admin in Storage.
+
 ## Source boundaries
 
 | Path | Responsibility |

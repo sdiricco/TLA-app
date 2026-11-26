@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+// @req-partial AUTH-007 AUTH-008 PLY-004 PLY-007
+
 test('lets an organizer add a player profile without losing club permissions', async ({ page }) => {
   let playerCreated = false
   let accountDeleted = false

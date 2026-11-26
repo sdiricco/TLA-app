@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+// @req-partial TRN-011 UX-002 NFR-005
+
 test('allows a signed-in user to enroll from the tournament detail page', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   let enrolled = false

@@ -1,5 +1,12 @@
 import axios, { AxiosError, AxiosHeaders } from 'axios'
-import { clearAuthToken, getAuthToken, getGuestToken } from './token'
+import {
+  clearAuthToken,
+  clearImpersonatedUserId,
+  getAuthToken,
+  getGuestToken,
+  getImpersonatedUserId,
+  IMPERSONATION_HEADER,
+} from './token'
 
 /**
  * Constants
@@ -43,6 +50,8 @@ authApiClient.interceptors.request.use((config) => {
   config.headers.set('Authorization', `Bearer ${guestToken ? 'tla_guest_token' : token}`)
   const organizationId = localStorage.getItem('tla_organization_id')
   if (organizationId) config.headers.set('X-Organization-Id', organizationId)
+  const impersonatedUserId = guestToken ? null : getImpersonatedUserId()
+  if (impersonatedUserId) config.headers.set(IMPERSONATION_HEADER, impersonatedUserId)
   return config
 })
 
@@ -54,7 +63,12 @@ authApiClient.interceptors.response.use(
   (error: AxiosError<{ message?: string }>) => {
     if (error.response?.status === 401 && getAuthToken()) {
       clearAuthToken()
+      clearImpersonatedUserId()
     }
+    // A refused impersonation (target deleted, rights revoked) only ends the
+    // impersonation: the admin keeps their own session.
+    const code = (error.response?.data as { code?: string } | undefined)?.code
+    if (error.response?.status === 403 && code === 'IMPERSONATION_DENIED') clearImpersonatedUserId()
     return Promise.reject(error)
   },
 )

@@ -2,8 +2,8 @@
 // Moment and PrimeVue dependencies.
 import { computed, ref } from 'vue'
 import moment from 'moment'
-import 'moment/locale/it.js'
 import { RouterLink } from 'vue-router'
+import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Menu from 'primevue/menu'
 import type { MenuItem } from 'primevue/menuitem'
@@ -44,6 +44,15 @@ function toggleStatusMenu(event: Event): void {
 }
 
 // Presentation helpers.
+const winnerInitials = computed(() =>
+  (props.tournament.winner?.name ?? '')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join(''),
+)
+
 const categoryLabels: Record<string, string> = {
   maschile: 'Maschile',
   femminile: 'Femminile',
@@ -81,6 +90,34 @@ function formatCurrency(value: number): string {
         </p>
       </div>
     </div>
+
+    <!------------------------------>
+    <!-- Section: Tournament winner -->
+    <!------------------------------>
+    <RouterLink
+      v-if="tournament.winner"
+      :to="{ name: 'player-detail', params: { id: tournament.winner.id } }"
+      class="group mt-5 flex w-full items-center gap-4 rounded-xl border border-(--color-accent)/40 bg-(--color-accent)/12 p-3 no-underline transition-colors hover:bg-(--color-accent)/18 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:max-w-[50%] sm:p-4"
+      :aria-label="`Vincitore: ${tournament.winner.name}. Apri la scheda giocatore`"
+    >
+      <span class="relative shrink-0">
+        <Avatar
+          :image="tournament.winner.photo_url ?? undefined"
+          :label="tournament.winner.photo_url ? undefined : winnerInitials"
+          shape="circle"
+          class="size-14! bg-(--color-accent)! text-lg! font-bold! text-(--color-primary-800)!"
+        />
+        <span class="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full bg-(--color-accent) text-xs text-(--color-primary-800) ring-2 ring-(--color-sidebar-end)">
+          <i class="pi pi-trophy" aria-hidden="true" />
+        </span>
+      </span>
+      <p class="grid min-w-0 flex-1 gap-0.5">
+        <small class="text-[0.65rem] font-extrabold uppercase tracking-wider text-(--color-accent)">Vincitore</small>
+        <strong class="truncate text-lg text-white">{{ tournament.winner.name }}</strong>
+        <span v-if="tournament.winner.club" class="truncate text-xs text-white/60">{{ tournament.winner.club }}</span>
+      </p>
+      <i class="pi pi-chevron-right text-xs text-white/35 transition-transform group-hover:translate-x-0.5 group-hover:text-white/70" aria-hidden="true" />
+    </RouterLink>
 
     <!------------------------------>
     <!-- Section: Tournament state controls -->

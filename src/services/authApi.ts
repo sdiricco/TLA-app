@@ -4,8 +4,10 @@ import { apiRequest } from './request'
 import {
   clearAuthToken,
   clearGuestToken,
+  clearImpersonatedUserId,
   getAuthToken,
   getGuestToken,
+  getImpersonatedUserId,
   setAuthToken,
   setGuestToken,
 } from './token'
@@ -98,6 +100,7 @@ export const authService: AuthService = {
     } finally {
       clearGuestToken()
       clearAuthToken()
+      clearImpersonatedUserId()
     }
   },
   deleteAccount: async () => {
@@ -110,9 +113,15 @@ export const authService: AuthService = {
     if (!getAuthToken()) return null
 
     try {
-      const data = await apiRequest<{ user: User }>(authApiClient, { url: '/auth/me', method: 'GET' })
-      return data?.user ?? null
+      const data = await apiRequest<{ user: User; impersonator?: User['impersonator'] }>(authApiClient, { url: '/auth/me', method: 'GET' })
+      return data?.user ? { ...data.user, impersonator: data.impersonator ?? null } : null
     } catch {
+      // A failed impersonation must not log the admin out: drop it and retry
+      // with the admin's own session.
+      if (getImpersonatedUserId()) {
+        clearImpersonatedUserId()
+        return authService.getCurrentUser()
+      }
       clearAuthToken()
       return null
     }

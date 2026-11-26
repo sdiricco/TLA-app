@@ -15,7 +15,7 @@ const showTopbar = computed(() => !route.meta.hideTopbar)
 </script>
 
 <template>
-  <div class="flex flex-col h-screen overflow-hidden">
+  <div class="flex h-[calc(100vh-var(--impersonation-offset,0px))] flex-col overflow-hidden">
     <div class="flex flex-1 overflow-hidden relative">
       <div class="shrink-0 h-full max-md:hidden">
         <AppSidebar />

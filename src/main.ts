@@ -4,6 +4,8 @@ import PrimeVue from 'primevue/config';
 import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
 import { Icon } from '@iconify/vue';
+import moment from 'moment';
+import 'moment/dist/locale/it.js';
 import { definePreset } from '@primeuix/themes';
 import Lara from '@primeuix/themes/lara';
 import 'primeicons/primeicons.css';
@@ -11,6 +13,9 @@ import './style.css';
 import './pwa';
 import App from './App.vue';
 import router from './router';
+
+// Italian is the application locale; call sites may still pass it explicitly.
+moment.locale('it');
 
 const TlaLara = definePreset(Lara, {
   semantic: {

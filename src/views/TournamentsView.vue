@@ -3,7 +3,6 @@
   import { computed, onMounted, ref } from 'vue';
   import { useRouter } from 'vue-router';
   import moment from 'moment';
-  import 'moment/locale/it.js';
   import Button from 'primevue/button';
   import Chip from 'primevue/chip';
   import Select from 'primevue/select';

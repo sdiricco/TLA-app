@@ -1,0 +1,45 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  automated-tests:
+    name: Requirements, server and E2E
+    runs-on: ubuntu-latest
+    env:
+      HUSKY: 0
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Check requirement traceability
+        run: npm run test:requirements
+
+      - name: Run server tests
+        run: npm run test:server
+
+      - name: Build application
+        run: npm run build:all
+
+      - name: Run E2E tests
+        run: npm run test:e2e

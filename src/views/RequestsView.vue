@@ -2,7 +2,6 @@
 import { onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import moment from 'moment'
-import 'moment/locale/it.js'
 import Button from 'primevue/button'
 import Image from 'primevue/image'
 import Message from 'primevue/message'

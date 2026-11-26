@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Menu from 'primevue/menu'
+import AppAccountMenu from './AppAccountMenu.vue'
 import { useAuthStore } from '../../stores/auth'
 import { useOrganizationsStore } from '../../stores/organizations'
 import { useLayoutStore } from '../../stores/layout'
@@ -25,8 +26,7 @@ const title = computed(() => {
   if (route.path.startsWith('/notifications')) return 'Notifiche'
   if (route.path.startsWith('/changelog')) return 'Changelog'
   if (route.path.startsWith('/requests')) return 'Richieste'
-  if (route.path.startsWith('/profile')) return 'Profilo'
-  if (route.path.startsWith('/admin')) return 'Admin'
+  if (route.path.startsWith('/profile')) return 'Gestisci'
   if (route.path.includes('/matches/')) return 'Partita'
   return 'Tornei'
 })
@@ -190,6 +190,8 @@ onMounted(() => {
         :disabled="auth.isGuest"
         @click="openCreate"
       />
+      <!-- Section: Account menu -->
+      <AppAccountMenu />
     </div>
   </header>
 </template>

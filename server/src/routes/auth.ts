@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import { prisma } from '../db/prisma'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/requireAuth'
-import { deleteSupabaseUser, resendSignupConfirmation, signInWithPassword, signUpWithPassword } from '../lib/supabaseAuth'
+import { resendSignupConfirmation, signInWithPassword, signUpWithPassword } from '../lib/supabaseAuth'
+import { AccountDeletionError, deleteUserAccount } from '../lib/accountDeletion'
 import { getOrCreateProfile, listUnlinkedProfiles, type StoredProfile } from '../lib/profileRepo'
 import { requireOrganization, requireSelectedOrganization, type OrganizationRequest } from '../middleware/requireOrganization'
 
@@ -64,6 +65,7 @@ authRouter.get('/me', requireAuth, async (req, res) => {
     const profile = await getOrCreateProfile(authUser)
     res.json({
       user: serializeUser(profile),
+      impersonator: authReq.impersonator ?? null,
     })
   } catch (error) {
     res.status(500).json({
@@ -178,77 +180,17 @@ authRouter.delete('/account', requireAuth, async (req, res) => {
     return
   }
 
+  if (authReq.impersonator) {
+    res.status(403).json({ message: 'Non puoi eliminare l’account mentre accedi come un altro utente' })
+    return
+  }
+
   try {
     const profile = await getOrCreateProfile(authUser)
-    const ownedMemberships = await prisma.organizationMembership.findMany({
-      where: { profileId: profile.id, role: 'owner' },
-      select: {
-        organization: {
-          select: {
-            id: true,
-            name: true,
-            _count: { select: { memberships: true } },
-            memberships: {
-              where: { role: 'owner', profileId: { not: profile.id } },
-              select: { profileId: true },
-              take: 1,
-            },
-          },
-        },
-      },
-    })
-    const blockedOrganizations = ownedMemberships
-      .map(({ organization }) => organization)
-      .filter((organization) => organization._count.memberships > 1 && organization.memberships.length === 0)
-
-    if (blockedOrganizations.length > 0) {
-      const names = blockedOrganizations.map(({ name }) => name).join(', ')
-      res.status(409).json({
-        message: `Prima di eliminare l’account assegna un altro proprietario a: ${names}`,
-      })
-      return
-    }
-
-    const emptyOwnedOrganizationIds = ownedMemberships
-      .map(({ organization }) => organization)
-      .filter((organization) => organization._count.memberships === 1)
-      .map(({ id }) => id)
-    const [linkedPlayers, personalTournaments] = await Promise.all([
-      prisma.player.findMany({ where: { userId: profile.id }, select: { id: true } }),
-      prisma.tournament.findMany({
-        where: { organizerProfileId: profile.id, organizationId: null },
-        select: { id: true },
-      }),
-    ])
-
-    await deleteSupabaseUser(profile.id)
-
-    try {
-      await prisma.$transaction([
-        prisma.tournament.deleteMany({ where: { id: { in: personalTournaments.map(({ id }) => id) } } }),
-        prisma.organization.deleteMany({ where: { id: { in: emptyOwnedOrganizationIds } } }),
-        prisma.player.updateMany({
-          where: { id: { in: linkedPlayers.map(({ id }) => id) } },
-          data: {
-            userId: null,
-            name: 'Giocatore eliminato',
-            birthDate: null,
-            photoUrl: null,
-            club: null,
-            phone: null,
-          },
-        }),
-        prisma.profile.deleteMany({ where: { id: profile.id } }),
-      ])
-    } catch (cleanupError) {
-      // The Auth identity is already gone at this point. Keep the endpoint
-      // successful for the user and surface cleanup failures to server logs.
-      console.error('Account deleted but application cleanup failed', cleanupError)
-    }
-
+    await deleteUserAccount(profile.id)
     res.status(204).send()
   } catch (error) {
-    res.status(503).json({
+    res.status(error instanceof AccountDeletionError ? error.status : 503).json({
       message: error instanceof Error ? error.message : 'Impossibile eliminare l’account',
     })
   }

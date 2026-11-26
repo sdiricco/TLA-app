@@ -1,6 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <title>TLA</title>
+  <defs>
+    <clipPath id="ball">
+      <circle cx="32" cy="32" r="29"/>
+    </clipPath>
+  </defs>
   <circle cx="32" cy="32" r="29" fill="#b7f34a"/>
-  <path d="M8 12c13 8 13 32 0 40" fill="none" stroke="#166534" stroke-width="3" stroke-linecap="round" opacity=".72"/>
-  <path d="M56 12c-13 8-13 32 0 40" fill="none" stroke="#166534" stroke-width="3" stroke-linecap="round" opacity=".72"/>
+  <g clip-path="url(#ball)" fill="none" stroke="#166534" stroke-width="3" stroke-linecap="round" opacity=".72">
+    <path d="M8 12c13 8 13 32 0 40"/>
+    <path d="M56 12c-13 8-13 32 0 40"/>
+  </g>
 </svg>

@@ -1,125 +1,119 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import SelectButton from 'primevue/selectbutton'
-import Tag from 'primevue/tag'
+// -----------------------------------------------------------------------------
+// Imports
+// -----------------------------------------------------------------------------
 import AdminSettingsPanel from '@/components/admin/AdminSettingsPanel.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import SettingsGroup from '@/components/settings/SettingsGroup.vue'
+import SettingsRow from '@/components/settings/SettingsRow.vue'
 import { useAuthStore } from '@/stores/auth'
-import { useOrganizationsStore } from '@/stores/organizations'
 import { useThemeStore } from '@/stores/theme'
 import type { ColorSchemePreference } from '@/stores/theme'
 
-// Shared stores provide the read-only account summary and admin permissions.
+// -----------------------------------------------------------------------------
+// State
+// -----------------------------------------------------------------------------
 const auth = useAuthStore()
-const organizations = useOrganizationsStore()
 const theme = useThemeStore()
+
+// Theme choices rendered as preview tiles; "system" is drawn half light and
+// half dark.
 const appearanceOptions: Array<{ label: string; value: ColorSchemePreference; icon: string }> = [
   { label: 'Chiaro', value: 'light', icon: 'pi pi-sun' },
   { label: 'Scuro', value: 'dark', icon: 'pi pi-moon' },
   { label: 'Sistema', value: 'system', icon: 'pi pi-desktop' },
 ]
-const appearanceLabel = computed(() => appearanceOptions.find(({ value }) => value === theme.appearance)?.label ?? 'Sistema')
-const appearanceIcon = computed(() => appearanceOptions.find(({ value }) => value === theme.appearance)?.icon ?? 'pi pi-desktop')
 </script>
 
 <template>
-  <!------------------------------>
-  <!-- Page layout -->
-  <!------------------------------>
-  <section class="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 text-(--color-text) sm:gap-5">
+  <section class="mx-auto flex w-full max-w-3xl flex-col gap-8 pb-10 text-(--color-text)">
+    <!------------------------------>
     <!-- Section: Header -->
-    <PageHeader
-      title="Impostazioni"
-      description="Consulta il contesto attivo e gestisci le funzionalità disponibili per i tornei."
-    />
+    <!------------------------------>
+    <PageHeader title="Impostazioni" description="Preferenze dell’app su questo dispositivo." />
 
     <!------------------------------>
-    <!-- Section: Appearance preferences -->
+    <!-- Section: Appearance -->
     <!------------------------------>
-    <article id="personalizzazione" class="scroll-mt-4 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
-      <header class="mb-5 flex items-center gap-3">
-        <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary">
-          <i class="pi pi-sliders-h" aria-hidden="true" />
-        </span>
+    <SettingsGroup id="personalizzazione" class="scroll-mt-4" title="Aspetto">
+      <div class="grid gap-4 p-4 sm:p-5">
         <div>
-          <h2 class="text-xl font-bold tracking-tight">Personalizzazione</h2>
-          <p class="mt-1 text-sm text-(--color-text-muted)">Scegli come visualizzare TLA su questo dispositivo.</p>
+          <p id="appearance-title" class="font-semibold">Tema</p>
+          <p class="mt-0.5 text-sm text-(--color-text-muted)">“Sistema” segue l’impostazione chiara o scura del dispositivo.</p>
         </div>
-      </header>
 
-      <div class="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(16rem,0.6fr)]">
-        <section class="grid gap-4 rounded-lg border border-(--color-border) bg-(--color-surface-soft) p-4" aria-labelledby="appearance-title">
-          <div class="flex items-start gap-3">
-            <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-(--color-surface-card) text-primary shadow-sm"><i :class="appearanceIcon" /></span>
-            <div>
-              <h3 id="appearance-title" class="font-bold">Aspetto</h3>
-              <p class="mt-1 text-sm leading-relaxed text-(--color-text-muted)">“Sistema” segue automaticamente l’impostazione chiara o scura del dispositivo.</p>
-            </div>
-          </div>
-          <SelectButton
-            :model-value="theme.appearance"
-            :options="appearanceOptions"
-            option-label="label"
-            option-value="value"
-            :allow-empty="false"
-            aria-labelledby="appearance-title"
-            @update:model-value="(value) => theme.setAppearance(value as ColorSchemePreference)"
+        <div class="grid grid-cols-3 gap-2 sm:gap-3" role="radiogroup" aria-labelledby="appearance-title">
+          <button
+            v-for="option in appearanceOptions"
+            :key="option.value"
+            type="button"
+            role="radio"
+            :aria-checked="theme.appearance === option.value"
+            class="group grid cursor-pointer gap-2 rounded-xl border-2 bg-transparent p-1.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500/35"
+            :class="theme.appearance === option.value ? 'border-primary-500' : 'border-(--color-border) hover:border-primary-300'"
+            @click="theme.setAppearance(option.value)"
           >
-            <template #option="{ option }">
-              <span class="flex items-center justify-center gap-2"><i :class="option.icon" /><span>{{ option.label }}</span></span>
-            </template>
-          </SelectButton>
-          <p class="text-xs text-(--color-text-muted)">Preferenza salvata: <strong class="text-(--color-text)">{{ appearanceLabel }}</strong></p>
-        </section>
-
-        <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-          <div class="flex items-center gap-3 rounded-lg bg-(--color-surface-soft) p-4">
-            <span class="grid size-9 shrink-0 place-items-center rounded-md bg-(--color-surface-card) text-primary shadow-sm"><i class="pi pi-palette" /></span>
-            <div class="min-w-0">
-              <dt class="text-xs font-extrabold tracking-wider text-(--color-text-subtle)">TEMA</dt>
-              <dd class="mt-1 font-bold">Verde TLA</dd>
-            </div>
-          </div>
-          <div class="flex items-center gap-3 rounded-lg bg-(--color-surface-soft) p-4">
-            <span class="grid size-9 shrink-0 place-items-center rounded-md bg-(--color-surface-card) text-primary shadow-sm"><i class="pi pi-building" /></span>
-            <div class="min-w-0">
-              <dt class="text-xs font-extrabold tracking-wider text-(--color-text-subtle)">CONTESTO</dt>
-              <dd class="mt-1 truncate font-bold" :title="organizations.activeOrganization?.name ?? 'Contenuti globali'">{{ organizations.activeOrganization?.name ?? 'Contenuti globali' }}</dd>
-            </div>
-          </div>
-        </dl>
+            <!-- Mini preview of the app shell in the chosen scheme -->
+            <span class="relative block aspect-[16/10] overflow-hidden rounded-lg border border-(--color-border)" aria-hidden="true">
+              <span
+                class="absolute inset-0 flex"
+                :class="option.value === 'dark' ? 'bg-zinc-900' : 'bg-zinc-100'"
+              >
+                <span class="w-1/4" :class="option.value === 'dark' ? 'bg-primary-950' : 'bg-primary-800'" />
+                <span class="flex flex-1 flex-col gap-1 p-1.5 sm:gap-1.5 sm:p-2">
+                  <span class="h-1.5 w-1/2 rounded-full" :class="option.value === 'dark' ? 'bg-zinc-600' : 'bg-zinc-300'" />
+                  <span class="flex-1 rounded" :class="option.value === 'dark' ? 'bg-zinc-800' : 'bg-white'" />
+                  <span class="h-1.5 w-1/3 rounded-full bg-primary-500" />
+                </span>
+              </span>
+              <!-- "Sistema": dark half laid over the right side -->
+              <span v-if="option.value === 'system'" class="absolute inset-y-0 right-0 flex w-1/2 bg-zinc-900">
+                <span class="flex flex-1 flex-col gap-1 p-1.5 pl-0 sm:gap-1.5 sm:p-2 sm:pl-0">
+                  <span class="h-1.5 w-1/3 rounded-full bg-zinc-600" />
+                  <span class="flex-1 rounded-r bg-zinc-800" />
+                  <span class="h-1.5 w-1/4 rounded-full bg-primary-500" />
+                </span>
+              </span>
+            </span>
+            <span class="flex items-center gap-1.5 px-1 pb-0.5 text-sm font-semibold">
+              <i
+                :class="theme.appearance === option.value ? 'pi pi-check-circle text-primary' : `${option.icon} text-(--color-text-subtle)`"
+                aria-hidden="true"
+              />
+              {{ option.label }}
+            </span>
+          </button>
+        </div>
       </div>
-    </article>
+    </SettingsGroup>
 
     <!------------------------------>
     <!-- Section: Tournament configuration -->
     <!------------------------------>
-    <section v-if="auth.isAdmin" id="configurazione" class="scroll-mt-4 grid gap-6 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
-      <header class="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-        <div class="flex items-center gap-3">
-          <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary">
-            <i class="pi pi-trophy" aria-hidden="true" />
-          </span>
-          <div>
-            <h2 class="text-xl font-bold tracking-tight">Configurazione tornei</h2>
-            <p class="mt-1 text-sm text-(--color-text-muted)">Scegli formati e categorie disponibili durante la creazione.</p>
-          </div>
-        </div>
-        <Tag value="Amministrazione" severity="secondary" />
-      </header>
-      <AdminSettingsPanel embedded />
-    </section>
+    <div id="configurazione" class="scroll-mt-4">
+      <AdminSettingsPanel v-if="auth.isAdmin" />
+      <SettingsGroup v-else title="Tornei">
+        <SettingsRow
+          title="Formati e categorie"
+          description="Sono gestiti dagli amministratori dell’organizzazione."
+          icon="pi pi-lock"
+          muted
+        />
+      </SettingsGroup>
+    </div>
 
-    <article v-else id="configurazione" class="scroll-mt-4 rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-6">
-      <div class="flex items-start gap-3">
-        <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-(--color-surface-soft) text-primary">
-          <i class="pi pi-lock" aria-hidden="true" />
-        </span>
-        <div>
-          <h2 class="text-xl font-bold tracking-tight">Configurazione tornei</h2>
-          <p class="mt-2 text-sm leading-relaxed text-(--color-text-muted)">Formati e categorie sono gestiti dagli amministratori dell’organizzazione.</p>
-        </div>
-      </div>
-    </article>
+    <!------------------------------>
+    <!-- Section: About -->
+    <!------------------------------>
+    <SettingsGroup title="Informazioni">
+      <SettingsRow title="Novità dell’app" description="Tutti gli aggiornamenti di TLA." icon="pi pi-history" :to="{ name: 'changelog' }" />
+      <SettingsRow
+        v-if="!auth.isGuest"
+        title="Richieste e suggerimenti"
+        description="Proponi idee o segnala problemi."
+        icon="pi pi-lightbulb"
+        :to="{ name: 'requests' }"
+      />
+    </SettingsGroup>
   </section>
 </template>

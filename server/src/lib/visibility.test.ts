@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+
+// @req-partial ORG-007 TRN-006 NFR-002
 import { explicitOrganizationScope } from './visibility'
 
 test('keeps the aggregate context open to every accessible content source', () => {

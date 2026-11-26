@@ -1,7 +1,13 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { adminService } from '../services/adminApi'
 import { authService } from '../services/authApi'
-import { clearGuestToken, setAuthToken } from '../services/token'
+import {
+  clearGuestToken,
+  clearImpersonatedUserId,
+  setAuthToken,
+  setImpersonatedUserId,
+} from '../services/token'
 import type { OnboardingPlayerInput, User } from '../types'
 import { useOrganizationsStore } from './organizations'
 
@@ -20,6 +26,11 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => user.value?.role === 'admin' || useOrganizationsStore().isAdmin)
   const isGuest = computed(() => user.value?.id === 'guest')
+  // Platform-wide administrator only; unlike isAdmin it ignores club roles.
+  const isPlatformAdmin = computed(() => user.value?.role === 'admin')
+  // The real admin behind a "login as" session; null in normal use.
+  const impersonator = computed(() => user.value?.impersonator ?? null)
+  const isImpersonating = computed(() => impersonator.value !== null)
   const canCreateTournament = computed(() => {
     if (!user.value || isGuest.value) return false
     const organizations = useOrganizationsStore()
@@ -124,6 +135,21 @@ export const useAuthStore = defineStore('auth', () => {
     useOrganizationsStore().clear()
   }
 
+  // Starting or ending an impersonation reloads the app so every store, the
+  // selected organization and cached data belong to the right identity.
+  async function startImpersonation(userId: string): Promise<void> {
+    await adminService.startImpersonation(userId)
+    setImpersonatedUserId(userId)
+    localStorage.removeItem('tla_organization_id')
+    window.location.assign('/dashboard')
+  }
+
+  function stopImpersonation(): void {
+    clearImpersonatedUserId()
+    localStorage.removeItem('tla_organization_id')
+    window.location.assign('/admin')
+  }
+
   async function deleteAccount(): Promise<void> {
     await authService.deleteAccount()
     user.value = null
@@ -209,6 +235,9 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isAdmin,
     isGuest,
+    isPlatformAdmin,
+    impersonator,
+    isImpersonating,
     canCreateTournament,
     init,
     refresh,
@@ -223,5 +252,7 @@ export const useAuthStore = defineStore('auth', () => {
     deleteAccount,
     loginAsGuest,
     completeOnboarding,
+    startImpersonation,
+    stopImpersonation,
   }
 })

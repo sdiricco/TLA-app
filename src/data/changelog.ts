@@ -13,6 +13,57 @@ export interface ChangelogEntry {
 // the same pull request; see the product changelog policy in AGENTS.md.
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: '2026-11-26',
+    version: 'Amministrazione 1.0',
+    kind: 'feature',
+    title: 'Gestione utenti e accesso come utente',
+    description: 'L’amministratore della piattaforma gestisce gli account e può vedere l’app esattamente come un utente.',
+    items: [
+      'Dopo l’accesso l’amministratore arriva nel Backoffice, una pagina dedicata fuori dall’app con solo gli utenti',
+      '“Entra nell’app” per usare TLA con il proprio account; la configurazione dei tornei resta in Impostazioni',
+      'Elenco utenti con ricerca, filtro per ruolo, ultimo accesso e stato dell’onboarding',
+      'Promozione ad amministratore, creazione di account già confermati ed eliminazione',
+      '“Entra come” per usare l’app al posto di un utente, con un banner sempre visibile e il ritorno al proprio account con un clic',
+    ],
+  },
+  {
+    date: '2026-11-26',
+    version: 'Tornei 1.2',
+    kind: 'improvement',
+    title: 'Vincitore del torneo e tabellone più chiaro',
+    description: 'A torneo deciso trovi subito il vincitore, e il tabellone si apre dove si sta giocando.',
+    items: [
+      'Scheda del vincitore in evidenza nel dettaglio del torneo, con accesso al profilo giocatore',
+      'Il tabellone si apre sull’ultimo turno ancora in corso; i turni conclusi sono segnati con una spunta',
+      'Selettore compatto tra vista per turni e tabellone completo, anche per giornate e classifica dei gironi',
+      'Download del tabellone spostato nel menu ⋯',
+    ],
+  },
+  {
+    date: '2026-11-26',
+    version: 'Account 1.1',
+    kind: 'feature',
+    title: 'Nuovo menu account e Impostazioni più ordinate',
+    description: 'In alto a destra trovi il tuo avatar con un menu rapido; le impostazioni sono più ordinate e veloci da usare.',
+    items: [
+      'Avatar nella barra superiore con nome, ruolo e accesso rapido a “Il mio profilo” (scheda giocatore) e “Gestisci” (account)',
+      'Voce “Backoffice” riservata all’amministratore della piattaforma',
+      'Impostazioni riorganizzate in gruppi, con anteprima visiva del tema chiaro, scuro o di sistema',
+      'Formati e categorie dei tornei attivabili con un interruttore su ogni riga',
+    ],
+  },
+  {
+    date: '2026-11-05',
+    version: 'Accessibilità 1.0',
+    kind: 'fix',
+    title: 'Focus da tastiera più visibile nei moduli',
+    description: 'I campi dei moduli evidenziano chiaramente il controllo attivo durante la navigazione da tastiera.',
+    items: [
+      'Contorno di focus coerente per campi di testo, selezioni e aree di testo',
+      'Verifica automatica del nome accessibile e del focus nella schermata di accesso',
+    ],
+  },
+  {
     date: '2026-11-04',
     version: 'Incontri 1.1',
     kind: 'improvement',

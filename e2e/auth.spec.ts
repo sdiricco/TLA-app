@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+// @req-partial AUTH-001 AUTH-002 AUTH-003 AUTH-004 ORG-001 ORG-002 TRN-001 UX-002 UX-003 NFR-004 NFR-005
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.clear())
   await page.goto('/login')
@@ -10,6 +12,15 @@ test('shows the login form', async ({ page }) => {
   await expect(page.getByLabel('Email')).toBeVisible()
   await expect(page.getByPlaceholder('Inserisci la password')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Accedi' })).toBeVisible()
+})
+
+test('exposes accessible keyboard focus on the login controls', async ({ page }) => {
+  await page.keyboard.press('Tab')
+  const focusedControl = page.locator(':focus')
+
+  await expect(focusedControl).toBeVisible()
+  await expect(focusedControl).toHaveAccessibleName(/.+/)
+  await expect(focusedControl).toHaveCSS('outline-style', /^(?!none$).+/)
 })
 
 test('opens account registration', async ({ page }) => {
@@ -105,7 +116,8 @@ test('keeps the organization filter above the primary mobile navigation', async 
   await expect(navigation.getByRole('link', { name: 'Dashboard' })).toBeVisible()
   await expect(navigation.getByRole('link', { name: 'Tornei' })).toBeVisible()
   await expect(navigation.getByRole('link', { name: 'Giocatori' })).toBeVisible()
-  await expect(navigation.getByRole('link', { name: 'Profilo' })).toBeVisible()
+  await expect(navigation.getByRole('link', { name: 'Profilo' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Menu account:/ })).toBeVisible()
   await expect(navigation.getByRole('link', { name: 'Organizzazioni' })).toHaveCount(0)
 
   await organizationFilter.click()

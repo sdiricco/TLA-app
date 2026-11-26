@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+// @req-partial AUTH-005 AUTH-006 ORG-001 UX-002 NFR-005
+
 interface OnboardingPayload {
   intent: 'player' | 'explore'
   player?: {

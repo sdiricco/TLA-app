@@ -601,3 +601,48 @@ export async function completeTournamentPhase(
   await tx.tournamentPhase.update({ where: { id: nextPhase.id }, data: { status: 'active' } })
   await generatePhaseMatches(tx, tournamentId, nextPhase.id)
 }
+
+export interface TournamentWinner {
+  id: string
+  name: string
+  photo_url: string | null
+  club: string | null
+}
+
+// The winner is decided by the last phase only: the completed final of an
+// elimination draw, or the top of a round-robin table once every match is
+// played. The tournament status is not required, since it is set manually.
+export async function findTournamentWinner(
+  tx: PhaseTransaction,
+  tournamentId: string,
+): Promise<TournamentWinner | null> {
+  const lastPhase = await tx.tournamentPhase.findFirst({
+    where: { tournamentId },
+    orderBy: { position: 'desc' },
+    include: {
+      players: { include: { player: { select: { ranking: true } } } },
+      matches: true,
+    },
+  })
+  if (!lastPhase || lastPhase.matches.length === 0) return null
+
+  let winnerId: string | null = null
+  if (lastPhase.format === 'round_robin') {
+    if (lastPhase.matches.some((match) => match.status !== 'completed')) return null
+    winnerId = buildStandings(lastPhase.players, lastPhase.matches)[0]?.playerId ?? null
+  } else {
+    const finalRound = Math.max(...lastPhase.matches.map((match) => match.round))
+    const finals = lastPhase.matches.filter((match) => match.round === finalRound)
+    const final = finals.length === 1 ? finals[0] : null
+    winnerId = final?.status === 'completed' ? final.winnerId : null
+  }
+  if (!winnerId) return null
+
+  const player = await tx.player.findUnique({
+    where: { id: winnerId },
+    select: { id: true, name: true, photoUrl: true, club: true },
+  })
+  return player
+    ? { id: player.id, name: player.name, photo_url: player.photoUrl, club: player.club }
+    : null
+}

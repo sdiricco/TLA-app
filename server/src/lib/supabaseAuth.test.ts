@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
+// @req-partial AUTH-001 NFR-001
+
 test('signUpWithPassword sends profile metadata in the GoTrue REST data field', async () => {
   process.env.SUPABASE_URL = 'https://auth.test.supabase.co'
   process.env.SUPABASE_ANON_KEY = 'publishable-test-key'
