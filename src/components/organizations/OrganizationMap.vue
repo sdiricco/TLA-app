@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useResizeObserver } from '@vueuse/core'
 import * as L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { OrganizationPreview } from '../../types'
@@ -89,6 +90,10 @@ onMounted(() => {
   renderMarkers()
   renderPicker()
 })
+
+// Leaflet measures its container once: refresh tiles whenever the layout
+// resizes it (full-screen explorer, rotation, viewport changes).
+useResizeObserver(mapElement, () => map?.invalidateSize())
 
 watch(() => props.organizations, renderMarkers, { deep: true })
 watch(() => [props.latitude, props.longitude], renderPicker)

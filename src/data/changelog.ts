@@ -14,6 +14,20 @@ export interface ChangelogEntry {
 export const changelogEntries: ChangelogEntry[] = [
   {
     date: '2026-11-26',
+    version: 'Esplora 1.1',
+    kind: 'improvement',
+    title: 'Mappa dei circoli e stile più pulito',
+    description: 'La mappa delle organizzazioni lascia spazio alla mappa, e stati e icone sono più leggibili.',
+    items: [
+      'Elenco delle organizzazioni in un pannello che si apre e si chiude, come nelle app di mappe',
+      'La mappa riempie tutto lo schermo e i controlli dello zoom non finiscono più sotto la ricerca',
+      'Etichette di stato più discrete e nuova icona del torneo con il giocatore e la racchetta',
+      'Nel tema scuro la barra di navigazione in basso non è più bianca',
+      'Cambiando fase nel tabellone non compaiono più per un attimo le partite della fase precedente',
+    ],
+  },
+  {
+    date: '2026-11-26',
     version: 'Amministrazione 1.0',
     kind: 'feature',
     title: 'Gestione utenti e accesso come utente',

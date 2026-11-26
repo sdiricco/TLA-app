@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import moment from 'moment'
 import Tag from 'primevue/tag'
+import TennisPlayerIcon from '@/components/icons/TennisPlayerIcon.vue'
 import { tournamentFormatLabels } from '@/config/tournamentFormats'
 import type { Tournament, TournamentStatus } from '@/types'
 
@@ -32,8 +33,8 @@ function statusSeverity(status: TournamentStatus): 'success' | 'info' | 'seconda
       class="absolute inset-0 z-10"
       :aria-label="`Apri il torneo ${tournament.name}`"
     />
-    <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary" aria-hidden="true">
-      <i :class="tournament.status === 'ongoing' ? 'pi pi-play-circle' : 'pi pi-calendar'" />
+    <span class="grid size-14 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary" aria-hidden="true">
+      <TennisPlayerIcon class="size-10" />
     </span>
     <span class="grid min-w-0 gap-1">
       <strong class="truncate text-sm transition-colors group-hover:text-primary sm:text-base">{{ tournament.name }}</strong>

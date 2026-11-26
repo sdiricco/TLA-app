@@ -69,6 +69,7 @@ const selectedPhaseId = ref<string | null>(
     ?? null,
 )
 const selectedGroupId = ref<string | null>(null)
+const switchingPhase = ref(false)
 const phaseDrawerVisible = ref(false)
 const drawActionsMenu = ref<{ toggle: (event: Event) => void } | null>(null)
 
@@ -527,10 +528,19 @@ watch(activePhase, (phase) => {
   selectedGroupId.value = phase?.format === 'round_robin' ? phase.groups[0]?.id ?? null : null
 }, { immediate: true })
 
+// The previous phase's matches stay in the store until the new ones arrive:
+// hide the draw meanwhile so they are never laid out with the new format.
 watch(selectedPhaseId, async (phaseId, previousPhaseId) => {
   if (!phaseId || phaseId === previousPhaseId) return
-  await matchesStore.loadForTournament(tournament.value.id, phaseId)
-  focusCurrentRound()
+  switchingPhase.value = true
+  try {
+    await matchesStore.loadForTournament(tournament.value.id, phaseId)
+    focusCurrentRound()
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Errore', detail: (error as Error).message, life: 4000 })
+  } finally {
+    if (phaseId === selectedPhaseId.value) switchingPhase.value = false
+  }
 })
 
 watch(selectedGroupId, focusCurrentRound)
@@ -645,7 +655,11 @@ onMounted(loadDraw)
       />
     </section>
 
-    <div v-if="enrolledPlayers.length < 2" class="flex min-h-55 flex-col items-center justify-center gap-3 text-center text-muted-color">
+    <div v-if="switchingPhase" class="flex min-h-60 items-center justify-center" role="status" aria-label="Caricamento della fase">
+      <ProgressSpinner class="size-9" stroke-width="4" />
+    </div>
+
+    <div v-else-if="enrolledPlayers.length < 2" class="flex min-h-55 flex-col items-center justify-center gap-3 text-center text-muted-color">
       <i class="pi pi-sitemap text-2xl" />
       <p>Servono almeno 2 giocatori per generare il tabellone.</p>
     </div>

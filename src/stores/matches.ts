@@ -15,6 +15,9 @@ export const useMatchesStore = defineStore('matches', () => {
   const response = ref<TournamentMatchesResponse | null>(null)
   const loading = ref(false)
   const activePhaseId = ref<string | null>(null)
+  // Phase switches can overlap; only the latest request may write the draw,
+  // otherwise a slow response would show one phase's matches in another.
+  let latestRequest = 0
 
   const matchesByRound = computed(() => {
     const map = new Map<number, Match[]>()
@@ -31,13 +34,16 @@ export const useMatchesStore = defineStore('matches', () => {
   const numRounds = computed(() => response.value?.draw.rounds_count ?? 0)
 
   async function loadForTournament(tournamentId: string, phaseId?: string): Promise<void> {
+    const request = ++latestRequest
     loading.value = true
     try {
-      response.value = await matchesService.getByTournament(tournamentId, phaseId)
-      matches.value = response.value.matches
-      activePhaseId.value = response.value.phase?.id ?? phaseId ?? null
+      const loaded = await matchesService.getByTournament(tournamentId, phaseId)
+      if (request !== latestRequest) return
+      response.value = loaded
+      matches.value = loaded.matches
+      activePhaseId.value = loaded.phase?.id ?? phaseId ?? null
     } finally {
-      loading.value = false
+      if (request === latestRequest) loading.value = false
     }
   }
 

@@ -8,6 +8,7 @@ import InputText from 'primevue/inputtext'
 import ProgressSpinner from 'primevue/progressspinner'
 import { useRouter } from 'vue-router'
 import { playersService } from '@/services/playersApi'
+import TennisPlayerIcon from '@/components/icons/TennisPlayerIcon.vue'
 import { tournamentsService } from '@/services/tournamentsApi'
 import type { Player, Tournament, TournamentStatus } from '@/types'
 import { getPlayerInitials } from '@/utils/main'
@@ -249,8 +250,8 @@ watch(visible, (isVisible) => {
               class="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-(--color-surface-soft) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
               @click="openTournament(tournament)"
             >
-              <span class="grid size-10 place-items-center rounded-lg bg-primary-50 text-primary">
-                <IconifyIcon icon="mdi:trophy-outline" class="size-5" aria-hidden="true" />
+              <span class="grid size-14 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary">
+                <TennisPlayerIcon class="size-10" />
               </span>
               <span class="min-w-0">
                 <strong class="block truncate text-sm">{{ tournament.name }}</strong>

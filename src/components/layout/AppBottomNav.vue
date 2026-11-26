@@ -43,7 +43,7 @@ function isActive(to: string): boolean {
   gap: 0.35rem;
   padding: 0.55rem 0.75rem calc(0.55rem + env(safe-area-inset-bottom));
   border-top: 1px solid var(--color-border);
-  background: rgb(var(--color-white-rgb) / 92%);
+  background: color-mix(in srgb, var(--color-surface-card) 92%, transparent);
   backdrop-filter: blur(14px);
 }
 
@@ -76,5 +76,10 @@ function isActive(to: string): boolean {
 
 .bottom-link.active {
   color: var(--color-primary-700);
+}
+
+/* The deep primary disappears on dark surfaces; use the court accent there. */
+:root.app-dark .bottom-link.active {
+  color: var(--color-accent);
 }
 </style>
