@@ -1,0 +1,31 @@
+name: Supabase Keep Alive
+
+# Supabase free-tier projects are paused after ~7 days without activity.
+# Running a trivial query every few days keeps the production database awake.
+# Note: GitHub disables scheduled workflows in public repositories after 60
+# days without repository activity; re-enable it from the Actions tab if so.
+
+on:
+  schedule:
+    - cron: '0 6 */3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Ping database
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Run keep-alive query
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set"
+            exit 1
+          fi
+          psql "$SUPABASE_DB_URL" --no-psqlrc --tuples-only --command "select 'tla keep-alive', now();"
