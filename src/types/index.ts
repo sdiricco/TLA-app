@@ -196,6 +196,8 @@ export type PlayerSortField = 'ranking' | 'name' | 'club' | 'created_at'
 export type SortOrder = 'asc' | 'desc'
 
 export interface PlayerListQuery {
+  /** Restrict the result to these player ids (pagination is ignored). */
+  ids?: string[]
   name?: string
   club?: string
   page?: number

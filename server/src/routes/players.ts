@@ -172,7 +172,8 @@ playersRouter.patch('/me', async (req, res) => {
 
 playersRouter.get('/', async (req, res) => {
   try {
-    const { name, club, page: pageParam, perPage: perPageParam, sortBy, sortOrder } = req.query as {
+    const { name, club, ids: idsParam, page: pageParam, perPage: perPageParam, sortBy, sortOrder } = req.query as {
+      ids?: string
       name?: string
       club?: string
       page?: string
@@ -180,11 +181,18 @@ playersRouter.get('/', async (req, res) => {
       sortBy?: string
       sortOrder?: string
     }
-    const page = parseNonNegativeInt(pageParam, 0)
-    const perPage = Math.min(parsePositiveInt(perPageParam, 20), 100)
+    // `ids` resolves a known set of players (e.g. a tournament's entrants) in
+    // one request, independently of how many other players are visible.
+    const ids = typeof idsParam === 'string'
+      ? [...new Set(idsParam.split(',').map((id) => id.trim()).filter(Boolean))]
+      : []
+    if (ids.length > 500) throw new Error('Too many player ids')
+    const page = ids.length > 0 ? 0 : parseNonNegativeInt(pageParam, 0)
+    const perPage = ids.length > 0 ? Math.max(ids.length, 1) : Math.min(parsePositiveInt(perPageParam, 20), 100)
     const orderBy = parsePlayerSort(sortBy, sortOrder)
     const where: Prisma.PlayerWhereInput = {
       ...(await getVisiblePlayerWhere(req as OrganizationRequest)),
+      ...(ids.length > 0 ? { id: { in: ids } } : {}),
       ...(name
         ? {
             name: {

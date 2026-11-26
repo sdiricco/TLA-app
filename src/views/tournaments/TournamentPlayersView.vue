@@ -117,6 +117,8 @@ async function loadPage(): Promise<void> {
       reloadTournament(),
       playersStore.fetchAll({ page: 0, perPage: 100 }),
     ])
+    // Entrants outside the first directory page must still be listed.
+    await playersStore.ensureLoaded(enrolledPlayerIds.value)
   } catch (error) {
     toast.add({ severity: 'error', summary: 'Pagina non disponibile', detail: (error as Error).message, life: 4000 })
   } finally {
@@ -250,7 +252,11 @@ onBeforeUnmount(layout.clearTopbarContext)
 watch(
   () => enrolledPlayerIds.value.join(','),
   (currentIds, previousIds) => {
-    if (currentIds !== previousIds && !loading.value) void playersStore.fetchAll({ page: 0, perPage: 100 })
+    if (currentIds !== previousIds && !loading.value) {
+      void playersStore
+        .fetchAll({ page: 0, perPage: 100 })
+        .then(() => playersStore.ensureLoaded(enrolledPlayerIds.value))
+    }
   },
 )
 </script>

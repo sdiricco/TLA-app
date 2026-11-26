@@ -62,10 +62,13 @@ export const playerHandlers = [
     const club = url.searchParams.get('club')
     const sortBy = (url.searchParams.get('sortBy') as PlayerSortField | null) ?? 'ranking'
     const sortOrder = (url.searchParams.get('sortOrder') as SortOrder | null) ?? 'asc'
+    const ids = url.searchParams.get('ids')?.split(',').filter(Boolean) ?? []
     const filtered = players
+      .filter((player) => ids.length === 0 || ids.includes(player.id))
       .filter((player) => matchesFilter(player.name, name))
       .filter((player) => matchesFilter(player.club, club))
     const sorted = sortPlayers(filtered, sortBy, sortOrder)
+    if (ids.length > 0) return HttpResponse.json(toPaginatedResponse(sorted, 0, Math.max(ids.length, 1)))
     return HttpResponse.json(toPaginatedResponse(sorted, page, perPage))
   }),
   http.get('/api/players/me', ({ request }) => {

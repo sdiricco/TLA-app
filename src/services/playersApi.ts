@@ -15,7 +15,7 @@ export const playersService: PlayersService = {
     apiRequest<PaginatedResponse<Player>>(apiClient, {
       url: '/players',
       method: 'GET',
-      params: query,
+      params: query?.ids ? { ...query, ids: query.ids.join(',') } : query,
     }),
   getById: (id) => apiRequest<Player>(apiClient, { url: `/players/${id}`, method: 'GET' }),
   getMatchHistory: (id) => apiRequest<PlayerMatchHistory>(apiClient, { url: `/players/${id}/matches`, method: 'GET' }),

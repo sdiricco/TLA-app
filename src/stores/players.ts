@@ -36,6 +36,17 @@ export const usePlayersStore = defineStore('players', () => {
     }
   }
 
+  // Adds the given players to the list when the paginated page does not hold
+  // them (e.g. a tournament's entrants beyond the first page of the directory).
+  async function ensureLoaded(ids: string[]): Promise<void> {
+    const known = new Set(players.value.map((player) => player.id))
+    const missing = [...new Set(ids)].filter((id) => !known.has(id))
+    if (missing.length === 0) return
+    const response = await playersService.getAll({ ids: missing })
+    const current = new Set(players.value.map((player) => player.id))
+    players.value = [...players.value, ...response.values.filter((player) => !current.has(player.id))]
+  }
+
   async function getById(id: string): Promise<Player> {
     return playersService.getById(id)
   }
@@ -73,6 +84,7 @@ export const usePlayersStore = defineStore('players', () => {
     loadingMore,
     error,
     fetchAll,
+    ensureLoaded,
     getById,
     getMatchHistory,
     create,

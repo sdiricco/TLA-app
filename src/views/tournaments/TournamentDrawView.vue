@@ -370,11 +370,23 @@ function focusCurrentRound(): void {
 // Data loading
 // Player metadata and matches are independent requests and can run in parallel.
 // -----------------------------------------------------------------------------
+// Every entrant of every phase: the directory page alone can miss them once
+// more players are visible than fit in one page.
+function tournamentPlayerIds(): string[] {
+  return [
+    ...(tournament.value.playerIds ?? []),
+    ...(tournament.value.tournament_players ?? []).map((entry) => entry.player_id),
+    ...(tournament.value.phases ?? []).flatMap((phase) => phase.players.map((entry) => entry.player_id)),
+  ]
+}
+
 async function loadDraw(): Promise<void> {
   loading.value = true
   try {
     await Promise.all([
-      playersStore.fetchAll({ page: 0, perPage: 100 }),
+      playersStore
+        .fetchAll({ page: 0, perPage: 100 })
+        .then(() => playersStore.ensureLoaded(tournamentPlayerIds())),
       matchesStore.loadForTournament(tournament.value.id, selectedPhaseId.value ?? undefined),
     ])
     focusCurrentRound()
