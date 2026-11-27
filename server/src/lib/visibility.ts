@@ -56,6 +56,12 @@ export async function visiblePlayerWhere(req: OrganizationRequest): Promise<Pris
   if (!req.authUser || req.authUser.id === 'guest') return { organizationId: null }
 
   const organizationIds = await membershipOrganizationIds(req)
+  // Platform admins manage every club's tournaments, so they can also list
+  // the players of a club they are not a member of.
+  if (filter !== 'mine' && !organizationIds.includes(filter)) {
+    const profile = await getOrCreateProfile(req.authUser)
+    if (profile.role === 'admin') organizationIds.push(filter)
+  }
   const explicitScope = explicitOrganizationScope(filter, organizationIds)
   if (explicitScope) return explicitScope
   return {

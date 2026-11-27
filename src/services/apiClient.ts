@@ -54,6 +54,10 @@ apiClient.interceptors.response.use(
     // impersonation: the admin keeps their own session.
     const code = (error.response?.data as { code?: string } | undefined)?.code;
     if (error.response?.status === 403 && code === 'IMPERSONATION_DENIED') clearImpersonatedUserId();
+    // Surface the backend's explanation (e.g. "Giocatore non trovato") instead
+    // of Axios' generic "Request failed with status code 400".
+    const message = error.response?.data?.message;
+    if (typeof message === 'string' && message.trim()) error.message = message;
     return Promise.reject(error);
   }
 );

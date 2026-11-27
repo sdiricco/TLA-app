@@ -110,15 +110,20 @@ async function reloadTournament(): Promise<void> {
   tournament.value = await tournamentsStore.getById(route.params['id'] as string)
 }
 
+// A club tournament only accepts that club's players, so the candidates are
+// loaded from the tournament's organization rather than from every visible club.
+async function loadCandidatePlayers(): Promise<void> {
+  const organizationId = tournament.value?.organization_id
+  await playersStore.fetchAll({ page: 0, perPage: 100, ...(organizationId ? { organizationId } : {}) })
+  // Entrants outside the first directory page must still be listed.
+  await playersStore.ensureLoaded(enrolledPlayerIds.value)
+}
+
 async function loadPage(): Promise<void> {
   loading.value = true
   try {
-    await Promise.all([
-      reloadTournament(),
-      playersStore.fetchAll({ page: 0, perPage: 100 }),
-    ])
-    // Entrants outside the first directory page must still be listed.
-    await playersStore.ensureLoaded(enrolledPlayerIds.value)
+    await reloadTournament()
+    await loadCandidatePlayers()
   } catch (error) {
     toast.add({ severity: 'error', summary: 'Pagina non disponibile', detail: (error as Error).message, life: 4000 })
   } finally {
@@ -253,9 +258,7 @@ watch(
   () => enrolledPlayerIds.value.join(','),
   (currentIds, previousIds) => {
     if (currentIds !== previousIds && !loading.value) {
-      void playersStore
-        .fetchAll({ page: 0, perPage: 100 })
-        .then(() => playersStore.ensureLoaded(enrolledPlayerIds.value))
+      void loadCandidatePlayers()
     }
   },
 )

@@ -14,6 +14,17 @@ export interface ChangelogEntry {
 export const changelogEntries: ChangelogEntry[] = [
   {
     date: '2026-11-27',
+    version: 'Tornei 1.4',
+    kind: 'fix',
+    title: 'Iscrizione dei giocatori ai tornei del circolo',
+    description: 'Aggiungere un giocatore a un torneo non dà più errore.',
+    items: [
+      'Tra i giocatori da iscrivere compaiono solo quelli del circolo del torneo',
+      'I messaggi di errore spiegano il motivo invece di mostrare solo un codice',
+    ],
+  },
+  {
+    date: '2026-11-27',
     version: 'Dashboard 1.1',
     kind: 'improvement',
     title: 'Dashboard più diretta',
