@@ -14,6 +14,19 @@ export interface ChangelogEntry {
 export const changelogEntries: ChangelogEntry[] = [
   {
     date: '2026-11-27',
+    version: 'Organizzazioni 1.2',
+    kind: 'improvement',
+    title: 'Pagina organizzazioni rinnovata',
+    description: 'La pagina delle organizzazioni ha lo stesso stile di dashboard e tornei ed è più semplice da usare.',
+    items: [
+      'L’organizzazione attiva è in evidenza con città, visibilità, ruolo, membri e codice invito da copiare',
+      'Elenco delle tue organizzazioni con iniziali, ruolo e stato: basta un tocco per cambiare spazio',
+      'Esplora la mappa, entra con codice e crea organizzazione raccolti in un unico riquadro',
+      'Conferme e codici copiati compaiono come notifiche temporanee',
+    ],
+  },
+  {
+    date: '2026-11-27',
     version: 'Tornei 1.4',
     kind: 'fix',
     title: 'Iscrizione dei giocatori ai tornei del circolo',

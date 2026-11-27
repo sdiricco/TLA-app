@@ -1,112 +1,92 @@
 <script setup lang="ts">
+// -----------------------------------------------------------------------------
+// Imports
+// -----------------------------------------------------------------------------
 import { computed, ref } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
 import { useRouter } from 'vue-router'
-import { useTimeoutFn } from '@vueuse/core'
 import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
-import PageHeader from '@/components/layout/PageHeader.vue'
+import Tag from 'primevue/tag'
+import { useToast } from 'primevue/usetoast'
+import OrganizationJoinDialog from '@/components/organizations/OrganizationJoinDialog.vue'
+import OrganizationListItem from '@/components/organizations/OrganizationListItem.vue'
+import {
+  organizationRoleLabel,
+  organizationVisibilityLabel,
+} from '@/components/organizations/organizationLabels'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationsStore } from '@/stores/organizations'
 import type { Organization } from '@/types'
 
-// Shared organization state and invitation dialog state.
+// -----------------------------------------------------------------------------
+// Types
+// -----------------------------------------------------------------------------
+interface OrganizationAction {
+  icon: string
+  title: string
+  copy: string
+  to?: RouteLocationRaw
+  run?: () => void
+}
+
+// -----------------------------------------------------------------------------
+// State
+// -----------------------------------------------------------------------------
 const router = useRouter()
+const toast = useToast()
 const auth = useAuthStore()
 const store = useOrganizationsStore()
-const inviteMessage = ref<string | null>(null)
 const joinDialogVisible = ref(false)
-const joinCode = ref('')
-const joining = ref(false)
-const joinError = ref<string | null>(null)
 
-const pageTitle = computed(() => auth.isGuest ? 'Scegli dove giocare' : 'I tuoi spazi')
+// -----------------------------------------------------------------------------
+// Derived state
+// -----------------------------------------------------------------------------
+const active = computed(() => store.activeOrganization)
 const pageDescription = computed(() => auth.isGuest
   ? 'Esplora le community di tennis e consulta tornei e giocatori.'
-  : 'Passa da un’organizzazione all’altra o gestisci quella attiva.')
-const joinCodeIsValid = computed(() =>
-  /^[A-Z0-9]{5}$/.test(joinCode.value) || /^[A-Za-z0-9_-]{8,64}$/.test(joinCode.value),
-)
-const nextActions = computed(() => [
-  {
-    icon: 'pi pi-map',
-    title: 'Esplora la mappa',
-    copy: 'Trova organizzazioni visibili',
-    run: () => { void router.push({ name: 'organizations-explore' }) },
-  },
+  : 'Scegli lo spazio su cui lavorare, gestisci quello attivo o unisciti a una nuova community.')
+const hasOrganizations = computed(() => !!active.value || store.organizations.length > 0)
+// The active organization leads the list, the others follow alphabetically.
+const sortedOrganizations = computed(() => [...store.organizations].sort((left, right) => {
+  if (left.id === active.value?.id) return -1
+  if (right.id === active.value?.id) return 1
+  return left.name.localeCompare(right.name, 'it')
+}))
+const actions = computed<OrganizationAction[]>(() => [
+  { icon: 'pi pi-map', title: 'Esplora la mappa', copy: 'Trova circoli e community vicino a te', to: { name: 'organizations-explore' } },
   ...auth.isGuest ? [] : [
-    {
-      icon: 'pi pi-key',
-      title: 'Entra con codice',
-      copy: 'Accedi a uno spazio privato',
-      run: openJoinDialog,
-    },
-    {
-      icon: 'pi pi-plus',
-      title: 'Crea organizzazione',
-      copy: 'Apri un nuovo spazio tennis',
-      run: () => { void router.push({ name: 'organization-create' }) },
-    },
+    { icon: 'pi pi-key', title: 'Entra con codice', copy: 'Unisciti a uno spazio privato', run: () => { joinDialogVisible.value = true } },
+    { icon: 'pi pi-plus', title: 'Crea organizzazione', copy: 'Apri un nuovo spazio per il tuo circolo', to: { name: 'organization-create' } },
   ],
 ])
-const { start: scheduleInviteMessageClear } = useTimeoutFn(
-  () => { inviteMessage.value = null },
-  3000,
-  { immediate: false },
-)
 
-function roleLabel(role: Organization['role']): string {
-  if (role === 'owner') return 'Proprietario'
-  if (role === 'admin') return 'Amministratore'
-  return 'Membro'
+// -----------------------------------------------------------------------------
+// Actions
+// -----------------------------------------------------------------------------
+function runAction(action: OrganizationAction): void {
+  if (action.to) void router.push(action.to)
+  else action.run?.()
 }
 
-function visibilityLabel(organization: Organization): string {
-  if (organization.visibility === 'public') return 'Pubblica'
-  return organization.discoverable ? 'Privata · visibile' : 'Privata · nascosta'
+function selectOrganization(organization: Organization): void {
+  if (organization.id === active.value?.id) return
+  store.select(organization.id)
+  toast.add({ severity: 'success', summary: 'Organizzazione attiva', detail: organization.name, life: 2500 })
 }
 
-function openJoinDialog(): void {
-  joinCode.value = ''
-  joinError.value = null
-  joinDialogVisible.value = true
-}
-
-function normalizeJoinCode(): void {
-  const normalized = joinCode.value.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64)
-  joinCode.value = normalized.length <= 5 ? normalized.toUpperCase() : normalized
-}
-
-async function joinOrganization(): Promise<void> {
-  normalizeJoinCode()
-  if (!joinCodeIsValid.value) {
-    joinError.value = 'Inserisci un codice invito valido.'
-    return
-  }
-  joining.value = true
-  joinError.value = null
-  try {
-    const organization = await store.join(joinCode.value)
-    joinDialogVisible.value = false
-    inviteMessage.value = `Sei entrato in ${organization.name}.`
-    scheduleInviteMessageClear()
-  } catch (error) {
-    joinError.value = (error as Error).message
-  } finally {
-    joining.value = false
-  }
+function onJoined(organization: Organization): void {
+  toast.add({ severity: 'success', summary: 'Benvenuto', detail: `Sei entrato in ${organization.name}.`, life: 3000 })
 }
 
 async function copyInviteCode(organization: Organization): Promise<void> {
   if (!organization.join_code) return
   try {
     await navigator.clipboard.writeText(organization.join_code)
-    inviteMessage.value = `Codice di ${organization.name} copiato.`
+    toast.add({ severity: 'success', summary: 'Codice copiato', detail: `Codice invito di ${organization.name}: ${organization.join_code}`, life: 3000 })
   } catch {
-    inviteMessage.value = `Codice invito: ${organization.join_code}`
+    toast.add({ severity: 'info', summary: 'Codice invito', detail: organization.join_code, life: 6000 })
   }
-  scheduleInviteMessageClear()
 }
 </script>
 
@@ -114,76 +94,173 @@ async function copyInviteCode(organization: Organization): Promise<void> {
   <!------------------------------>
   <!-- Page layout -->
   <!------------------------------>
-  <section class="mx-auto w-full max-w-230 pb-10 pt-3 sm:pt-8">
+  <div class="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 text-(--color-text) sm:gap-5">
+    <!------------------------------>
     <!-- Section: Header -->
-    <PageHeader eyebrow="ORGANIZZAZIONI" :title="pageTitle" :description="pageDescription">
-      <div class="flex gap-2">
-        <Button label="Esplora" icon="pi pi-map" severity="secondary" outlined @click="router.push({ name: 'organizations-explore' })" />
-        <Button v-if="!auth.isGuest" label="Nuova" icon="pi pi-plus" @click="router.push({ name: 'organization-create' })" />
+    <!------------------------------>
+    <header class="flex items-start justify-between gap-4 pb-1">
+      <div class="min-w-0">
+        <h1 class="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">Organizzazioni</h1>
+        <p class="mt-1 text-sm text-(--color-text-muted) sm:text-base">{{ pageDescription }}</p>
       </div>
-    </PageHeader>
+      <div v-if="!auth.isGuest" class="flex shrink-0 gap-2">
+        <Button
+          icon="pi pi-plus"
+          aria-label="Nuova organizzazione"
+          title="Nuova organizzazione"
+          class="md:hidden"
+          rounded
+          @click="router.push({ name: 'organization-create' })"
+        />
+        <Button
+          label="Nuova organizzazione"
+          icon="pi pi-plus"
+          class="hidden md:inline-flex"
+          @click="router.push({ name: 'organization-create' })"
+        />
+      </div>
+    </header>
 
-    <div class="mt-5 grid gap-4">
-      <Message v-if="store.error" severity="error" :closable="false">{{ store.error }}</Message>
-      <Message v-if="inviteMessage" severity="success" :closable="false">{{ inviteMessage }}</Message>
+    <Message v-if="store.error" severity="error" :closable="false">{{ store.error }}</Message>
 
-      <template v-if="store.activeOrganization">
+    <template v-if="hasOrganizations">
+      <!------------------------------>
+      <!-- Section: Active organization -->
+      <!------------------------------>
+      <section
+        v-if="active"
+        class="overflow-hidden rounded-xl bg-linear-to-br from-(--color-sidebar-start) to-(--color-sidebar-end) text-white"
+        aria-labelledby="active-organization-title"
+      >
+        <div class="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div class="min-w-0">
+            <p class="mb-2 flex items-center gap-2 text-[0.65rem] font-extrabold uppercase tracking-[0.18em] text-(--color-accent)">
+              <span class="size-2 rounded-full bg-(--color-accent) ring-4 ring-(--color-accent)/20" aria-hidden="true" />
+              {{ auth.isGuest ? 'Stai esplorando' : 'Organizzazione attiva' }}
+            </p>
+            <h2 id="active-organization-title" class="truncate text-2xl font-bold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
+              {{ active.name }}
+            </h2>
+            <p class="mt-3 max-w-2xl text-sm leading-relaxed text-white/65 sm:text-base">
+              {{ active.description || 'Community di tennis su TLA.' }}
+            </p>
+          </div>
+          <div class="flex flex-col gap-2 sm:flex-row lg:justify-end">
+            <Button
+              label="Vai ai tornei"
+              icon="pi pi-arrow-right"
+              icon-pos="right"
+              class="border-white/20! bg-white/10! text-white! hover:bg-white/15!"
+              @click="router.push({ name: 'tournaments' })"
+            />
+            <Button
+              v-if="store.isAdmin"
+              label="Modifica"
+              icon="pi pi-pencil"
+              class="border-white/20! bg-transparent! text-white! hover:bg-white/10!"
+              outlined
+              @click="router.push({ name: 'organization-edit' })"
+            />
+          </div>
+        </div>
+        <!-- Section: Active organization facts -->
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 px-5 py-4 text-xs text-white/60 sm:px-7">
+          <span v-if="active.city" class="inline-flex items-center gap-2"><i class="pi pi-map-marker text-(--color-accent)" /> {{ active.city }}</span>
+          <span class="inline-flex items-center gap-2"><i class="pi pi-lock text-(--color-accent)" /> {{ organizationVisibilityLabel(active) }}</span>
+          <span v-if="!auth.isGuest" class="inline-flex items-center gap-2"><i class="pi pi-user text-(--color-accent)" /> {{ organizationRoleLabel(active.role) }}</span>
+          <span v-if="active.member_count !== undefined" class="inline-flex items-center gap-2"><i class="pi pi-users text-(--color-accent)" /> {{ active.member_count }} membri</span>
+          <button
+            v-if="store.isAdmin && active.join_code"
+            type="button"
+            class="ml-auto inline-flex cursor-pointer items-center gap-2 rounded-md border border-white/15 px-2.5 py-1.5 font-mono text-xs font-bold tracking-widest text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-accent)"
+            :aria-label="`Copia codice invito di ${active.name}`"
+            @click="copyInviteCode(active)"
+          >
+            <i class="pi pi-key text-(--color-accent)" aria-hidden="true" /> {{ active.join_code }} <i class="pi pi-copy text-white/60" aria-hidden="true" />
+          </button>
+        </div>
+      </section>
+
+      <div class="grid items-start gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(19rem,0.75fr)] xl:gap-5">
         <!------------------------------>
-        <!-- Section: Active organization -->
+        <!-- Section: User organizations -->
         <!------------------------------>
-        <section class="overflow-hidden border border-(--color-border) bg-(--color-surface-card)" aria-labelledby="active-organization-title">
-          <div class="flex items-start gap-3 p-4 sm:gap-4 sm:p-6">
-            <span class="grid size-12 shrink-0 place-items-center bg-primary-50 text-xl text-primary sm:size-13"><i class="pi pi-building" /></span>
-            <div class="min-w-0 flex-1">
-              <div class="mb-1 flex items-center gap-2 text-xs font-extrabold tracking-wider text-primary"><span class="size-2 rounded-full bg-primary-500 ring-4 ring-primary-500/10" />{{ auth.isGuest ? 'STAI ESPLORANDO' : 'ORGANIZZAZIONE ATTIVA' }}</div>
-              <h2 id="active-organization-title" class="truncate text-2xl font-bold tracking-tight">{{ store.activeOrganization.name }}</h2>
-              <p class="mb-3 mt-2 max-w-2xl text-sm leading-relaxed text-(--color-text-muted)">{{ store.activeOrganization.description || 'Community di tennis su TLA.' }}</p>
-              <div class="flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-(--color-text-muted)">
-                <span class="flex items-center gap-1"><i class="pi pi-lock text-primary" />{{ visibilityLabel(store.activeOrganization) }}</span>
-                <span v-if="!auth.isGuest" class="flex items-center gap-1"><i class="pi pi-user text-primary" />{{ roleLabel(store.activeOrganization.role) }}</span>
-                <span v-if="store.activeOrganization.member_count !== undefined" class="flex items-center gap-1"><i class="pi pi-users text-primary" />{{ store.activeOrganization.member_count }} membri</span>
-              </div>
+        <section
+          v-if="!auth.isGuest && store.organizations.length"
+          class="overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface-card)"
+          aria-labelledby="my-organizations-title"
+        >
+          <header class="flex items-center justify-between gap-4 border-b border-(--color-border) px-4 py-4 sm:px-5">
+            <div>
+              <p class="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-primary">I tuoi spazi</p>
+              <h2 id="my-organizations-title" class="mt-1 text-lg font-bold tracking-tight">Le tue organizzazioni</h2>
             </div>
-          </div>
-          <div class="grid gap-2 border-t border-(--color-border) bg-(--color-surface-soft) p-3 sm:flex sm:items-center">
-            <span class="sm:mr-auto">
-              <Button label="Vai ai tornei" icon="pi pi-arrow-right" icon-pos="right" @click="router.push({ name: 'tournaments' })" />
-            </span>
-            <Button v-if="store.isAdmin" label="Modifica" icon="pi pi-pencil" severity="secondary" outlined @click="router.push({ name: 'organization-edit' })" />
-            <Button v-if="store.isAdmin && store.activeOrganization.join_code" label="Codice invito" icon="pi pi-copy" severity="secondary" text @click="copyInviteCode(store.activeOrganization)" />
-          </div>
+            <Tag :value="String(store.organizations.length)" severity="secondary" rounded />
+          </header>
+          <OrganizationListItem
+            v-for="organization in sortedOrganizations"
+            :key="organization.id"
+            :organization="organization"
+            :active="organization.id === active?.id"
+            @select="selectOrganization"
+            @copy-code="copyInviteCode"
+          />
         </section>
 
-      </template>
+        <!------------------------------>
+        <!-- Section: Next actions -->
+        <!------------------------------>
+        <aside
+          class="overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface-card)"
+          :class="auth.isGuest || !store.organizations.length ? 'xl:col-span-2' : ''"
+          aria-labelledby="organization-actions-title"
+        >
+          <header class="border-b border-(--color-border) px-4 py-4 sm:px-5">
+            <h2 id="organization-actions-title" class="font-bold">{{ auth.isGuest ? 'Scopri altre community' : 'Aggiungi uno spazio' }}</h2>
+            <p class="mt-0.5 text-xs text-(--color-text-muted)">
+              {{ auth.isGuest ? 'Spostati sulla mappa per trovare altri circoli.' : 'Cerca una community esistente oppure creane una nuova.' }}
+            </p>
+          </header>
+          <nav aria-label="Azioni organizzazioni">
+            <button
+              v-for="action in actions"
+              :key="action.title"
+              type="button"
+              class="group grid min-h-17 w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-(--color-border) px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-(--color-surface-soft) focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary sm:px-5"
+              @click="runAction(action)"
+            >
+              <span class="grid size-9 place-items-center rounded-lg bg-(--color-surface-soft) text-primary"><i :class="action.icon" /></span>
+              <span class="grid min-w-0 gap-0.5">
+                <strong class="text-sm group-hover:text-primary">{{ action.title }}</strong>
+                <small class="truncate text-xs text-(--color-text-muted)">{{ action.copy }}</small>
+              </span>
+              <i class="pi pi-chevron-right text-[0.65rem] text-(--color-text-subtle)" aria-hidden="true" />
+            </button>
+          </nav>
+        </aside>
+      </div>
+    </template>
 
-      <!------------------------------>
-      <!-- Section: User organizations -->
-      <!------------------------------>
-      <section v-if="!auth.isGuest && store.organizations.length" class="mt-4" aria-labelledby="my-organizations-title">
-        <header class="mb-3 flex items-start justify-between gap-4"><div><h2 id="my-organizations-title" class="text-lg font-bold">Le tue organizzazioni</h2><p class="mt-1 text-sm text-(--color-text-muted)">Seleziona lo spazio su cui vuoi lavorare.</p></div><span class="grid min-w-7 place-items-center bg-(--color-surface-soft) px-2 py-1 text-xs font-extrabold text-(--color-text-muted)">{{ store.organizations.length }}</span></header>
-        <div class="grid gap-2 md:grid-cols-2">
-          <article v-for="organization in store.organizations" :key="organization.id" class="flex min-w-0 items-center border" :class="organization.id === store.activeOrganization?.id ? 'border-primary-300 bg-primary-50' : 'border-(--color-border) bg-(--color-surface-card)'">
-            <button type="button" class="flex min-w-0 flex-1 items-center gap-3 p-3 text-left" @click="store.select(organization.id)"><span class="grid size-9 shrink-0 place-items-center bg-(--color-surface-soft) text-primary"><i class="pi pi-building" /></span><span class="grid min-w-0 flex-1"><strong class="truncate text-sm">{{ organization.name }}</strong><small class="truncate text-xs text-(--color-text-muted)">{{ visibilityLabel(organization) }} · {{ roleLabel(organization.role) }}</small></span><span v-if="organization.id === store.activeOrganization?.id" class="text-xs font-extrabold text-primary"><i class="pi pi-check" /> Attiva</span><i v-else class="pi pi-chevron-right text-xs text-(--color-text-subtle)" /></button>
-            <Button v-if="organization.join_code && ['owner', 'admin'].includes(organization.role)" icon="pi pi-copy" text rounded :aria-label="`Copia codice invito di ${organization.name}`" @click="copyInviteCode(organization)" />
-          </article>
-        </div>
-      </section>
-
-      <!-- Section: Next actions -->
-      <section v-if="store.activeOrganization || store.organizations.length" class="mt-6" aria-labelledby="next-actions-title">
-        <header class="mb-3"><h2 id="next-actions-title" class="text-lg font-bold">{{ auth.isGuest ? 'Scopri altre community' : 'Aggiungi uno spazio' }}</h2><p class="mt-1 text-sm text-(--color-text-muted)">{{ auth.isGuest ? 'Spostati sulla mappa per trovare altri circoli.' : 'Cerca una community esistente oppure creane una nuova.' }}</p></header>
-        <div class="grid gap-2 md:grid-cols-3">
-          <button v-for="action in nextActions" :key="action.title" type="button" class="flex items-center gap-3 border border-(--color-border) p-3 text-left hover:border-primary-300 hover:bg-(--color-surface-card)" @click="action.run"><span class="grid size-10 shrink-0 place-items-center bg-primary-50 text-primary"><i :class="action.icon" /></span><span class="grid min-w-0 flex-1"><strong class="text-sm">{{ action.title }}</strong><small class="text-xs text-(--color-text-muted)">{{ action.copy }}</small></span><i class="pi pi-arrow-right text-xs text-(--color-text-subtle)" /></button>
-        </div>
-      </section>
-
-      <!-- Section: Empty state -->
-      <section v-if="!store.activeOrganization && !store.organizations.length" class="grid justify-items-center gap-3 border border-(--color-border) bg-(--color-surface-card) px-4 py-12 text-center sm:py-16"><span class="grid size-14 place-items-center bg-primary-50 text-xl text-primary"><i class="pi pi-building" /></span><h2 class="text-xl font-bold">Nessuna organizzazione</h2><p class="max-w-lg text-(--color-text-muted)">{{ auth.isGuest ? 'Esplora la mappa per scegliere una community.' : 'Crea il tuo primo spazio oppure trovane uno sulla mappa.' }}</p><div class="mt-2 flex flex-col gap-2 sm:flex-row"><Button label="Esplora la mappa" icon="pi pi-map" severity="secondary" outlined @click="router.push({ name: 'organizations-explore' })" /><Button v-if="!auth.isGuest" label="Crea organizzazione" icon="pi pi-plus" @click="router.push({ name: 'organization-create' })" /></div></section>
-    </div>
+    <!------------------------------>
+    <!-- Section: Empty state -->
+    <!------------------------------>
+    <section
+      v-else
+      class="grid justify-items-center gap-3 rounded-xl border border-(--color-border) bg-(--color-surface-card) px-4 py-12 text-center sm:py-16"
+    >
+      <span class="grid size-14 place-items-center rounded-full bg-primary-50 text-xl text-primary"><i class="pi pi-building" /></span>
+      <h2 class="text-xl font-bold">Nessuna organizzazione</h2>
+      <p class="max-w-lg text-sm text-(--color-text-muted)">
+        {{ auth.isGuest ? 'Esplora la mappa per scegliere una community.' : 'Crea il tuo primo spazio, entra con un codice invito oppure trova un circolo sulla mappa.' }}
+      </p>
+      <div class="mt-2 flex flex-col gap-2 sm:flex-row">
+        <Button label="Esplora la mappa" icon="pi pi-map" severity="secondary" outlined @click="router.push({ name: 'organizations-explore' })" />
+        <Button v-if="!auth.isGuest" label="Entra con codice" icon="pi pi-key" severity="secondary" outlined @click="joinDialogVisible = true" />
+        <Button v-if="!auth.isGuest" label="Crea organizzazione" icon="pi pi-plus" @click="router.push({ name: 'organization-create' })" />
+      </div>
+    </section>
 
     <!-- Section: Join dialog -->
-    <Dialog v-model:visible="joinDialogVisible" modal header="Entra con codice" class="mx-4 w-full max-w-md">
-      <form class="grid gap-3" @submit.prevent="joinOrganization"><p class="leading-relaxed text-(--color-text-muted)">Inserisci il codice ricevuto dall’amministratore dell’organizzazione.</p><Message v-if="joinError" severity="error" :closable="false">{{ joinError }}</Message><label for="organization-join-code" class="text-sm font-bold text-(--color-text-muted)">Codice invito</label><InputText id="organization-join-code" v-model="joinCode" placeholder="A1B2C" maxlength="64" autocomplete="off" fluid autofocus @input="normalizeJoinCode" /><small class="text-xs text-(--color-text-muted)">I nuovi codici hanno 5 caratteri: lettere maiuscole e numeri.</small><Button type="submit" label="Entra nell’organizzazione" icon="pi pi-sign-in" :loading="joining" :disabled="!joinCodeIsValid" fluid /></form>
-    </Dialog>
-  </section>
+    <OrganizationJoinDialog v-model:visible="joinDialogVisible" @joined="onJoined" />
+  </div>
 </template>

@@ -126,9 +126,10 @@ test('keeps the organization filter above the primary mobile navigation', async 
 
   await page.getByRole('menuitem', { name: 'Organizzazioni' }).click()
   await expect(page).toHaveURL(/\/organizations$/)
-  await expect(page.getByRole('heading', { name: 'I tuoi spazi' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Organizzazioni' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Nessuna organizzazione' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Crea organizzazione' }).click()
+  await page.getByRole('button', { name: 'Crea organizzazione', exact: true }).click()
   await expect(page).toHaveURL(/\/organizations\/new$/)
   await expect(page.getByRole('heading', { name: 'Crea un’organizzazione' })).toBeVisible()
   await expect(page.locator('.app-topbar')).toHaveCount(0)
