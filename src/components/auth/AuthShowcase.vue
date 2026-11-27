@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CourtRally from '@/components/auth/CourtRally.vue'
 </script>
 
 <template>
@@ -12,11 +13,8 @@
     </div>
 
     <div class="court-card">
-      <div class="court"><i class="net" /><i class="ball" /></div>
-      <div class="court-info">
-        <div><strong>Torneo sociale</strong><small>Tabellone in corso</small></div>
-        <span class="live"><i /> LIVE</span>
-      </div>
+      <!-- Section: Court -->
+      <CourtRally />
     </div>
     <p class="showcase-footer">Tennis League Administration</p>
   </aside>
@@ -34,17 +32,6 @@
 .showcase-copy h1 { margin: 0; font-size: clamp(2.7rem, 5vw, 4.4rem); line-height: 0.98; letter-spacing: -0.06em; }
 .showcase-copy h1 span { color: var(--showcase-accent); }
 .showcase-copy > p:last-child { max-width: 430px; margin: 1.5rem 0 0; color: rgb(var(--color-white-rgb) / 72%); line-height: 1.65; }
-.court-card { width: min(390px, 100%); padding: 0.7rem; border: 1px solid rgb(var(--color-white-rgb) / 16%); background: rgb(var(--color-white-rgb) / 9%); }
-.court { position: relative; height: 105px; overflow: hidden; border: 1px solid rgb(var(--color-white-rgb) / 55%); background: var(--showcase-main); }
-.court::before { position: absolute; inset: 18px 0; border-block: 1px solid rgb(var(--color-white-rgb) / 55%); content: ''; }
-.court::after { position: absolute; top: 18px; bottom: 18px; left: 50%; border-left: 1px solid rgb(var(--color-white-rgb) / 55%); content: ''; }
-.net { position: absolute; z-index: 1; inset: 50% 0 auto; border-top: 2px solid rgb(var(--color-white-rgb) / 85%); }
-.ball { position: absolute; z-index: 2; top: 25%; right: 24%; width: 11px; height: 11px; background: var(--showcase-accent); box-shadow: 0 4px 8px rgb(var(--color-black-rgb) / 25%); }
-.court-info { display: flex; align-items: center; justify-content: space-between; padding: 0.8rem 0.25rem 0.2rem; }
-.court-info div { display: grid; gap: 0.15rem; }
-.court-info strong { font-size: 0.78rem; }
-.court-info small { color: rgb(var(--color-white-rgb) / 60%); font-size: 0.68rem; }
-.live { display: flex; align-items: center; gap: 0.35rem; padding: 0.32rem 0.5rem; background: rgb(var(--color-black-rgb) / 18%); color: rgb(var(--color-white-rgb) / 78%); font-size: 0.61rem; font-weight: 800; letter-spacing: 0.08em; }
-.live i { width: 6px; height: 6px; background: var(--showcase-accent); }
+.court-card { width: min(440px, 100%); margin-inline: auto; }
 .showcase-footer { margin: 1.5rem 0 0; color: rgb(var(--color-white-rgb) / 40%); font-size: 0.7rem; }
 </style>

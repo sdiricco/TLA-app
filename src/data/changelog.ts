@@ -23,6 +23,8 @@ export const changelogEntries: ChangelogEntry[] = [
       'Inserimento del risultato più rapido, con il vincitore scelto con un tocco',
       'Si aprono anche gli incontri delle fasi successive alla prima',
       'Corretto il tabellone che in alcuni tornei conclusi chiedeva di iscrivere almeno 2 giocatori',
+      'Il pulsante per creare un torneo è accanto al titolo della pagina Tornei',
+      'Nella pagina di accesso il campo da tennis ha le proporzioni reali, con due giocatori che corrono sulla palla e palleggiano di dritto e rovescio',
     ],
   },
   {
