@@ -59,14 +59,13 @@ const greeting = computed(() => {
 const welcomeTitle = computed(() => firstName.value ? `${greeting.value}, ${firstName.value}` : greeting.value)
 const contextLabel = computed(() => organizations.activeOrganization?.name ?? 'contenuti globali')
 const dashboardDescription = computed(() => {
-  if (auth.isAdmin) return `Controlla le priorità di ${contextLabel.value} e porta avanti la competizione.`
+  if (auth.isAdmin) return `Gestisci i tuoi tornei e le attività di ${contextLabel.value}.`
   if (auth.isGuest) return 'Scopri tornei, giocatori e attività della community.'
   if (auth.canCreateTournament) return 'Gestisci i tuoi tornei globali oppure partecipa alle competizioni della community.'
   return `Segui i tornei di ${contextLabel.value} e la tua attività sportiva.`
 })
 
 const ongoingTournaments = computed(() => tournaments.value.filter((item) => item.status === 'ongoing'))
-const upcomingTournaments = computed(() => tournaments.value.filter((item) => item.status === 'upcoming'))
 const draftTournaments = computed(() => tournaments.value.filter((item) => !item.published))
 const activeRequests = computed(() => requests.value.filter((item) => ['open', 'planned', 'in_progress'].includes(item.status)))
 const registrationOpenTournaments = computed(() => tournaments.value.filter((item) => {
@@ -77,84 +76,98 @@ const registrationOpenTournaments = computed(() => tournaments.value.filter((ite
   return (!starts?.isValid() || !today.isBefore(starts, 'day'))
     && (!ends?.isValid() || !today.isAfter(ends, 'day'))
 }))
-const relevantTournaments = computed(() => [...tournaments.value]
-  .filter((item) => item.status !== 'completed')
-  .sort((left, right) => {
-    if (left.status !== right.status) return left.status === 'ongoing' ? -1 : 1
-    const leftDate = left.start_date ? moment(left.start_date).valueOf() : Number.MAX_SAFE_INTEGER
-    const rightDate = right.start_date ? moment(right.start_date).valueOf() : Number.MAX_SAFE_INTEGER
-    return leftDate - rightDate
-  })
-  .slice(0, 4))
+// Active tournaments first, then the closest start date.
+function sortActiveTournaments(items: Tournament[]): Tournament[] {
+  return items
+    .filter((item) => item.status !== 'completed')
+    .sort((left, right) => {
+      if (left.status !== right.status) return left.status === 'ongoing' ? -1 : 1
+      const leftDate = left.start_date ? moment(left.start_date).valueOf() : Number.MAX_SAFE_INTEGER
+      const rightDate = right.start_date ? moment(right.start_date).valueOf() : Number.MAX_SAFE_INTEGER
+      return leftDate - rightDate
+    })
+}
+
+// Tournaments store the organizer's profile id, which is the signed-in user's id.
+const myActiveTournaments = computed(() => sortActiveTournaments(
+  tournaments.value.filter((item) => !!auth.user?.id && item.organizer_id === auth.user.id),
+))
+const myOngoingCount = computed(() => myActiveTournaments.value.filter((item) => item.status === 'ongoing').length)
+const myTournamentsRoute = computed<RouteLocationRaw>(() => ({
+  name: 'tournaments',
+  query: auth.user?.id ? { organizer: auth.user.id } : {},
+}))
+const relevantTournaments = computed(() => auth.isAdmin
+  ? myActiveTournaments.value.slice(0, 5)
+  : sortActiveTournaments([...tournaments.value]).slice(0, 4))
+const tournamentsRoute = computed<RouteLocationRaw>(() => auth.isAdmin ? myTournamentsRoute.value : { name: 'tournaments' })
+// The season card opens the player's public profile, or the account profile
+// where a player card can be created.
+const personalRoute = computed<RouteLocationRaw | undefined>(() => {
+  if (auth.isGuest) return undefined
+  return player.value ? { name: 'player-detail', params: { id: player.value.id } } : { name: 'profile' }
+})
 
 const stats = computed(() => {
   if (auth.isAdmin) {
+    const upcoming = myActiveTournaments.value.length - myOngoingCount.value
     return [
-      { label: 'In corso', value: ongoingTournaments.value.length, icon: 'pi pi-play-circle', hint: 'tornei' },
-      { label: 'In programma', value: upcomingTournaments.value.length, icon: 'pi pi-calendar-clock', hint: 'tornei' },
-      { label: 'Giocatori', value: playersTotal.value, icon: 'pi pi-users', hint: 'nel contesto' },
-      { label: 'Richieste attive', value: activeRequests.value.length, icon: 'pi pi-lightbulb', hint: organizations.activeOrganization ? 'da valutare' : 'seleziona un club' },
+      {
+        label: 'I miei tornei',
+        value: myActiveTournaments.value.length,
+        icon: 'pi pi-trophy',
+        hint: `${myOngoingCount.value} in corso · ${upcoming} in programma`,
+        to: myTournamentsRoute.value,
+      },
+      {
+        label: 'Da pubblicare',
+        value: draftTournaments.value.length,
+        icon: 'pi pi-eye-slash',
+        hint: draftTournaments.value.length ? 'bozze' : 'tutto pubblicato',
+        to: { name: 'tournaments' },
+        attention: draftTournaments.value.length > 0,
+      },
+      { label: 'Giocatori', value: playersTotal.value, icon: 'pi pi-users', hint: 'nel contesto', to: { name: 'players' } },
+      {
+        label: 'Richieste attive',
+        value: activeRequests.value.length,
+        icon: 'pi pi-lightbulb',
+        hint: organizations.activeOrganization ? 'da valutare' : 'seleziona un club',
+        to: organizations.activeOrganization ? { name: 'requests' } : { name: 'organizations' },
+        attention: activeRequests.value.length > 0,
+      },
     ]
   }
   return [
-    { label: 'Iscrizioni aperte', value: registrationOpenTournaments.value.length, icon: 'pi pi-user-plus', hint: 'tornei' },
-    { label: 'In corso', value: ongoingTournaments.value.length, icon: 'pi pi-play-circle', hint: 'tornei' },
-    { label: 'Partite giocate', value: playerHistory.value?.stats.played ?? 0, icon: 'pi pi-chart-line', hint: auth.isGuest ? 'accedi per i dati' : 'personali' },
-    { label: 'Vittorie', value: playerHistory.value ? `${playerHistory.value.stats.win_rate}%` : '—', icon: 'pi pi-trophy', hint: 'percentuale' },
+    { label: 'Iscrizioni aperte', value: registrationOpenTournaments.value.length, icon: 'pi pi-user-plus', hint: 'tornei', to: { name: 'tournaments', query: { status: 'upcoming' } } },
+    { label: 'In corso', value: ongoingTournaments.value.length, icon: 'pi pi-play-circle', hint: 'tornei', to: { name: 'tournaments', query: { status: 'ongoing' } } },
+    { label: 'Partite giocate', value: playerHistory.value?.stats.played ?? 0, icon: 'pi pi-chart-line', hint: auth.isGuest ? 'accedi per i dati' : 'personali', to: personalRoute.value },
+    { label: 'Vittorie', value: playerHistory.value ? `${playerHistory.value.stats.win_rate}%` : '—', icon: 'pi pi-trophy', hint: 'percentuale', to: personalRoute.value },
   ]
 })
 
 const priorities = computed<DashboardPriority[]>(() => {
   const items: DashboardPriority[] = []
-  if (auth.isAdmin) {
-    if (ongoingTournaments.value.length > 0) {
-      const tournament = ongoingTournaments.value[0]!
-      items.push({
-        key: 'ongoing',
-        icon: 'pi pi-bolt',
-        title: `${ongoingTournaments.value.length} ${ongoingTournaments.value.length === 1 ? 'torneo in corso' : 'tornei in corso'}`,
-        description: 'Controlla incontri e risultati ancora da registrare.',
-        to: { name: 'tournament-detail', params: { id: tournament.id } },
-      })
-    }
-    if (draftTournaments.value.length > 0) {
-      items.push({
-        key: 'drafts',
-        icon: 'pi pi-eye-slash',
-        title: `${draftTournaments.value.length} ${draftTournaments.value.length === 1 ? 'torneo da pubblicare' : 'tornei da pubblicare'}`,
-        description: 'Completa le informazioni e rendi visibili le iscrizioni.',
-        to: { name: 'tournaments' },
-      })
-    }
-    if (activeRequests.value.length > 0 && organizations.activeOrganization) {
-      items.push({
-        key: 'requests',
-        icon: 'pi pi-inbox',
-        title: `${activeRequests.value.length} ${activeRequests.value.length === 1 ? 'richiesta attiva' : 'richieste attive'}`,
-        description: 'Valuta le segnalazioni e aggiorna il loro avanzamento.',
-        to: { name: 'requests' },
-      })
-    }
-  } else {
-    if (registrationOpenTournaments.value.length > 0) {
-      const tournament = registrationOpenTournaments.value[0]!
-      items.push({
-        key: 'registrations',
-        icon: 'pi pi-user-plus',
-        title: 'Iscrizioni aperte',
-        description: `${registrationOpenTournaments.value.length} ${registrationOpenTournaments.value.length === 1 ? 'torneo disponibile' : 'tornei disponibili'} per la tua prossima sfida.`,
-        to: { name: 'tournament-detail', params: { id: tournament.id } },
-      })
-    }
-    if (!auth.isGuest && !player.value) {
-      items.push({
-        key: 'player-profile',
-        icon: 'pi pi-id-card',
-        title: 'Completa la tua attività sportiva',
-        description: 'Crea la tua scheda giocatore dal profilo per iscriverti ai tornei.',
-        to: { name: 'profile' },
-      })
-    }
+  // Administrators see their pending work directly in the indicator cards.
+  if (auth.isAdmin) return items
+  if (registrationOpenTournaments.value.length > 0) {
+    const tournament = registrationOpenTournaments.value[0]!
+    items.push({
+      key: 'registrations',
+      icon: 'pi pi-user-plus',
+      title: 'Iscrizioni aperte',
+      description: `${registrationOpenTournaments.value.length} ${registrationOpenTournaments.value.length === 1 ? 'torneo disponibile' : 'tornei disponibili'} per la tua prossima sfida.`,
+      to: { name: 'tournament-detail', params: { id: tournament.id } },
+    })
+  }
+  if (!auth.isGuest && !player.value) {
+    items.push({
+      key: 'player-profile',
+      icon: 'pi pi-id-card',
+      title: 'Completa la tua attività sportiva',
+      description: 'Crea la tua scheda giocatore dal profilo per iscriverti ai tornei.',
+      to: { name: 'profile' },
+    })
   }
   return items.slice(0, 3)
 })
@@ -252,8 +265,6 @@ onMounted(loadDashboard)
       </div>
       <div class="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-white/10 pt-4 text-xs text-white/55">
         <span class="inline-flex items-center gap-2"><i class="pi pi-filter text-(--color-accent)" /> {{ contextLabel }}</span>
-        <span class="inline-flex items-center gap-2"><i class="pi pi-play-circle text-(--color-accent)" /> {{ ongoingTournaments.length }} in corso</span>
-        <span class="inline-flex items-center gap-2"><i class="pi pi-calendar text-(--color-accent)" /> {{ upcomingTournaments.length }} in programma</span>
       </div>
     </header>
 
@@ -279,9 +290,9 @@ onMounted(loadDashboard)
     <div class="grid items-start gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(19rem,0.75fr)] xl:gap-5">
       <div class="grid min-w-0 gap-4 sm:gap-5">
         <!------------------------------>
-        <!-- Section: Operational priorities -->
+        <!-- Section: Operational priorities (players only; admins see them in the indicators) -->
         <!------------------------------>
-        <section class="overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface-card)" aria-labelledby="dashboard-priorities-title">
+        <section v-if="!auth.isAdmin" class="overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface-card)" aria-labelledby="dashboard-priorities-title">
           <header class="flex items-center justify-between gap-4 border-b border-(--color-border) px-4 py-4 sm:px-5">
             <div>
               <p class="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-primary">Oggi</p>
@@ -320,19 +331,35 @@ onMounted(loadDashboard)
         <section class="overflow-hidden rounded-xl border border-(--color-border) bg-(--color-surface-card)" aria-labelledby="dashboard-tournaments-title">
           <header class="flex items-center justify-between gap-4 border-b border-(--color-border) px-4 py-4 sm:px-5">
             <div>
-              <p class="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-primary">Competizioni</p>
-              <h2 id="dashboard-tournaments-title" class="mt-1 text-lg font-bold tracking-tight">{{ auth.isAdmin ? 'Tornei da seguire' : 'Prossimi tornei' }}</h2>
+              <p class="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-primary">{{ auth.isAdmin ? 'Gestione' : 'Competizioni' }}</p>
+              <h2 id="dashboard-tournaments-title" class="mt-1 text-lg font-bold tracking-tight">{{ auth.isAdmin ? 'I miei tornei' : 'Prossimi tornei' }}</h2>
             </div>
-            <Button label="Vedi tutti" icon="pi pi-arrow-right" icon-pos="right" size="small" text @click="$router.push({ name: 'tournaments' })" />
+            <Button label="Vedi tutti" icon="pi pi-arrow-right" icon-pos="right" size="small" text @click="$router.push(tournamentsRoute)" />
           </header>
           <div v-if="loading" class="grid gap-3 p-4 sm:p-5"><Skeleton v-for="index in 3" :key="index" height="4rem" /></div>
           <div v-else-if="relevantTournaments.length">
-            <DashboardTournamentItem v-for="tournament in relevantTournaments" :key="tournament.id" :tournament="tournament" />
+            <DashboardTournamentItem
+              v-for="tournament in relevantTournaments"
+              :key="tournament.id"
+              :tournament="tournament"
+              :show-organizer="!auth.isAdmin"
+            />
           </div>
           <div v-else class="grid min-h-36 place-items-center p-6 text-center">
             <div>
               <i class="pi pi-calendar text-xl text-(--color-text-subtle)" />
-              <p class="mt-2 text-sm text-(--color-text-muted)">Nessun torneo attivo o in programma.</p>
+              <p class="mt-2 text-sm text-(--color-text-muted)">
+                {{ auth.isAdmin ? 'Non stai gestendo tornei attivi o in programma.' : 'Nessun torneo attivo o in programma.' }}
+              </p>
+              <Button
+                v-if="auth.isAdmin && auth.canCreateTournament"
+                class="mt-3"
+                label="Nuovo torneo"
+                icon="pi pi-plus"
+                size="small"
+                text
+                @click="$router.push({ name: 'tournament-create' })"
+              />
             </div>
           </div>
         </section>
@@ -390,9 +417,19 @@ onMounted(loadDashboard)
         <!------------------------------>
         <!-- Section: Personal performance -->
         <!------------------------------>
-        <section v-if="!auth.isGuest" class="rounded-xl border border-(--color-border) bg-(--color-surface-card) p-4 sm:p-5">
-          <p class="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-primary">La tua stagione</p>
-          <template v-if="player && playerHistory">
+        <section v-if="!auth.isGuest" class="rounded-xl border border-(--color-border) bg-(--color-surface-card)">
+          <RouterLink
+            v-if="player && playerHistory"
+            :to="{ name: 'player-detail', params: { id: player.id } }"
+            class="group block rounded-xl p-4 text-inherit no-underline transition-colors hover:bg-(--color-surface-soft) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:p-5"
+            aria-label="Apri il tuo profilo giocatore"
+          >
+            <span class="flex items-center justify-between gap-3">
+              <span class="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-primary">La tua stagione</span>
+              <span class="inline-flex items-center gap-1 text-xs font-semibold text-(--color-text-muted) group-hover:text-primary">
+                Il mio profilo <i class="pi pi-chevron-right text-[0.6rem] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </span>
+            </span>
             <div class="mt-3 flex items-center justify-between gap-4">
               <div class="min-w-0"><h2 class="truncate text-lg font-bold">{{ player.name }}</h2><p class="mt-1 truncate text-xs text-(--color-text-muted)">{{ player.club ?? 'Club non specificato' }}</p></div>
               <strong class="text-3xl tracking-tight">{{ playerHistory.stats.win_rate }}%</strong>
@@ -402,11 +439,14 @@ onMounted(loadDashboard)
               <div><strong class="block text-emerald-700">{{ playerHistory.stats.wins }}</strong><small class="text-[0.65rem] text-(--color-text-muted)">Vinte</small></div>
               <div><strong class="block">{{ playerHistory.stats.losses }}</strong><small class="text-[0.65rem] text-(--color-text-muted)">Perse</small></div>
             </div>
-          </template>
-          <div v-else class="mt-3">
-            <h2 class="font-bold">Inizia a giocare</h2>
-            <p class="mt-1 text-sm leading-relaxed text-(--color-text-muted)">Crea la tua scheda giocatore dal profilo per iscriverti ai tornei e seguire i risultati.</p>
-            <Button class="mt-3" label="Crea profilo giocatore" icon="pi pi-user-plus" size="small" text @click="$router.push({ name: 'profile' })" />
+          </RouterLink>
+          <div v-else class="p-4 sm:p-5">
+            <p class="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-primary">La tua stagione</p>
+            <div class="mt-3">
+              <h2 class="font-bold">Inizia a giocare</h2>
+              <p class="mt-1 text-sm leading-relaxed text-(--color-text-muted)">Crea la tua scheda giocatore dal profilo per iscriverti ai tornei e seguire i risultati.</p>
+              <Button class="mt-3" label="Crea profilo giocatore" icon="pi pi-user-plus" size="small" text @click="$router.push({ name: 'profile' })" />
+            </div>
           </div>
         </section>
       </aside>

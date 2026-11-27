@@ -13,6 +13,20 @@ export interface ChangelogEntry {
 // the same pull request; see the product changelog policy in AGENTS.md.
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: '2026-11-27',
+    version: 'Dashboard 1.1',
+    kind: 'improvement',
+    title: 'Dashboard più diretta',
+    description: 'Gli indicatori portano alla sezione giusta e chi amministra vede subito i propri tornei.',
+    items: [
+      'Ogni indicatore della dashboard si può toccare e apre la sezione corrispondente',
+      'Per gli amministratori “In corso” e “In programma” diventano un unico indicatore “I miei tornei”',
+      'Le priorità sono integrate negli indicatori: bozze da pubblicare e richieste attive sono evidenziate',
+      'La lista “I miei tornei” mostra solo i tornei che organizzi, con le bozze segnalate',
+      'La scheda “La tua stagione” apre il tuo profilo giocatore',
+    ],
+  },
+  {
     date: '2026-11-26',
     version: 'Tornei 1.3',
     kind: 'improvement',

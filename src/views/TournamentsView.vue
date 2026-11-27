@@ -1,7 +1,7 @@
 <script setup lang="ts">
   // Vue and third-party dependencies
-  import { computed, onMounted, ref } from 'vue';
-  import { useRouter } from 'vue-router';
+  import { computed, onMounted, ref, watch } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
   import moment from 'moment';
   import Button from 'primevue/button';
   import Chip from 'primevue/chip';
@@ -41,6 +41,7 @@
   const auth = useAuthStore();
   const organizationsStore = useOrganizationsStore();
   const store = useTournamentsStore();
+  const route = useRoute();
   const router = useRouter();
 
   /**
@@ -52,7 +53,7 @@
    */
   const filtersOpen = ref(false);
   const draftFilters = ref<TournamentFilters>(createDefaultFilters());
-  const appliedFilters = ref<TournamentFilters>(createDefaultFilters());
+  const appliedFilters = ref<TournamentFilters>(filtersFromQuery());
   const organizerOptions = ref<OrganizerSummary[]>([
     { id: 'all', name: 'Tutti gli organizzatori' },
   ]);
@@ -139,7 +140,8 @@
     }
     if (filters.organizerId !== 'all') {
       const organizer = organizerOptions.value.find((option) => option.id === filters.organizerId);
-      chips.push({ key: 'organizerId', label: organizer?.name ?? 'Organizzatore' });
+      const label = filters.organizerId === auth.user?.id ? 'I miei tornei' : organizer?.name;
+      chips.push({ key: 'organizerId', label: label ?? 'Organizzatore' });
     }
 
     return chips;
@@ -158,6 +160,19 @@
       organizationId: organizationsStore.activeId ?? 'global',
       organizerId: 'all',
     };
+  }
+
+  // Links from other pages (for example the dashboard) preselect the status and
+  // organizer through the query string.
+  function filtersFromQuery(): TournamentFilters {
+    const filters = createDefaultFilters();
+    const status = route.query['status'];
+    const organizerId = route.query['organizer'];
+    if (typeof status === 'string' && ['upcoming', 'ongoing', 'completed'].includes(status)) {
+      filters.status = status as TournamentStatus;
+    }
+    if (typeof organizerId === 'string' && organizerId) filters.organizerId = organizerId;
+    return filters;
   }
 
   // Moment formats the local calendar date without introducing a UTC day shift.
@@ -297,6 +312,19 @@
   /**
    * Lifecycle and reactive effects
    */
+
+  // Keeps the quick filters in the URL so reloads and back navigation restore them.
+  watch(
+    () => [appliedFilters.value.status, appliedFilters.value.organizerId] as const,
+    ([status, organizerId]) => {
+      const query = { ...route.query };
+      delete query['status'];
+      delete query['organizer'];
+      if (status !== 'all') query['status'] = status;
+      if (organizerId !== 'all') query['organizer'] = organizerId;
+      void router.replace({ query });
+    }
+  );
 
   // Performs the initial request when the route view becomes active.
   onMounted(() => {

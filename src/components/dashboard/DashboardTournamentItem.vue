@@ -5,7 +5,11 @@ import TennisPlayerIcon from '@/components/icons/TennisPlayerIcon.vue'
 import { tournamentFormatLabels } from '@/config/tournamentFormats'
 import type { Tournament, TournamentStatus } from '@/types'
 
-defineProps<{ tournament: Tournament }>()
+withDefaults(defineProps<{
+  tournament: Tournament
+  // Hidden when the list only contains the current user's tournaments.
+  showOrganizer?: boolean
+}>(), { showOrganizer: true })
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return 'Data da definire'
@@ -44,7 +48,7 @@ function statusSeverity(status: TournamentStatus): 'success' | 'info' | 'seconda
         <span class="truncate">{{ tournamentFormatLabels[tournament.format] ?? tournament.format }}</span>
       </small>
       <RouterLink
-        v-if="tournament.organizer"
+        v-if="showOrganizer && tournament.organizer"
         :to="{ name: 'organizer-profile', params: { id: tournament.organizer.id } }"
         class="relative z-20 flex w-fit max-w-full items-center gap-1.5 truncate rounded-sm text-xs font-semibold text-(--color-text-muted) no-underline hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
@@ -53,6 +57,7 @@ function statusSeverity(status: TournamentStatus): 'success' | 'info' | 'seconda
       </RouterLink>
     </span>
     <span class="flex items-center gap-2">
+      <Tag v-if="!tournament.published" value="Bozza" severity="warn" />
       <Tag class="hidden sm:inline-flex" :value="statusLabel(tournament.status)" :severity="statusSeverity(tournament.status)" />
       <i class="pi pi-chevron-right text-xs text-(--color-text-subtle) transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
     </span>

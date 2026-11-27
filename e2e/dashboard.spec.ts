@@ -24,6 +24,7 @@ const tournaments = [
     end_date: '2026-08-20',
     participants_count: 16,
     max_participants: 32,
+    organizer_id: 'admin-dashboard',
   },
   {
     id: 'tournament-draft',
@@ -38,6 +39,20 @@ const tournaments = [
     end_date: '2026-09-07',
     participants_count: 0,
     max_participants: 24,
+    organizer_id: 'admin-dashboard',
+  },
+  {
+    id: 'tournament-other',
+    name: 'Trofeo di un altro organizzatore',
+    organization_id: organization.id,
+    location: 'TC Lucca',
+    status: 'upcoming',
+    published: true,
+    format: 'single_elimination',
+    category: 'male',
+    start_date: '2026-09-10',
+    end_date: '2026-09-12',
+    organizer_id: 'someone-else',
   },
 ]
 
@@ -105,21 +120,30 @@ test('gives an administrator a clear operational overview', async ({ page }) => 
   await expect(page.getByText('TC Lucca', { exact: true }).first()).toBeVisible()
 
   const indicators = page.getByRole('region', { name: 'Indicatori principali' })
-  await expect(indicators.getByText('In corso', { exact: true })).toBeVisible()
-  await expect(indicators.getByText('Giocatori', { exact: true })).toBeVisible()
+  const myTournaments = indicators.getByRole('link', { name: /I miei tornei/ })
+  await expect(myTournaments).toContainText('2')
+  await expect(myTournaments).toContainText('1 in corso · 1 in programma')
+  await expect(myTournaments).toHaveAttribute('href', '/tournaments?organizer=admin-dashboard')
+  await expect(indicators.getByRole('link', { name: /Da pubblicare/ })).toContainText('1')
+  await expect(indicators.getByRole('link', { name: /Giocatori/ })).toHaveAttribute('href', '/players')
   await expect(indicators.getByText('24', { exact: true })).toBeVisible()
 
-  await expect(page.getByRole('heading', { name: 'Priorità' })).toBeVisible()
-  await expect(page.getByText('1 torneo in corso')).toBeVisible()
-  await expect(page.getByText('1 torneo da pubblicare')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Tornei da seguire' })).toBeVisible()
+  // Priorities live in the indicators, so the separate section is gone.
+  await expect(page.getByRole('heading', { name: 'Priorità' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'I miei tornei' })).toBeVisible()
   await expect(page.getByText('Open di Primavera')).toBeVisible()
+  await expect(page.getByText('Trofeo di un altro organizzatore')).toHaveCount(0)
   await expect(page.getByText('Nuove luci per il campo 2')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Nuovo torneo' })).toHaveCount(0)
   await expect(page.getByRole('navigation', { name: 'Accessi rapidi' }).getByRole('link', { name: /Tornei/ })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Filtra per organizzazione: TC Lucca' })).toBeVisible()
   await expect(page.getByText('La tua stagione')).toBeVisible()
   await expect(page.getByText('75%', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Apri il tuo profilo giocatore' })).toHaveAttribute('href', '/players/dashboard-player')
+
+  await myTournaments.click()
+  await expect(page).toHaveURL(/\/tournaments\?organizer=admin-dashboard$/)
+  await expect(page.getByText('I miei tornei')).toBeVisible()
 })
 
 test('keeps the dashboard useful and compact on mobile', async ({ page }) => {
@@ -129,8 +153,7 @@ test('keeps the dashboard useful and compact on mobile', async ({ page }) => {
 
   await expect(page.getByRole('heading', { level: 1, name: /Simone/ })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Navigazione mobile principale' }).getByRole('link', { name: 'Dashboard' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Priorità' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Tornei da seguire' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'I miei tornei' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Accessi rapidi' })).toBeVisible()
 })
 
