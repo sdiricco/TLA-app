@@ -76,14 +76,7 @@ const backNavigation = computed(() => {
   return null
 })
 const createAction = computed(() => {
-  if (auth.canCreateTournament && route.name === 'tournaments') {
-    return {
-      routeName: 'tournament-create' as const,
-      label: 'Nuovo torneo',
-      icon: 'pi pi-plus',
-      ariaLabel: 'Crea un nuovo torneo',
-    }
-  }
+  // Tournaments put their create button next to the page title.
   if (auth.isAdmin && route.name === 'players') {
     return {
       routeName: 'player-create' as const,

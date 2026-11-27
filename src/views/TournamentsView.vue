@@ -320,6 +320,24 @@
           {{ pageDescription }}
         </p>
       </div>
+      <Button
+        v-if="canCreateTournament"
+        icon="pi pi-plus"
+        aria-label="Crea un nuovo torneo"
+        title="Nuovo torneo"
+        class="shrink-0 md:hidden"
+        rounded
+        :disabled="auth.isGuest"
+        @click="openCreate"
+      />
+      <Button
+        v-if="canCreateTournament"
+        label="Nuovo torneo"
+        icon="pi pi-plus"
+        class="hidden shrink-0 md:inline-flex"
+        :disabled="auth.isGuest"
+        @click="openCreate"
+      />
     </header>
 
     <!------------------------------>
